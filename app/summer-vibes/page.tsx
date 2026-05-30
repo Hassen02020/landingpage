@@ -376,6 +376,7 @@ export default function SummerVibesPage() {
             alt="Famille en vacances"
             className="w-full h-full object-cover"
           />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
         <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
         <div className="absolute -bottom-28 -left-16 w-96 h-96 rounded-full opacity-5" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
@@ -393,8 +394,7 @@ export default function SummerVibesPage() {
         </h1>
 
         <p className="relative z-10 text-blue-100 text-lg sm:text-xl max-w-lg mb-8 leading-relaxed">
-          Réservez votre hôtel à <strong className="text-white">Hammamet, Sousse ou Djerba</strong> en quelques secondes — au{" "}
-          <strong className="text-white">meilleur prix garanti</strong>, avec Easy2Book.
+          Réservez votre hôtel en quelques secondes au <strong className="text-white">meilleur prix garanti</strong>, avec Easy2Book.
         </p>
 
         {/* USP Blocks - Side by Side */}
