@@ -376,7 +376,6 @@ export default function SummerVibesPage() {
             alt="Famille en vacances"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 via-blue-800/70 to-blue-900/85" />
         </div>
         <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
         <div className="absolute -bottom-28 -left-16 w-96 h-96 rounded-full opacity-5" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
@@ -398,14 +397,30 @@ export default function SummerVibesPage() {
           <strong className="text-white">meilleur prix garanti</strong>, avec Easy2Book.
         </p>
 
-        <div
-          className="relative z-10 flex items-center gap-3 px-5 py-3.5 rounded-2xl mb-8 shadow-lg"
-          style={{ backgroundColor: "rgba(245,194,66,0.15)", border: "1.5px solid rgba(245,194,66,0.45)" }}
-        >
-          <span className="text-2xl">💳</span>
-          <div className="text-left">
-            <p className="text-white font-extrabold text-sm leading-none mb-0.5">Payez une avance · Le reste à l&apos;hôtel</p>
-            <p className="text-blue-200 text-xs">Confirmez votre séjour dès maintenant, sans payer la totalité</p>
+        {/* USP Blocks - Side by Side */}
+        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 max-w-2xl w-full">
+          <div
+            className="flex items-start gap-3 px-5 py-4 rounded-2xl shadow-lg"
+            style={{ backgroundColor: "rgba(255,255,255,0.95)", border: "2px solid rgba(245,194,66,0.5)" }}
+          >
+            <span className="text-2xl">💳</span>
+            <div className="text-left">
+              <p className="text-gray-900 font-extrabold text-sm leading-none mb-1">Flexibilité de Paiement</p>
+              <p className="text-gray-700 text-xs font-medium mb-1">Payez une avance, le reste à l'hôtel !</p>
+              <p className="text-gray-600 text-xs leading-relaxed">Confirmez votre séjour dès maintenant sans bloquer tout votre budget. Ne payez la totalité qu'à votre arrivée à la réception.</p>
+            </div>
+          </div>
+
+          <div
+            className="flex items-start gap-3 px-5 py-4 rounded-2xl shadow-lg"
+            style={{ backgroundColor: "rgba(255,255,255,0.95)", border: "2px solid rgba(245,194,66,0.5)" }}
+          >
+            <span className="text-2xl">🛡️</span>
+            <div className="text-left">
+              <p className="text-gray-900 font-extrabold text-sm leading-none mb-1">Rapidité & Sécurité</p>
+              <p className="text-gray-700 text-xs font-medium mb-1">Réponse en moins de 15 minutes</p>
+              <p className="text-gray-600 text-xs leading-relaxed">Traitement ultra-rapide de votre demande, conseils personnalisés et paiement d'acompte 100% sécurisé.</p>
+            </div>
           </div>
         </div>
 
@@ -415,21 +430,6 @@ export default function SummerVibesPage() {
           style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
           location="hero"
         />
-
-        <a
-          href="https://www.facebook.com/Easy2Bookplateforme"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="relative z-10 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:bg-white/20 active:scale-95 mt-4"
-          style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "#fff" }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-          </svg>
-          Suivez-nous sur Facebook
-        </a>
-
-        <p className="relative z-10 text-blue-300 text-sm mt-5">🔒 Réponse en moins de 15 min · Paiement sécurisé</p>
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40" aria-hidden="true">
           <div className="w-px h-8 rounded-full" style={{ backgroundColor: "#f5c242" }} />
