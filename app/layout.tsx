@@ -10,6 +10,19 @@ export const metadata: Metadata = {
     title: "Summer Vibes Tunisia 2026 — Easy2Book",
     description: "Les meilleures offres hôtelières en Tunisie pour l'été 2026.",
     type: "website",
+    url: "https://landingpage-puce-five.vercel.app/summer-vibes",
+    siteName: "Easy2Book",
+    images: [
+      {
+        url: "https://landingpage-puce-five.vercel.app/logo.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Easy2Book Summer Vibes 2026",
+      },
+    ],
+  },
+  other: {
+    "fb:page_id": "Easy2Bookplateforme",
   },
 }
 

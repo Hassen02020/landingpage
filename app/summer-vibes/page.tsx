@@ -466,6 +466,10 @@ export default function SummerVibesPage() {
         <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors" onClick={() => trackWhatsAppClick("footer")}>
           +216 98 140 514
         </a>
+        &nbsp;|&nbsp;
+        <a href="https://www.facebook.com/Easy2Bookplateforme" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
+          Facebook
+        </a>
       </footer>
 
       {/* FLOATING WHATSAPP */}
