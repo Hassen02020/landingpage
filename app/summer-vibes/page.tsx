@@ -372,7 +372,7 @@ export default function SummerVibesPage() {
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80"
+            src="/hero-bg.jpg"
             alt="Famille en vacances"
             className="w-full h-full object-cover"
           />
