@@ -15,62 +15,89 @@ const WHATSAPP_MESSAGE = encodeURIComponent(
 )
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`
 
-function trackWhatsAppClick(location: string = "general"): void {
+// Generate unique event ID for deduplication
+function generateEventId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
+}
+
+// Dual transmission function: Browser Pixel + Server CAPI
+async function sendEvent(eventName: string, customData: Record<string, unknown>): Promise<void> {
+  const eventId = generateEventId()
+
+  // 1. Send to Browser Pixel (existing implementation)
   if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("track", "Contact", {
-      content_category: "Summer Vibes 2026",
-      content_name: location,
-      value: 1,
-      currency: "TND",
-      user_segment: "summer_vibes_visitor"
-    })
+    if (eventName === "Contact") {
+      window.fbq("track", eventName, { ...customData, eventID: eventId })
+    } else {
+      window.fbq("trackCustom", eventName, { ...customData, eventID: eventId })
+    }
   }
+
+  // 2. Send to Server CAPI (new implementation)
+  try {
+    await fetch("/api/meta-capi", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        eventName,
+        customData,
+        eventId,
+      }),
+    })
+  } catch (error) {
+    console.error("CAPI send failed:", error)
+    // Silently fail - browser pixel still works
+  }
+}
+
+function trackWhatsAppClick(location: string = "general"): void {
+  sendEvent("Contact", {
+    content_category: "Summer Vibes 2026",
+    content_name: location,
+    value: 1,
+    currency: "TND",
+    user_segment: "summer_vibes_visitor"
+  })
 }
 
 function trackCategoryChange(categoryId: string, categoryName: string): void {
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("trackCustom", "CategoryView", {
-      content_category: "Hotel Category",
-      content_name: categoryName,
-      category_id: categoryId,
-      user_interest: detectUserInterest(categoryName),
-      campaign: "summer_vibes_2026"
-    })
-  }
+  sendEvent("CategoryView", {
+    content_category: "Hotel Category",
+    content_name: categoryName,
+    category_id: categoryId,
+    user_interest: detectUserInterest(categoryName),
+    campaign: "summer_vibes_2026"
+  })
 }
 
 function trackHotelClick(hotelName: string, city: string, category: string): void {
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("trackCustom", "HotelClick", {
-      content_name: hotelName,
-      content_category: category,
-      city: city,
-      destination: "Tunisia",
-      travel_type: detectTravelType(category),
-      value: 1,
-      currency: "TND"
-    })
-  }
+  sendEvent("HotelClick", {
+    content_name: hotelName,
+    content_category: category,
+    city: city,
+    destination: "Tunisia",
+    travel_type: detectTravelType(category),
+    value: 1,
+    currency: "TND"
+  })
 }
 
 function trackScrollDepth(depth: string): void {
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("trackCustom", "ScrollDepth", {
-      depth: depth,
-      engagement_level: calculateEngagement(depth),
-      page_section: depth
-    })
-  }
+  sendEvent("ScrollDepth", {
+    depth: depth,
+    engagement_level: calculateEngagement(depth),
+    page_section: depth
+  })
 }
 
 function trackPageEngagement(timeOnPage: number): void {
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("trackCustom", "PageEngagement", {
-      time_on_page: timeOnPage,
-      engagement_score: calculateEngagementScore(timeOnPage),
-      user_intent: detectUserIntent(timeOnPage)
-    })
-  }
+  sendEvent("PageEngagement", {
+    time_on_page: timeOnPage,
+    engagement_score: calculateEngagementScore(timeOnPage),
+    user_intent: detectUserIntent(timeOnPage)
+  })
 }
 
 function detectUserInterest(category: string): string {
