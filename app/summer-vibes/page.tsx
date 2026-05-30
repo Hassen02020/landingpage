@@ -17,26 +17,111 @@ const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`
 
 function trackWhatsAppClick(location: string = "general"): void {
   if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("track", "Contact", { content_category: "Summer Vibes 2026", content_name: location })
+    window.fbq("track", "Contact", {
+      content_category: "Summer Vibes 2026",
+      content_name: location,
+      value: 1,
+      currency: "TND",
+      user_segment: "summer_vibes_visitor"
+    })
   }
 }
 
 function trackCategoryChange(categoryId: string, categoryName: string): void {
   if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("trackCustom", "CategoryView", { content_category: "Hotel Category", content_name: categoryName, category_id: categoryId })
+    window.fbq("trackCustom", "CategoryView", {
+      content_category: "Hotel Category",
+      content_name: categoryName,
+      category_id: categoryId,
+      user_interest: detectUserInterest(categoryName),
+      campaign: "summer_vibes_2026"
+    })
   }
 }
 
 function trackHotelClick(hotelName: string, city: string, category: string): void {
   if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("trackCustom", "HotelClick", { content_name: hotelName, content_category: category, city })
+    window.fbq("trackCustom", "HotelClick", {
+      content_name: hotelName,
+      content_category: category,
+      city: city,
+      destination: "Tunisia",
+      travel_type: detectTravelType(category),
+      value: 1,
+      currency: "TND"
+    })
   }
 }
 
 function trackScrollDepth(depth: string): void {
   if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("trackCustom", "ScrollDepth", { depth })
+    window.fbq("trackCustom", "ScrollDepth", {
+      depth: depth,
+      engagement_level: calculateEngagement(depth),
+      page_section: depth
+    })
   }
+}
+
+function trackPageEngagement(timeOnPage: number): void {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("trackCustom", "PageEngagement", {
+      time_on_page: timeOnPage,
+      engagement_score: calculateEngagementScore(timeOnPage),
+      user_intent: detectUserIntent(timeOnPage)
+    })
+  }
+}
+
+function detectUserInterest(category: string): string {
+  const interestMap: Record<string, string> = {
+    "🏨 Chaîne El Mouradi": "luxury_chain",
+    "🏖️ Enfants Gratuits": "family_travel",
+    "🌊 Hôtels Aquapark": "family_fun",
+    "💕 Voyage de Noces": "honeymoon_couple",
+    "👙 Burkini Autorisé": "family_conservative",
+    "💰 Bons Plans": "budget_conscious",
+    "💼 Business Hotels": "business_traveler"
+  }
+  return interestMap[category] || "general_traveler"
+}
+
+function detectTravelType(category: string): string {
+  const typeMap: Record<string, string> = {
+    "🏨 Chaîne El Mouradi": "luxury",
+    "🏖️ Enfants Gratuits": "family",
+    "🌊 Hôtels Aquapark": "family_entertainment",
+    "💕 Voyage de Noces": "romantic",
+    "👙 Burkini Autorisé": "family",
+    "💰 Bons Plans": "budget",
+    "💼 Business Hotels": "business"
+  }
+  return typeMap[category] || "leisure"
+}
+
+function calculateEngagement(depth: string): string {
+  const levels: Record<string, string> = {
+    "25%": "low",
+    "50%": "medium",
+    "75%": "high",
+    "100%": "very_high"
+  }
+  return levels[depth] || "low"
+}
+
+function calculateEngagementScore(timeOnPage: number): number {
+  if (timeOnPage < 10) return 1
+  if (timeOnPage < 30) return 2
+  if (timeOnPage < 60) return 3
+  if (timeOnPage < 120) return 4
+  return 5
+}
+
+function detectUserIntent(timeOnPage: number): string {
+  if (timeOnPage < 10) return "browsing"
+  if (timeOnPage < 30) return "considering"
+  if (timeOnPage < 60) return "interested"
+  return "ready_to_book"
 }
 
 function CTAButton({
@@ -303,9 +388,11 @@ function CategoriesSection({
 }
 
 export default function SummerVibesPage() {
-  // Scroll depth tracking
+  // Scroll depth and page engagement tracking
   useEffect(() => {
     let trackedDepths = new Set<string>()
+    let timeOnPage = 0
+    let engagementInterval: number
 
     const handleScroll = () => {
       const scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100)
@@ -316,8 +403,17 @@ export default function SummerVibesPage() {
       }
     }
 
+    // Track page engagement every 30 seconds
+    engagementInterval = window.setInterval(() => {
+      timeOnPage += 30
+      trackPageEngagement(timeOnPage)
+    }, 30000)
+
     window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      window.clearInterval(engagementInterval)
+    }
   }, [])
 
   return (
