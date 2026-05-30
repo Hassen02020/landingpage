@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 
 declare global {
@@ -15,9 +15,27 @@ const WHATSAPP_MESSAGE = encodeURIComponent(
 )
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`
 
-function trackWhatsAppClick(): void {
+function trackWhatsAppClick(location: string = "general"): void {
   if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("track", "Contact", { content_category: "Summer Vibes 2026" })
+    window.fbq("track", "Contact", { content_category: "Summer Vibes 2026", content_name: location })
+  }
+}
+
+function trackCategoryChange(categoryId: string, categoryName: string): void {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("trackCustom", "CategoryView", { content_category: "Hotel Category", content_name: categoryName, category_id: categoryId })
+  }
+}
+
+function trackHotelClick(hotelName: string, city: string, category: string): void {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("trackCustom", "HotelClick", { content_name: hotelName, content_category: category, city })
+  }
+}
+
+function trackScrollDepth(depth: string): void {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("trackCustom", "ScrollDepth", { depth })
   }
 }
 
@@ -25,17 +43,19 @@ function CTAButton({
   label,
   className,
   style,
+  location,
 }: {
   label: string
   className?: string
   style?: React.CSSProperties
+  location?: string
 }) {
   return (
     <a
       href={WHATSAPP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={trackWhatsAppClick}
+      onClick={() => trackWhatsAppClick(location || "general")}
       className={className}
       style={style}
     >
@@ -187,10 +207,15 @@ function CategoriesSection({
   onCtaClick,
 }: {
   whatsappNumber: string
-  onCtaClick: () => void
+  onCtaClick: (location: string) => void
 }) {
   const [active, setActive] = useState("famille")
   const current = CATEGORIES.find((c) => c.id === active)!
+
+  const handleCategoryChange = (catId: string, catLabel: string) => {
+    setActive(catId)
+    trackCategoryChange(catId, catLabel)
+  }
 
   return (
     <section className="py-16 px-5" style={{ backgroundColor: "#f0f4f8" }}>
@@ -206,7 +231,7 @@ function CategoriesSection({
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => setActive(cat.id)}
+              onClick={() => handleCategoryChange(cat.id, cat.label)}
               className="text-xs font-bold px-4 py-2 rounded-full border-2 transition-all"
               style={{
                 borderColor: cat.color,
@@ -231,7 +256,10 @@ function CategoriesSection({
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={onCtaClick}
+                onClick={() => {
+                  trackHotelClick(name, city, current.label)
+                  onCtaClick(`hotel-${name}`)
+                }}
                 className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer border border-gray-100"
               >
                 <div className="relative w-full overflow-hidden" style={{ height: "170px" }}>
@@ -275,6 +303,23 @@ function CategoriesSection({
 }
 
 export default function SummerVibesPage() {
+  // Scroll depth tracking
+  useEffect(() => {
+    let trackedDepths = new Set<string>()
+
+    const handleScroll = () => {
+      const scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100)
+      const depth = scrollPercent >= 75 ? "75%" : scrollPercent >= 50 ? "50%" : scrollPercent >= 25 ? "25%" : null
+      if (depth && !trackedDepths.has(depth)) {
+        trackedDepths.add(depth)
+        trackScrollDepth(depth)
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
   return (
     <div className="min-h-screen font-sans bg-white text-gray-900">
 
@@ -301,6 +346,7 @@ export default function SummerVibesPage() {
           label="💬 Réserver"
           className="hidden sm:inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold transition-transform active:scale-95"
           style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
+          location="header"
         />
       </header>
 
@@ -354,6 +400,7 @@ export default function SummerVibesPage() {
           label="💬 Planifier mes vacances sur WhatsApp"
           className="relative z-10 inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-2xl transition-all hover:brightness-110 active:scale-95"
           style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
+          location="hero"
         />
 
         <p className="relative z-10 text-blue-300 text-sm mt-5">🔒 Réponse en moins de 15 min · Paiement sécurisé</p>
@@ -409,13 +456,14 @@ export default function SummerVibesPage() {
           label="💬 Je réserve sur WhatsApp"
           className="inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-xl transition-all hover:brightness-110 active:scale-95"
           style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
+          location="bottom-cta"
         />
       </section>
 
       {/* FOOTER */}
       <footer className="py-6 px-5 text-center text-xs text-white/60" style={{ backgroundColor: "#071e3d" }}>
         © {new Date().getFullYear()} Easy2Book — Centrale de Réservation &nbsp;|&nbsp;
-        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors" onClick={trackWhatsAppClick}>
+        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors" onClick={() => trackWhatsAppClick("footer")}>
           +216 98 140 514
         </a>
       </footer>
@@ -425,7 +473,7 @@ export default function SummerVibesPage() {
         href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={trackWhatsAppClick}
+        onClick={() => trackWhatsAppClick("floating")}
         aria-label="Nous contacter sur WhatsApp"
         className="fixed bottom-6 right-5 z-50 flex items-center justify-center rounded-full shadow-2xl transition-transform hover:scale-110 active:scale-95"
         style={{ backgroundColor: "#25D366", width: "60px", height: "60px" }}
