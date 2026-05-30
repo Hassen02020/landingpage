@@ -342,12 +342,25 @@ export default function SummerVibesPage() {
             <p className="text-yellow-300 text-xs font-medium tracking-widest uppercase">Centrale de Réservation</p>
           </div>
         </div>
-        <CTAButton
-          label="💬 Réserver"
-          className="hidden sm:inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold transition-transform active:scale-95"
-          style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
-          location="header"
-        />
+        <div className="flex items-center gap-2">
+          <a
+            href="https://www.facebook.com/Easy2Bookplateforme"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            aria-label="Suivez-nous sur Facebook"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="white">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          </a>
+          <CTAButton
+            label="💬 Réserver"
+            className="hidden sm:inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold transition-transform active:scale-95"
+            style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
+            location="header"
+          />
+        </div>
       </header>
 
       {/* HERO */}
@@ -402,6 +415,19 @@ export default function SummerVibesPage() {
           style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
           location="hero"
         />
+
+        <a
+          href="https://www.facebook.com/Easy2Bookplateforme"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative z-10 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:bg-white/20 active:scale-95 mt-4"
+          style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "#fff" }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+          Suivez-nous sur Facebook
+        </a>
 
         <p className="relative z-10 text-blue-300 text-sm mt-5">🔒 Réponse en moins de 15 min · Paiement sécurisé</p>
 
