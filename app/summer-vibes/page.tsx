@@ -354,6 +354,13 @@ export default function SummerVibesPage() {
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
             </svg>
           </a>
+          <a
+            href="tel:+21698140514"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-bold transition-colors hover:bg-white/10"
+            style={{ color: "#fff" }}
+          >
+            📞 98 140 514 / 97 449 510
+          </a>
           <CTAButton
             label="💬 Réserver"
             className="hidden sm:inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold transition-transform active:scale-95"
@@ -385,7 +392,7 @@ export default function SummerVibesPage() {
           className="relative z-10 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
           style={{ backgroundColor: "rgba(245,194,66,0.18)", color: "#f5c242", border: "1px solid rgba(245,194,66,0.35)" }}
         >
-          ☀️ Offre Exclusive — Été 2026
+          ☀️ Des Offres Exclusives — Été 2026
         </span>
 
         <h1 className="relative z-10 text-white font-extrabold leading-tight mb-4" style={{ fontSize: "clamp(2.2rem, 7vw, 4rem)" }}>
