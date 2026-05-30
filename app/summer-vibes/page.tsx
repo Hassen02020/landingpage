@@ -366,17 +366,17 @@ export default function SummerVibesPage() {
       {/* HERO */}
       <section
         className="relative flex flex-col items-center justify-center text-center px-5 pt-16 pb-20 overflow-hidden"
-        style={{ background: "linear-gradient(160deg, #0f4c81 0%, #0a3260 60%, #071e3d 100%)", minHeight: "92vh" }}
+        style={{ minHeight: "92vh" }}
       >
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden="true">
-          <Image
-            src="/logo.jpg"
-            alt=""
-            width={520}
-            height={520}
-            className="object-contain select-none"
-            style={{ opacity: 0.04, filter: "brightness(10)" }}
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80"
+            alt="Famille en vacances"
+            className="w-full h-full object-cover"
           />
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 via-blue-800/70 to-blue-900/85" />
         </div>
         <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
         <div className="absolute -bottom-28 -left-16 w-96 h-96 rounded-full opacity-5" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
