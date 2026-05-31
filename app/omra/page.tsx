@@ -66,6 +66,18 @@ function trackScrollDepth(depth: string): void {
   })
 }
 
+const PROGRAM_FEATURES = [
+  "🪪 تأشيرة العمرة والتأمين الصحي",
+  "✈️ تذكرة الطائرة ذهاباً وإياباً",
+  "🏨 فندق ⭐⭐⭐ قريب من الحرم — فندق أرائك غزة",
+  "🛏️ 10 ليالي بمكة + 4 ليالي بالمدينة",
+  "🚌 نقل بحافلات سياحية مريحة",
+  "🕋 زيارة المزارات التاريخية في مكة والمدينة",
+  "🚪 دخول مباشر لمكة للعمرة",
+  "👤 مرافقون ذوو خبرة مع مرافقة نسائية",
+  "🎁 هدايا للمعتمرين",
+]
+
 const PACKAGES = [
   {
     id: "foj1",
@@ -76,15 +88,7 @@ const PACKAGES = [
     emoji: "🌙",
     badge: "Départ Juin",
     badgeColor: "bg-emerald-500",
-    features: [
-      "✈️ Vol aller-retour inclus",
-      "🏨 Hôtel proche du Haram",
-      "🚌 Transport touristique confortable",
-      "👨‍👩‍👧 Accompagnateur expert",
-      "👩 Accompagnatrice féminine",
-      "📋 Programme complet 14 jours",
-      "🎁 Omra gratuite pour 10 personnes",
-    ],
+    features: PROGRAM_FEATURES,
   },
   {
     id: "foj2",
@@ -95,54 +99,46 @@ const PACKAGES = [
     emoji: "⭐",
     badge: "Départ Juillet",
     badgeColor: "bg-amber-500",
-    features: [
-      "✈️ Vol aller-retour inclus",
-      "🏨 Hôtel proche du Haram",
-      "🚌 Transport touristique confortable",
-      "👨‍👩‍👧 Accompagnateur expert",
-      "👩 Accompagnatrice féminine",
-      "📋 Programme complet 14 jours",
-      "🎁 Omra gratuite pour 10 personnes",
-    ],
+    features: PROGRAM_FEATURES,
   },
 ]
 
 const ADVANTAGES = [
   {
-    icon: "🕌",
-    title: "سكن قريب من الحرم",
-    subtitle: "Hébergement proche du Haram",
-    description: "Hôtels soigneusement sélectionnés à quelques pas des lieux saints pour maximiser votre temps de dévotion.",
+    icon: "🏨",
+    title: "فندق أرائك غزة ⭐⭐⭐",
+    subtitle: "Hôtel 3★ proche du Haram",
+    description: "10 nuits à La Mecque + 4 nuits à Médine dans un hôtel 3 étoiles soigneusement sélectionné, à proximité immédiate des lieux saints.",
   },
   {
-    icon: "👨‍👩‍👧",
-    title: "مرافقة متكاملة",
-    subtitle: "Accompagnement complet",
-    description: "Accompagnateurs experts et accompagnatrice féminine pour une expérience sereine et sécurisée à chaque étape.",
+    icon: "🪪",
+    title: "تأشيرة وتأمين صحي",
+    subtitle: "Visa + assurance inclus",
+    description: "Nous prenons en charge tous les démarches administratives : visa Omra et assurance maladie complète inclus dans le prix.",
+  },
+  {
+    icon: "🕋",
+    title: "زيارة المزارات التاريخية",
+    subtitle: "Visites guidées Mecque & Médine",
+    description: "Programme enrichissant avec visites des sites historiques et spirituels à La Mecque et Médine, accompagné par nos guides experts.",
   },
   {
     icon: "🎁",
-    title: "عمرة مجانية",
-    subtitle: "Omra gratuite pour groupes",
-    description: "Offre spéciale groupes : une Omra offerte pour chaque groupe de 10 personnes. Parfait pour famille et amis !",
+    title: "هدايا للمعتمرين + عمرة مجانية",
+    subtitle: "Cadeaux + Omra gratuite / 10 personnes",
+    description: "Chaque pèlerin reçoit des cadeaux spéciaux. Et pour chaque groupe de 10 personnes, une Omra entièrement offerte !",
   },
   {
-    icon: "💰",
-    title: "خصومات للمجموعات",
-    subtitle: "Réductions groupes dès 3 personnes",
-    description: "Bénéficiez de réductions exclusives à partir de 3 personnes. Plus vous êtes nombreux, plus vous économisez.",
+    icon: "�",
+    title: "مرافقة نسائية متخصصة",
+    subtitle: "Accompagnatrice féminine dédiée",
+    description: "Accompagnatrice féminine expérimentée + accompagnateurs experts pour une expérience sereine, sécurisée et spirituellement enrichissante.",
   },
   {
-    icon: "💳",
-    title: "مرونة في الدفع",
-    subtitle: "Paiement flexible",
-    description: "Réservez votre place avec une avance. Le reste du paiement s'adapte à votre convenance.",
-  },
-  {
-    icon: "⚡",
-    title: "رد سريع",
-    subtitle: "Réponse en moins de 15 min",
-    description: "Notre équipe est disponible pour répondre à toutes vos questions et finaliser votre réservation rapidement.",
+    icon: "🚪",
+    title: "دخول مباشر لمكة",
+    subtitle: "Entrée directe à La Mecque",
+    description: "Dès l'arrivée, accès direct à La Mecque pour accomplir l'Omra sans délai. Transport confortable en bus touristique tout au long du séjour.",
   },
 ]
 
@@ -316,10 +312,10 @@ export default function OmraPage() {
           {/* USPs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
             {[
-              { icon: "🏨", text: "سكن قريب من الحرم" },
-              { icon: "🎁", text: "عمرة مجانية / 10 أشخاص" },
+              { icon: "🏨", text: "فندق أرائك غزة ⭐⭐⭐" },
+              { icon: "🪪", text: "تأشيرة + تأمين صحي" },
               { icon: "👩", text: "مرافقة نسائية" },
-              { icon: "💰", text: "خصم من 3 أشخاص" },
+              { icon: "🎁", text: "هدايا + عمرة مجانية" },
             ].map((usp, i) => (
               <div key={i} className="bg-white/10 backdrop-blur border border-white/20 rounded-xl p-3 text-center">
                 <div className="text-2xl mb-1">{usp.icon}</div>
