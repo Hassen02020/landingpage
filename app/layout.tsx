@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     siteName: "Easy2Book",
     images: [
       {
-        url: "https://landingpage-easy2book.vercel.app/logo.jpg",
+        url: "https://landingpage-easy2book.vercel.app/logo.png",
         width: 1200,
         height: 630,
         alt: "Easy2Book Summer Vibes 2026",

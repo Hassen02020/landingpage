@@ -453,7 +453,7 @@ export default function SummerVibesPage() {
       >
         <div className="flex items-center gap-3">
           <Image
-            src="/logo.jpg"
+            src="/logo.png"
             alt="Easy2Book Logo"
             width={44}
             height={44}
@@ -614,6 +614,33 @@ export default function SummerVibesPage() {
           style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
           location="bottom-cta"
         />
+
+        {/* Liens vers autres offres */}
+        <div className="mt-12 border-t border-white/20 pt-10">
+          <p className="text-blue-200 text-sm font-semibold uppercase tracking-widest mb-6">Découvrez aussi nos autres offres</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-xl mx-auto">
+            <a
+              href="/omra"
+              className="flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg px-8 py-5 rounded-2xl shadow-xl transition-all hover:scale-105 border-2 border-emerald-400"
+            >
+              <span className="text-2xl">🕋</span>
+              <div className="text-left">
+                <div className="text-base font-black">عمرة الصيف 2026</div>
+                <div className="text-emerald-200 text-xs font-semibold">3 أفواج — 4 800 TND</div>
+              </div>
+            </a>
+            <a
+              href="/voyages-organises"
+              className="flex items-center justify-center gap-3 bg-white/15 hover:bg-white/25 text-white font-black text-lg px-8 py-5 rounded-2xl shadow-xl transition-all hover:scale-105 border-2 border-yellow-400"
+            >
+              <span className="text-2xl">✈️</span>
+              <div className="text-left">
+                <div className="text-base font-black">Voyages Organisés</div>
+                <div className="text-yellow-300 text-xs font-semibold">Turquie · Bali · Égypte · Maroc</div>
+              </div>
+            </a>
+          </div>
+        </div>
       </section>
 
       {/* FOOTER */}

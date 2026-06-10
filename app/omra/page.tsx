@@ -41,7 +41,7 @@ function trackWhatsAppClick(location: string = "general", packageName: string = 
     content_category: "Omra Ete 2026",
     content_name: location,
     content_ids: packageName,
-    value: 4100,
+    value: 4800,
     currency: "TND",
     user_segment: "omra_visitor",
   })
@@ -83,8 +83,8 @@ const PACKAGES = [
     id: "foj1",
     name: "الفوج الأول",
     date: "28 جوان 2026",
-    dateLabel: "Juin 2026",
-    price: 4100,
+    dateLabel: "جوان 2026",
+    price: 4800,
     emoji: "🌙",
     badge: "Départ Juin",
     badgeColor: "bg-emerald-500",
@@ -94,12 +94,33 @@ const PACKAGES = [
     id: "foj2",
     name: "الفوج الثاني",
     date: "28 جويلية 2026",
-    dateLabel: "Juillet 2026",
-    price: 4100,
+    dateLabel: "جويلية 2026",
+    price: 4800,
     emoji: "⭐",
     badge: "Départ Juillet",
     badgeColor: "bg-amber-500",
     features: PROGRAM_FEATURES,
+  },
+  {
+    id: "foj3",
+    name: "عمرة المولد النبوي الشريف",
+    date: "20 أوت 2026",
+    dateLabel: "أوت 2026",
+    price: 4800,
+    emoji: "🕌",
+    badge: "عمرة المولد",
+    badgeColor: "bg-purple-600",
+    features: [
+      "🪪 تأشيرة العمرة والتأمين الصحي",
+      "✈️ تذكرة الطائرة ذهاباً وإياباً",
+      "🏨 فندق ⭐⭐⭐ قريب من الحرم — فندق أرائك غزة",
+      "🛏️ 10 ليالي بمكة + 4 ليالي بالمدينة",
+      "🚌 نقل بحافلات سياحية مريحة",
+      "🕋 زيارة المزارات التاريخية في مكة والمدينة",
+      "🚪 دخول مباشر لمكة للعمرة",
+      "👤 مرافقون ذوو خبرة مع مرافقة نسائية",
+      "🎁 هدايا خاصة لمولد النبوي",
+    ],
   },
 ]
 
@@ -107,38 +128,38 @@ const ADVANTAGES = [
   {
     icon: "🏨",
     title: "فندق أرائك غزة ⭐⭐⭐",
-    subtitle: "Hôtel 3★ proche du Haram",
-    description: "10 nuits à La Mecque + 4 nuits à Médine dans un hôtel 3 étoiles soigneusement sélectionné, à proximité immédiate des lieux saints.",
+    subtitle: "فندق 3 نجوم قريب من الحرم",
+    description: "10 ليالٍ في مكة المكرمة + 4 ليالٍ في المدينة المنورة في فندق 3 نجوم مختار بعناية، على مقربة من الحرمين الشريفين.",
   },
   {
     icon: "🪪",
     title: "تأشيرة وتأمين صحي",
-    subtitle: "Visa + assurance inclus",
-    description: "Nous prenons en charge tous les démarches administratives : visa Omra et assurance maladie complète inclus dans le prix.",
+    subtitle: "التأشيرة والتأمين مشمولان في السعر",
+    description: "نتولى جميع الإجراءات الإدارية نيابةً عنكم: تأشيرة العمرة والتأمين الصحي الشامل مشمولان في سعر الرحلة.",
   },
   {
     icon: "🕋",
     title: "زيارة المزارات التاريخية",
-    subtitle: "Visites guidées Mecque & Médine",
-    description: "Programme enrichissant avec visites des sites historiques et spirituels à La Mecque et Médine, accompagné par nos guides experts.",
+    subtitle: "جولات مرشدة في مكة والمدينة",
+    description: "برنامج روحي وتاريخي ثري يشمل زيارة أبرز المواقع التاريخية والمقدسة في مكة المكرمة والمدينة المنورة برفقة مرشدين متخصصين.",
   },
   {
     icon: "🎁",
     title: "هدايا للمعتمرين + عمرة مجانية",
-    subtitle: "Cadeaux + Omra gratuite / 10 personnes",
-    description: "Chaque pèlerin reçoit des cadeaux spéciaux. Et pour chaque groupe de 10 personnes, une Omra entièrement offerte !",
+    subtitle: "هدايا + عمرة مجانية لكل 10 أشخاص",
+    description: "كل معتمر يحصل على هدايا مميزة. ولكل مجموعة من 10 أشخاص، عمرة كاملة مجانية تماماً!",
   },
   {
-    icon: "�",
+    icon: "👩",
     title: "مرافقة نسائية متخصصة",
-    subtitle: "Accompagnatrice féminine dédiée",
-    description: "Accompagnatrice féminine expérimentée + accompagnateurs experts pour une expérience sereine, sécurisée et spirituellement enrichissante.",
+    subtitle: "مرافقة نسائية مخصصة لراحتكم",
+    description: "مرافقة نسائية ذات خبرة + مرشدون متخصصون لضمان تجربة هادئة وآمنة ومثرية روحياً طوال فترة الرحلة.",
   },
   {
     icon: "🚪",
     title: "دخول مباشر لمكة",
-    subtitle: "Entrée directe à La Mecque",
-    description: "Dès l'arrivée, accès direct à La Mecque pour accomplir l'Omra sans délai. Transport confortable en bus touristique tout au long du séjour.",
+    subtitle: "دخول فوري لأداء العمرة",
+    description: "فور الوصول، دخول مباشر إلى مكة المكرمة لأداء مناسك العمرة دون تأخير. تنقل مريح بحافلات سياحية مكيفة طوال الرحلة.",
   },
 ]
 
@@ -155,7 +176,7 @@ function CTAButton({
 }) {
   const message = encodeURIComponent(
     packageName
-      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (4100 TND / 14 jours). Merci de me contacter.`
+      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (4800 TND / 14 jours). Merci de me contacter.`
       : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Été 2026. Merci."
   )
   return (
@@ -215,10 +236,10 @@ export default function OmraPage() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/logo.jpg" alt="Easy2Book" width={40} height={40} className="rounded-full" />
+            <Image src="/logo.png" alt="Easy2Book" width={40} height={40} className="rounded-full" />
             <div>
               <div className="font-bold text-gray-900 text-sm">Easy2Book</div>
-              <div className="text-xs text-emerald-600">عمرة العطلة الصيفية 2026</div>
+              <div className="text-xs text-emerald-600">عمرة الصيف + المولد النبوي 2026</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -264,7 +285,7 @@ export default function OmraPage() {
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center py-16">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-            🕋 عمرة الصيف 2026 — Juin & Juillet
+            � فتح باب التسجيل — عمرة الصيف 2026 + المولد النبوي
           </div>
 
           {/* Title */}
@@ -278,13 +299,14 @@ export default function OmraPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة — راحة البال التامة
+            🗓️ 28 جوان — 28 جويلية — 20 أوت<br/>
+            برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة
           </p>
 
           {/* Price badge */}
           <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur border border-white/20 rounded-2xl px-6 py-4 mb-8">
             <div className="text-center">
-              <div className="text-amber-400 font-black text-4xl">4 100</div>
+              <div className="text-amber-400 font-black text-4xl">4 800</div>
               <div className="text-white/80 text-sm">دينار تونسي / شخص</div>
             </div>
             <div className="h-12 w-px bg-white/20" />
@@ -340,7 +362,7 @@ export default function OmraPage() {
               className="w-full max-h-[500px] object-cover"
               controls
               playsInline
-              poster="/hero-bg.jpg"
+              poster="/logo.png"
               preload="metadata"
             >
               <source src="/omra-video.mp4" type="video/mp4" />
@@ -364,62 +386,42 @@ export default function OmraPage() {
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
               🗓️ اختر موعدك
             </h2>
-            <p className="text-gray-600 text-lg">فوجان متاحان — نفس السعر، نفس الخدمة المميزة</p>
+            <p className="text-gray-600 text-lg">3 أفواج متاحة — نفس الخدمة المميزة</p>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-3 justify-center mb-8">
+          {/* 3 Cards côte à côte */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {PACKAGES.map((pkg) => (
-              <button
-                key={pkg.id}
-                onClick={() => {
-                  setActiveTab(pkg.id)
-                  trackPackageClick(pkg.name, pkg.price, pkg.dateLabel)
-                }}
-                className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${
-                  activeTab === pkg.id
-                    ? "bg-emerald-600 text-white shadow-lg scale-105"
-                    : "bg-white text-gray-700 border border-gray-200 hover:border-emerald-300"
-                }`}
-              >
-                {pkg.emoji} {pkg.dateLabel}
-              </button>
-            ))}
-          </div>
-
-          {/* Package Card */}
-          <div className="bg-white rounded-3xl shadow-xl overflow-hidden max-w-2xl mx-auto">
-            <div className={`${activePackage.badgeColor} text-white text-center py-3 font-bold text-lg`}>
-              {activePackage.emoji} {activePackage.name} — {activePackage.date}
-            </div>
-            <div className="p-8">
-              <div className="text-center mb-6">
-                <div className="text-5xl font-black text-emerald-700">
-                  {activePackage.price.toLocaleString()} <span className="text-2xl">TND</span>
+              <div key={pkg.id} className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col hover:shadow-2xl transition-all">
+                <div className={`${pkg.badgeColor} text-white text-center py-3 font-bold text-base`}>
+                  {pkg.emoji} {pkg.name}
                 </div>
-                <div className="text-gray-500 mt-1">par personne — 14 jours tout inclus</div>
+                <div className="p-6 flex flex-col flex-1">
+                  <div className="text-center mb-4">
+                    <div className="text-lg font-bold text-gray-500 mb-1">🗓️ {pkg.date}</div>
+                    <div className="text-4xl font-black text-emerald-700">
+                      {pkg.price.toLocaleString()} <span className="text-xl">TND</span>
+                    </div>
+                    <div className="text-gray-400 text-sm mt-1">par personne — 14 jours tout inclus</div>
+                  </div>
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {pkg.features.map((feature, i) => (
+                      <li key={i} className="flex items-center gap-2 text-gray-700 text-sm">
+                        <span>{feature.split(" ")[0]}</span>
+                        <span>{feature.split(" ").slice(1).join(" ")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <CTAButton
+                    label={`💬 احجز — ${pkg.dateLabel}`}
+                    location={`package-${pkg.id}`}
+                    packageName={`${pkg.name} — ${pkg.dateLabel}`}
+                    className="block w-full bg-green-500 hover:bg-green-600 text-white font-black text-base py-3 rounded-2xl text-center transition-all shadow-lg"
+                  />
+                  <p className="text-center text-gray-400 text-xs mt-2">الأماكن محدودة 🔥</p>
+                </div>
               </div>
-
-              <ul className="space-y-3 mb-8">
-                {activePackage.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3 text-gray-700">
-                    <span className="text-lg">{feature.split(" ")[0]}</span>
-                    <span>{feature.split(" ").slice(1).join(" ")}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <CTAButton
-                label={`💬 احجز ${activePackage.dateLabel} — 4100 TND`}
-                location={`package-${activePackage.id}`}
-                packageName={`${activePackage.name} — ${activePackage.dateLabel}`}
-                className="block w-full bg-green-500 hover:bg-green-600 text-white font-black text-lg py-4 rounded-2xl text-center transition-all shadow-lg hover:shadow-xl"
-              />
-
-              <p className="text-center text-gray-500 text-sm mt-3">
-                الأماكن محدودة — احجز مكانك الآن! 🔥
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -524,7 +526,7 @@ export default function OmraPage() {
       <footer className="bg-black text-gray-500 py-8 text-center text-sm">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Image src="/logo.jpg" alt="Easy2Book" width={32} height={32} className="rounded-full" />
+            <Image src="/logo.png" alt="Easy2Book" width={32} height={32} className="rounded-full" />
             <span className="text-white font-bold">Easy2Book</span>
           </div>
           <p className="mb-3">نرافقكم في كل خطوة لرحلة العمر ✈️🌙</p>

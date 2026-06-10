@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     siteName: "Easy2Book",
     images: [
       {
-        url: "https://landingpage-easy2book.vercel.app/logo.jpg",
+        url: "https://landingpage-easy2book.vercel.app/logo.png",
         width: 1200,
         height: 630,
         alt: "Easy2Book عمرة الصيف 2026",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "عمرة الصيف 2026 — 4100 د.ت 🕋",
     description: "احجز رحلة عمرتك الصيفية مع Easy2Book — 14 يوم بسعر 4100 د.ت فقط",
-    images: ["https://landingpage-easy2book.vercel.app/logo.jpg"],
+    images: ["https://landingpage-easy2book.vercel.app/logo.png"],
   },
   other: {
     "fb:page_id": "Easy2Bookplateforme",
