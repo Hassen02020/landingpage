@@ -316,6 +316,34 @@ export default function OmraPage() {
             </div>
           </div>
 
+          {/* Filtre par date */}
+          <div className="bg-white/15 backdrop-blur border border-white/20 rounded-2xl p-4 mb-8 max-w-xl mx-auto">
+            <div className="text-white font-bold mb-3 text-center">📅 اختر موعدك</div>
+            <div className="flex gap-2 flex-wrap justify-center">
+              {[
+                { label: "15 جويلية", id: "foj1" },
+                { label: "28 جويلية", id: "foj2" },
+                { label: "20 أوت", id: "foj3" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id)
+                    const element = document.getElementById("packages-section")
+                    if (element) element.scrollIntoView({ behavior: "smooth" })
+                  }}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                    activeTab === item.id
+                      ? "bg-amber-400 text-black"
+                      : "bg-white/20 hover:bg-white/30 border border-white/30 text-white"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
             <CTAButton
@@ -380,7 +408,7 @@ export default function OmraPage() {
       </section>
 
       {/* PACKAGES SECTION */}
-      <section className="py-16 bg-gray-50">
+      <section id="packages-section" className="py-16 bg-gray-50">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-10">
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
