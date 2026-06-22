@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import { CATEGORIES } from "./config"
 
 declare global {
   interface Window {
@@ -176,144 +177,6 @@ function CTAButton({
   )
 }
 
-const CATEGORIES = [
-  {
-    id: "elmouradi",
-    label: "🏨 Chaîne El Mouradi",
-    color: "#e53e3e",
-    hotels: [
-      { name: "El Mouradi Hammamet", city: "Hammamet", tag: "All inclusive · Bord de mer · Toboggan", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-      { name: "El Mouradi Club Kantaoui", city: "Sousse", tag: "All inclusive · Port El Kantaoui · Plage", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
-      { name: "El Mouradi Club Selima", city: "Sousse", tag: "All inclusive · Vue mer · Animclub", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
-      { name: "El Mouradi Port El Kantaoui", city: "Sousse", tag: "All inclusive · Marina · Plage", img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80" },
-      { name: "El Mouradi Skanes", city: "Monastir", tag: "All inclusive · Aquapark · Vue mer", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "El Mouradi Cap Mahdia", city: "Mahdia", tag: "All inclusive · Plage privée · Club enfants", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
-      { name: "El Mouradi Mahdia", city: "Mahdia", tag: "All inclusive · Bord de mer", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "El Mouradi El Menzah", city: "Hammamet", tag: "All inclusive · Toboggan · Famille", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
-      { name: "El Mouradi Tozeur", city: "Tozeur", tag: "Oasis · Désert · Piscine", img: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" },
-      { name: "El Mouradi Gammarth", city: "Gammarth", tag: "5★ · Bord de mer · Luxe", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
-    ],
-  },
-  {
-    id: "earlybooking",
-    label: "⏰ Early Booking",
-    color: "#d97706",
-    hotels: [
-      { name: "Iberostar Selection Eolia Djerba", city: "Djerba", tag: "⚡ -40% avant le 30 Juin · 5★", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
-      { name: "Iberostar Mehari Djerba", city: "Djerba", tag: "⚡ -40% avant le 30 Juin · Plage", img: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" },
-      { name: "Iberostar Selection Kuriat Palace", city: "Monastir", tag: "⚡ -40% avant le 30 Juin · 5★", img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80" },
-      { name: "Iberostar Royal El Mansour Thalasso", city: "Mahdia", tag: "⚡ -35% avant le 30 Juin · Thalasso", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "Iberostar Selection Kantaoui Bay", city: "Sousse", tag: "⚡ -35% avant le 30 Juin · 5★", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
-      { name: "Radisson Blu Resort & Thalasso", city: "Hammamet", tag: "⚡ -35% avant le 30 Juin · Thalasso", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "Royal Tulip Taj Sultan", city: "Hammamet", tag: "⚡ -40% avant le 30 Juin · 5★", img: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=600&q=80" },
-      { name: "Eden Yasmine Resort & Spa", city: "Hammamet", tag: "⚡ -30% avant le 30 Juin · Aquapark", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
-      { name: "Novostar Nahrawess Thalasso", city: "Hammamet", tag: "⚡ -30% avant le 30 Juin · Thalasso", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-      { name: "Iberostar Selection Mirage", city: "Hammamet", tag: "⚡ -40% avant le 30 Juin · 5★", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
-      { name: "Eden Club Skanes", city: "Monastir", tag: "⚡ -30% avant le 30 Juin", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "El Mehdi Beach Resort", city: "Mahdia", tag: "⚡ -30% avant le 30 Juin · Plage", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
-    ],
-  },
-  {
-    id: "famille",
-    label: "👶 Enfant Gratuit",
-    color: "#38a169",
-    hotels: [
-      { name: "Yadis Hammamet", city: "Hammamet", tag: "👶 Enfant -6 ans GRATUIT · All inclusive", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
-      { name: "Houda Yasmine Marina & SPA", city: "Hammamet", tag: "👶 1er enfant -6 ans GRATUIT · Spa", img: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=600&q=80" },
-      { name: "Nesrine Hammamet", city: "Hammamet", tag: "👶 Enfant -5 ans GRATUIT · Kidclub", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "Pearl Marriott Resort & Spa", city: "Sousse", tag: "👶 Enfant -6 ans GRATUIT · 5★", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
-      { name: "Occidental Sousse Marhaba", city: "Sousse", tag: "👶 Enfant -6 ans GRATUIT", img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80" },
-      { name: "The Russelior Hotel & SPA", city: "Hammamet", tag: "👶 Enfant -4 ans GRATUIT · 5★", img: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=600&q=80" },
-      { name: "Mövenpick Resort Marine Spa", city: "Sousse", tag: "👶 Enfant -6 ans GRATUIT · 5★", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
-      { name: "Hammamet Garden Resort & Spa", city: "Hammamet", tag: "👶 Enfant -5 ans GRATUIT", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
-      { name: "Hilton Skanes Monastir", city: "Monastir", tag: "👶 Enfant -6 ans GRATUIT · 5★", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-      { name: "Djerba Resort", city: "Djerba", tag: "👶 Enfant -5 ans GRATUIT · Plage", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
-      { name: "Holiday Beach Djerba", city: "Djerba", tag: "👶 Enfant -6 ans GRATUIT", img: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" },
-    ],
-  },
-  {
-    id: "aquapark",
-    label: "🎢 Aquapark",
-    color: "#2563eb",
-    hotels: [
-      { name: "Houda Golf Beach & Aquapark", city: "Monastir", tag: "Toboggan · Aquapark · Plage", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
-      { name: "El Mouradi Hammamet", city: "Hammamet", tag: "Toboggan · All inclusive", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-      { name: "El Mouradi El Menzah", city: "Hammamet", tag: "Toboggan · Famille · Plage", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
-      { name: "El Mouradi Skanes", city: "Monastir", tag: "Aquapark · Vue mer · All inclusive", img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80" },
-      { name: "Thalassa Mahdia Aquapark", city: "Mahdia", tag: "Aquapark · Thalasso · Plage", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "ONE Resort Aqua Park & Spa", city: "Monastir", tag: "Aquapark · Spa · Plage", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
-      { name: "Sahara Beach Aqua Park", city: "Monastir", tag: "Aquapark · Bord de mer", img: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" },
-      { name: "Iberostar Mehari Djerba", city: "Djerba", tag: "Toboggan · All inclusive · Plage", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
-      { name: "Royal Jinene", city: "Sousse", tag: "Aquapark · Bord de mer · Famille", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "Zodiac Hammamet", city: "Hammamet", tag: "Toboggan · Plage · Animclub", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
-      { name: "Mahdia Beach Aqua Park", city: "Mahdia", tag: "Aquapark · Plage · Famille", img: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=600&q=80" },
-    ],
-  },
-  {
-    id: "noces",
-    label: "💑 Voyage de Noces",
-    color: "#db2777",
-    hotels: [
-      { name: "La Badira", city: "Hammamet", tag: "Luxe 5★ · Offre Noces · Spa", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
-      { name: "Royal Azur Thalassa", city: "Hammamet", tag: "5★ · Thalasso · Romantique", img: "https://images.unsplash.com/photo-1535827841776-24afc1e255ac?w=600&q=80" },
-      { name: "The Russelior Hotel & SPA", city: "Hammamet", tag: "5★ · Spa · Suite Noces", img: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=600&q=80" },
-      { name: "Steigenberger Marhaba Thalasso", city: "Hammamet", tag: "5★ · Thalasso · Vue mer", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "One Resort Premium", city: "Hammamet", tag: "5★ · Bord de mer · Spa", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-      { name: "Iberostar Kuriat Palace", city: "Monastir", tag: "5★ · Vue mer · Romantique", img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80" },
-      { name: "Hilton Skanes Monastir", city: "Monastir", tag: "5★ · Plage · Suite Noces", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "Royal Thalassa Monastir", city: "Monastir", tag: "5★ · Thalasso · Romantique", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
-      { name: "Hasdrubal Prestige Djerba", city: "Djerba", tag: "5★ · Spa · Plage privée", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
-      { name: "Iberostar Selection Eolia Djerba", city: "Djerba", tag: "5★ · Plage directe · Luxe", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
-      { name: "Anantara Tozeur Resort", city: "Tozeur", tag: "5★ · Désert · Unique au monde", img: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" },
-      { name: "Mövenpick Resort Marine Spa", city: "Sousse", tag: "5★ · Spa · Vue mer", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
-    ],
-  },
-  {
-    id: "burkini",
-    label: "🩱 Burkini Autorisé",
-    color: "#7c3aed",
-    hotels: [
-      { name: "La Playa Hôtel Club", city: "Hammamet", tag: "Burkini autorisé · Plage · Famille", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "Steigenberger Marhaba Thalasso", city: "Hammamet", tag: "Burkini autorisé · 5★ · Thalasso", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "Vincci Marillia", city: "Hammamet", tag: "Burkini autorisé · Bord de mer", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-    ],
-  },
-  {
-    id: "bonsplans",
-    label: "💰 Bons Plans",
-    color: "#d97706",
-    hotels: [
-      { name: "Sol Azur Beach Congres", city: "Hammamet", tag: "Meilleur rapport qualité/prix", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
-      { name: "Dar Khayam", city: "Hammamet", tag: "Aquapark · Bon plan famille", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
-      { name: "Iberostar Averroes", city: "Hammamet", tag: "All inclusive · Bon plan", img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80" },
-      { name: "Djerba Aqua Resort", city: "Djerba", tag: "Aquapark · Plage · Bon plan", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
-      { name: "Royal Azur Thalassa", city: "Hammamet", tag: "Thalasso · Bon plan", img: "https://images.unsplash.com/photo-1535827841776-24afc1e255ac?w=600&q=80" },
-      { name: "Riadh Palms Resort & Spa", city: "Sousse", tag: "Plage · Spa · Bon plan", img: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=600&q=80" },
-      { name: "Hasdrubal Thalassa Hammamet", city: "Hammamet", tag: "Thalasso · Bon plan", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "Occidental Sousse Marhaba", city: "Sousse", tag: "Plage · All inclusive · Bon plan", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "The Orangers Beach Resort", city: "Hammamet", tag: "Bungalows · Plage · Bon plan", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-      { name: "Iberostar Selection Eolia Djerba", city: "Djerba", tag: "5★ · Bon plan early booking", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
-    ],
-  },
-  {
-    id: "business",
-    label: "💼 Business Hotels",
-    color: "#0f4c81",
-    hotels: [
-      { name: "Mövenpick Hotel du Lac", city: "Tunis", tag: "Business · Lac · 5★", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
-      { name: "Mövenpick Hotel Gammarth", city: "Tunis", tag: "Business · Bord de mer · 5★", img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80" },
-      { name: "The Residence Tunis", city: "Tunis", tag: "Luxe · Business · Spa", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
-      { name: "Sheraton Tunis Hotel", city: "Tunis", tag: "Business · Conférences · 5★", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
-      { name: "Barceló Concorde Les Berges", city: "Tunis", tag: "Business · Lac · 4★", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
-      { name: "Laico Tunis SPA & Conference", city: "Tunis", tag: "Business · Conférences · Spa", img: "https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=600&q=80" },
-      { name: "Golden Tulip El Mechtel", city: "Tunis", tag: "Business · Centre-ville · 4★", img: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=600&q=80" },
-      { name: "Novotel Tunis Mohamed V", city: "Tunis", tag: "Business · Conférences", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
-      { name: "Regency Tunis Hotel", city: "Tunis", tag: "Business · Lac · 5★", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" },
-      { name: "Belvédère Fourati", city: "Tunis", tag: "Business · Centre Tunis", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
-    ],
-  },
-]
-
 function CategoriesSection({
   whatsappNumber,
   onCtaClick,
@@ -321,7 +184,7 @@ function CategoriesSection({
   whatsappNumber: string
   onCtaClick: (location: string) => void
 }) {
-  const [active, setActive] = useState("famille")
+  const [active, setActive] = useState("enfant-gratuit")
   const current = CATEGORIES.find((c) => c.id === active)!
 
   const handleCategoryChange = (catId: string, catLabel: string) => {
