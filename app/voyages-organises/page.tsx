@@ -193,8 +193,8 @@ function CTAButton({
 }) {
   const msg = encodeURIComponent(
     tripName
-      ? `Bonjour Easy2Book, je souhaite avoir des informations sur le voyage "${tripName}". Merci.`
-      : "Bonjour Easy2Book, je souhaite me renseigner sur vos voyages organisés 2026. Merci."
+      ? `Bonjour Easy2Book, je souhaite avoir des informations sur le voyage "${tripName}" ✈️\n\nMerci de me préciser :\n📅 Date de voyage souhaitée\n👥 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
+      : "Bonjour Easy2Book, je souhaite me renseigner sur vos voyages organisés 2026. ✈️\n\nMerci de me préciser :\n📅 Destination souhaitée\n📅 Date de voyage\n👥 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
   )
   return (
     <a
