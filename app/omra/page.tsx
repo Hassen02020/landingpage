@@ -231,7 +231,7 @@ export default function OmraPage() {
   const activePackage = PACKAGES.find((p) => p.id === activeTab) || PACKAGES[0]
 
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div className="min-h-screen bg-white font-sans" dir="rtl">
       {/* HEADER */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
