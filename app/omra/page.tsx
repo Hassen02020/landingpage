@@ -82,8 +82,8 @@ const PACKAGES = [
   {
     id: "foj1",
     name: "الفوج الأول",
-    date: "15 يوليو 2026",
-    dateLabel: "يوليو 2026",
+    date: "15 جويلية 2026",
+    dateLabel: "جويلية 2026",
     price: 4800,
     emoji: "🌙",
     badge: "Départ Juillet",
@@ -93,8 +93,8 @@ const PACKAGES = [
   {
     id: "foj2",
     name: "الفوج الثاني",
-    date: "28 يوليو 2026",
-    dateLabel: "يوليو 2026",
+    date: "28 جويلية 2026",
+    dateLabel: "جويلية 2026",
     price: 4800,
     emoji: "⭐",
     badge: "Départ Juillet",
@@ -104,8 +104,8 @@ const PACKAGES = [
   {
     id: "foj3",
     name: "عمرة المولد النبوي الشريف",
-    date: "20 أغسطس 2026",
-    dateLabel: "أغسطس 2026",
+    date: "20 أوت 2026",
+    dateLabel: "أوت 2026",
     price: 4800,
     emoji: "🕌",
     badge: "عمرة المولد",
@@ -299,7 +299,7 @@ export default function OmraPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            🗓️ 15 يوليو — 28 يوليو — 20 أغسطس<br/>
+            🗓️ 15 جويلية — 28 جويلية — 20 أوت<br/>
             برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة
           </p>
 
