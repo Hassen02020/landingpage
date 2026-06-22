@@ -82,11 +82,11 @@ const PACKAGES = [
   {
     id: "foj1",
     name: "الفوج الأول",
-    date: "28 جوان 2026",
-    dateLabel: "جوان 2026",
+    date: "15 جويلية 2026",
+    dateLabel: "جويلية 2026",
     price: 4800,
     emoji: "🌙",
-    badge: "Départ Juin",
+    badge: "Départ Juillet",
     badgeColor: "bg-emerald-500",
     features: PROGRAM_FEATURES,
   },
@@ -299,7 +299,7 @@ export default function OmraPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            🗓️ 28 جوان — 28 جويلية — 20 أوت<br/>
+            🗓️ 15 جويلية — 28 جويلية — 20 أوت<br/>
             برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة
           </p>
 
