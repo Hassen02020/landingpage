@@ -176,8 +176,8 @@ function CTAButton({
 }) {
   const message = encodeURIComponent(
     packageName
-      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (4800 TND / 14 jours). Merci de me contacter.`
-      : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Été 2026. Merci."
+      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (4800 TND / 14 jours) 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
+      : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Été 2026. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
   )
   return (
     <a
