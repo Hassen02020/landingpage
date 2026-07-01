@@ -237,7 +237,7 @@ function CategoriesSection({
                 }}
                 className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer border border-gray-100"
               >
-                <div className="relative w-full overflow-hidden" style={{ height: "170px" }}>
+                <div className="relative w-full overflow-hidden" style={{ height: "200px" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={img}
@@ -251,21 +251,27 @@ function CategoriesSection({
                   >
                     {current.label.split(" ").slice(0, 2).join(" ")}
                   </span>
-                  <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/50 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent" />
                   <p className="absolute bottom-2 left-3 text-white text-xs font-semibold">📍 {city}</p>
                 </div>
-                <div className="flex flex-col flex-1 p-4">
-                  <h3 className="font-bold text-sm leading-snug mb-1 text-gray-900 group-hover:text-blue-900 transition-colors">
+                <div className="flex flex-col flex-1 p-5">
+                  <h3 className="font-bold text-base leading-snug mb-2 text-gray-900 group-hover:text-blue-900 transition-colors">
                     {name}
                   </h3>
                   <p className="text-xs font-semibold mb-3" style={{ color: current.color }}>
                     {tag}
                   </p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-lg">🏊</span>
+                    <span className="text-xs text-gray-600">Piscine</span>
+                    <span className="text-lg">🍽</span>
+                    <span className="text-xs text-gray-600">All inclusive</span>
+                  </div>
                   <div
-                    className="mt-auto inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl self-start"
-                    style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
+                    className="mt-auto inline-flex items-center gap-1.5 text-sm font-bold px-4 py-3 rounded-xl self-start shadow-md hover:shadow-lg transition-shadow"
+                    style={{ backgroundColor: "#25D366", color: "#fff" }}
                   >
-                    💬 Demander le tarif
+                    💬 Réserver
                   </div>
                 </div>
               </a>
@@ -419,6 +425,33 @@ export default function SummerVibesPage() {
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40" aria-hidden="true">
           <div className="w-px h-8 rounded-full" style={{ backgroundColor: "#f5c242" }} />
           <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#f5c242" }} />
+        </div>
+      </section>
+
+      {/* COMPTEUR URGENCE */}
+      <section className="py-8 px-5" style={{ backgroundColor: "#fef3c7" }}>
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <span className="text-2xl">🔥</span>
+            <h3 className="font-extrabold text-lg" style={{ color: "#92400e" }}>Places limitées — Été 2026</h3>
+          </div>
+          <p className="text-sm mb-4" style={{ color: "#78350f" }}>Fin des promotions dans :</p>
+          <div className="flex justify-center gap-4">
+            {[
+              { value: "02", label: "Jours" },
+              { value: "14", label: "Heures" },
+              { value: "22", label: "Minutes" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="flex flex-col items-center px-4 py-3 rounded-xl"
+                style={{ backgroundColor: "#fff", border: "2px solid #f59e0b" }}
+              >
+                <span className="text-2xl font-extrabold" style={{ color: "#0f4c81" }}>{item.value}</span>
+                <span className="text-xs font-semibold" style={{ color: "#78350f" }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
