@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Easy2Book – Tanfous Beach Promo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0f0f0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+      padding: 30px 20px 60px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 1.1rem;
+      text-align: center;
+      opacity: 0.6;
+      letter-spacing: 1px;
+    }
+
+    /* ── IMAGE + LOGO OVERLAY ── */
+    .promo-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    }
+
+    .promo-wrapper img.promo-img {
+      width: 100%;
+      display: block;
+    }
+
+    .logo-overlay {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      opacity: 0.55;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+      pointer-events: none;
+    }
+
+    /* ── USP TIKTOK SECTION ── */
+    .usp-section {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .usp-section h2 {
+      color: #fff;
+      font-size: 1rem;
+      text-align: center;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.7;
+    }
+
+    .usp-card {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      transition: transform 0.2s;
+    }
+    .usp-card:hover { transform: translateY(-2px); }
+
+    .usp-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .usp-content {}
+    .usp-hook {
+      color: #FFD700;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .usp-headline {
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+    .usp-body {
+      color: rgba(255,255,255,0.65);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .usp-cta {
+      display: inline-block;
+      margin-top: 8px;
+      background: linear-gradient(90deg, #0ea5e9, #2563eb);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    /* badges */
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .badge {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .badge.hot { background: rgba(239,68,68,0.2); border-color: #ef4444; color: #fca5a5; }
+    .badge.green { background: rgba(34,197,94,0.2); border-color: #22c55e; color: #86efac; }
+    .badge.yellow { background: rgba(234,179,8,0.2); border-color: #eab308; color: #fde047; }
+
+    /* export hint */
+    .hint {
+      color: rgba(255,255,255,0.3);
+      font-size: 0.72rem;
+      text-align: center;
+      margin-top: -20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📸 APERÇU — LOGO OVERLAY + USPs TIKTOK</h1>
+
+  <!-- ═══════════════════════════════
+       IMAGE PROMO + LOGO TRANSPARENT
+  ══════════════════════════════════ -->
+  <div class="promo-wrapper">
+    <!--
+      Remplace "tanfous-promo.jpg" par le nom exact
+      de l'image que tu as placée dans /public/
+    -->
+    <img
+      class="promo-img"
+      src="tanfous-promo.jpg"
+      alt="Easy2Book – Tanfous Beach Summer 2026"
+      onerror="this.style.background='#1e3a5f';this.style.minHeight='600px';this.alt='[Image non trouvée — place tanfous-promo.jpg dans /public/]'"
+    />
+    <!-- Logo transparent superposé -->
+    <img
+      class="logo-overlay"
+      src="logo.png"
+      alt="Easy2Book logo"
+    />
+  </div>
+
+  <p class="hint">
+    ↑ Fais un screenshot ou utilise Ctrl+Shift+S pour exporter l'image finale
+  </p>
+
+  <!-- ═══════════════════════════════
+       USPs TIKTOK
+  ══════════════════════════════════ -->
+  <div class="usp-section">
+    <h2>🎯 USPs — Publicité TikTok</h2>
+
+    <!-- USP 1 : Prix choc Early Booking -->
+    <div class="usp-card">
+      <div class="usp-icon">🔥</div>
+      <div class="usp-content">
+        <div class="usp-hook">Hook #1 — Prix choc</div>
+        <div class="usp-headline">
+          صيفك من 98 دينار فقط! 🌊<br/>
+          <span style="font-size:0.85rem;color:rgba(255,255,255,0.7)">Vacances All Inclusive dès 98 TND/pers</span>
+        </div>
+        <div class="usp-body">
+          Hôtel Tanfous Beach ★★★ + Aquapark · All Inclusive Soft<br/>
+          Réserve avant le 31/05 → prix bloqué garanti 🔒
+        </div>
+        <div class="badge-row">
+          <span class="badge hot">Early Booking</span>
+          <span class="badge yellow">Jusqu'au 31/05</span>
+          <span class="badge green">All Inclusive</span>
+        </div>
+        <span class="usp-cta">📞 98140514 · WhatsApp</span>
+      </div>
+    </div>
+
+    <!-- USP 2 : Enfants gratuits -->
+    <div class="usp-card">
+      <div class="usp-icon">👶</div>
+      <div class="usp-content">
+        <div class="usp-hook">Hook #2 — Famille</div>
+        <div class="usp-headline">
+          الأطفال مجانا حتى 6 سنوات! 🎉<br/>
+          <span style="font-size:0.85rem;color:rgba(255,255,255,0.7)">1er enfant –50% · 2e enfant –6 ans GRATUIT</span>
+        </div>
+        <div class="usp-body">
+          Partez en famille sans vous ruiner.<br/>
+          Aquapark inclus → les enfants adorent, les parents aussi 😍
+        </div>
+        <div class="badge-row">
+          <span class="badge green">Enfants Gratuits</span>
+          <span class="badge">Aquapark inclus</span>
+          <span class="badge yellow">Famille 2026</span>
+        </div>
+        <span class="usp-cta">📲 Réserve maintenant</span>
+      </div>
+    </div>
+
+    <!-- USP 3 : Urgence / Scarcité -->
+    <div class="usp-card">
+      <div class="usp-icon">⏰</div>
+      <div class="usp-content">
+        <div class="usp-hook">Hook #3 — Urgence</div>
+        <div class="usp-headline">
+          Les places partent vite… 😱<br/>
+          <span style="font-size:0.85rem;color:rgba(255,255,255,0.7)">Offre Early Booking limitée — Été 2026</span>
+        </div>
+        <div class="usp-body">
+          Juillet/Août déjà en cours de remplissage.<br/>
+          Bloque ton séjour MAINTENANT, paie après 💳
+        </div>
+        <div class="badge-row">
+          <span class="badge hot">Places Limitées</span>
+          <span class="badge">Juillet · Août · Septembre</span>
+        </div>
+        <span class="usp-cta">🔒 Réserver via Easy2Book</span>
+      </div>
+    </div>
+
+    <!-- USP 4 : Confiance / Réservation facile -->
+    <div class="usp-card">
+      <div class="usp-icon">✅</div>
+      <div class="usp-content">
+        <div class="usp-hook">Hook #4 — Confiance</div>
+        <div class="usp-headline">
+          Réservation 100% sécurisée 🛡️<br/>
+          <span style="font-size:0.85rem;color:rgba(255,255,255,0.7)">Easy2Book — Centrale de Réservation Officielle</span>
+        </div>
+        <div class="usp-body">
+          Confirmation immédiate · Pas de frais cachés<br/>
+          Des centaines de familles tunisiennes nous font confiance chaque été 🇹🇳
+        </div>
+        <div class="badge-row">
+          <span class="badge green">Confirmé Instantané</span>
+          <span class="badge">0 Frais Cachés</span>
+          <span class="badge yellow">Centrale Officielle</span>
+        </div>
+        <span class="usp-cta">📞 98140514 · واتساب</span>
+      </div>
+    </div>
+
+    <!-- USP 5 : Script vidéo TikTok -->
+    <div class="usp-card" style="flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:14px;align-items:center;">
+        <div class="usp-icon">🎬</div>
+        <div>
+          <div class="usp-hook">Script Vidéo TikTok (15 sec)</div>
+          <div class="usp-headline">Copie / Colle en caption TikTok</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,0.3);border-radius:10px;padding:14px;color:rgba(255,255,255,0.85);font-size:0.83rem;line-height:1.8;direction:rtl;">
+        <strong style="color:#FFD700;">0–2s (Hook) :</strong><br/>
+        "صيفك هذا كيفاه تقضيه؟ 🌊☀️"<br/><br/>
+        <strong style="color:#FFD700;">2–7s (Offre) :</strong><br/>
+        "Hotel Tanfous Beach + Aquapark من 98 دينار فقط — All Inclusive!"<br/><br/>
+        <strong style="color:#FFD700;">7–12s (Avantages) :</strong><br/>
+        "الطفل الأول -50% • الطفل الثاني تحت 6 سنوات مجاناً 👶🎉"<br/><br/>
+        <strong style="color:#FFD700;">12–15s (CTA) :</strong><br/>
+        "حجز قبل 31 ماي وتاخو أحسن الأسعار ☎️ 98140514"<br/><br/>
+        <strong style="color:#0ea5e9;">Hashtags :</strong><br/>
+        #صيف2026 #سياحة_تونس #Easy2Book #عطلة_عيلة #TanfousBeach #Aquapark #EarlyBooking #توباس
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
