@@ -283,6 +283,208 @@ function CategoriesSection({
   )
 }
 
+function TestimonialsSlider() {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  
+  const testimonials = [
+    {
+      name: "Amira B.",
+      text: "Réservation rapide, équipe sérieuse. Tout s'est parfaitement déroulé pour notre séjour à Hammamet.",
+      rating: 5,
+      avatar: "👩"
+    },
+    {
+      name: "Karim M.",
+      text: "Excellent suivi jusqu'au voyage. L'équipe est réactive et les prix sont vraiment compétitifs.",
+      rating: 5,
+      avatar: "👨"
+    },
+    {
+      name: "Fatma T.",
+      text: "Prix moins cher qu'ailleurs. J'ai réservé pour toute la famille et nous avons adoré notre séjour.",
+      rating: 5,
+      avatar: "👩"
+    }
+  ]
+
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev + 1) % testimonials.length)
+  }
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)
+  }
+
+  return (
+    <div className="relative">
+      <div className="overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {testimonials.map((review) => (
+            <div key={review.name} className="w-full flex-shrink-0 px-4">
+              <div
+                className="p-6 rounded-2xl shadow-sm border mx-auto max-w-md"
+                style={{ backgroundColor: "#f8f9fc", borderColor: "#e5e7eb" }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-4xl">{review.avatar}</span>
+                  <div>
+                    <p className="font-bold text-base" style={{ color: "#0f4c81" }}>{review.name}</p>
+                    <div className="flex items-center gap-1">
+                      {Array(review.rating).fill(0).map((_, i) => (
+                        <span key={i} className="text-yellow-400 text-sm">⭐</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-700 text-sm leading-relaxed">"{review.text}"</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex justify-center gap-2 mt-6">
+        <button
+          onClick={prevSlide}
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+          style={{ backgroundColor: "#0f4c81", color: "#fff" }}
+          aria-label="Témoignage précédent"
+        >
+          ←
+        </button>
+        {testimonials.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className="w-3 h-3 rounded-full transition-all"
+            style={{ backgroundColor: currentIndex === i ? "#0f4c81" : "#e5e7eb" }}
+            aria-label={`Témoignage ${i + 1}`}
+          />
+        ))}
+        <button
+          onClick={nextSlide}
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+          style={{ backgroundColor: "#0f4c81", color: "#fff" }}
+          aria-label="Témoignage suivant"
+        >
+          →
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CountdownTimer() {
+  const [timeLeft, setTimeLeft] = useState({ days: 2, hours: 14, minutes: 22, seconds: 0 })
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        let { days, hours, minutes, seconds } = prev
+        
+        seconds--
+        if (seconds < 0) {
+          seconds = 59
+          minutes--
+        }
+        if (minutes < 0) {
+          minutes = 59
+          hours--
+        }
+        if (hours < 0) {
+          hours = 23
+          days--
+        }
+        if (days < 0) {
+          clearInterval(timer)
+          return { days: 0, hours: 0, minutes: 0, seconds: 0 }
+        }
+        
+        return { days, hours, minutes, seconds }
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
+
+  return (
+    <div className="flex justify-center gap-3">
+      {[
+        { value: String(timeLeft.days).padStart(2, '0'), label: "Jours" },
+        { value: String(timeLeft.hours).padStart(2, '0'), label: "Heures" },
+        { value: String(timeLeft.minutes).padStart(2, '0'), label: "Minutes" },
+        { value: String(timeLeft.seconds).padStart(2, '0'), label: "Secondes" },
+      ].map((item) => (
+        <div
+          key={item.label}
+          className="flex flex-col items-center px-3 py-2 rounded-xl"
+          style={{ backgroundColor: "#fff", border: "2px solid #f59e0b" }}
+        >
+          <span className="text-xl font-extrabold" style={{ color: "#0f4c81" }}>{item.value}</span>
+          <span className="text-xs font-semibold" style={{ color: "#78350f" }}>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FAQAccordion() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0)
+  
+  const faqs = [
+    {
+      q: "Comment fonctionne le paiement ?",
+      a: "Vous payez un acompte pour confirmer votre réservation, le reste est réglé directement à l'hôtel à votre arrivée. Simple et sécurisé !"
+    },
+    {
+      q: "Puis-je annuler ma réservation ?",
+      a: "Oui, selon les conditions de l'hôtel. Contactez-nous sur WhatsApp et nous vous expliquerons les modalités d'annulation."
+    },
+    {
+      q: "Les enfants sont-ils gratuits ?",
+      a: "Certains hôtels offrent la gratuité pour les enfants selon leur âge. Consultez nos catégories 'Enfant Gratuit' ou demandez-nous sur WhatsApp."
+    },
+    {
+      q: "Quand vais-je recevoir ma confirmation ?",
+      a: "Vous recevez votre confirmation de réservation par WhatsApp dans les 15 minutes suivant votre paiement d'acompte."
+    },
+    {
+      q: "Combien de temps prend la réponse ?",
+      a: "Notre équipe répond en moins de 15 minutes sur WhatsApp, 7j/7."
+    }
+  ]
+
+  return (
+    <div className="space-y-3">
+      {faqs.map((item, i) => (
+        <div
+          key={i}
+          className="rounded-2xl shadow-sm border overflow-hidden transition-all"
+          style={{ backgroundColor: "#f8f9fc", borderColor: openIndex === i ? "#0f4c81" : "#e5e7eb" }}
+        >
+          <button
+            onClick={() => setOpenIndex(openIndex === i ? null : i)}
+            className="w-full p-5 text-left flex items-center justify-between"
+          >
+            <h3 className="font-bold text-base" style={{ color: "#0f4c81" }}>{item.q}</h3>
+            <span className="text-2xl transition-transform" style={{ transform: openIndex === i ? "rotate(180deg)" : "rotate(0deg)" }}>
+              {openIndex === i ? "−" : "+"}
+            </span>
+          </button>
+          <div
+            className="overflow-hidden transition-all duration-300"
+            style={{ maxHeight: openIndex === i ? "200px" : "0px" }}
+          >
+            <p className="px-5 pb-5 text-gray-700 text-sm leading-relaxed">{item.a}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function SummerVibesPage() {
   // Scroll depth and page engagement tracking
   useEffect(() => {
@@ -436,22 +638,8 @@ export default function SummerVibesPage() {
             <h3 className="font-extrabold text-lg" style={{ color: "#92400e" }}>Places limitées — Été 2026</h3>
           </div>
           <p className="text-sm mb-4" style={{ color: "#78350f" }}>Fin des promotions dans :</p>
-          <div className="flex justify-center gap-4">
-            {[
-              { value: "02", label: "Jours" },
-              { value: "14", label: "Heures" },
-              { value: "22", label: "Minutes" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex flex-col items-center px-4 py-3 rounded-xl"
-                style={{ backgroundColor: "#fff", border: "2px solid #f59e0b" }}
-              >
-                <span className="text-2xl font-extrabold" style={{ color: "#0f4c81" }}>{item.value}</span>
-                <span className="text-xs font-semibold" style={{ color: "#78350f" }}>{item.label}</span>
-              </div>
-            ))}
-          </div>
+          <CountdownTimer />
+          <p className="text-xs mt-4" style={{ color: "#78350f" }}>Les tarifs augmentent progressivement selon disponibilité.</p>
         </div>
       </section>
 
@@ -474,40 +662,8 @@ export default function SummerVibesPage() {
             ))}
           </div>
 
-          {/* Avis clients */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {[
-              {
-                name: "Amira B.",
-                text: "Réservation rapide, équipe sérieuse. Tout s'est parfaitement déroulé pour notre séjour à Hammamet.",
-                rating: 5
-              },
-              {
-                name: "Karim M.",
-                text: "Excellent suivi jusqu'au voyage. L'équipe est réactive et les prix sont vraiment compétitifs.",
-                rating: 5
-              },
-              {
-                name: "Fatma T.",
-                text: "Prix moins cher qu'ailleurs. J'ai réservé pour toute la famille et nous avons adoré notre séjour.",
-                rating: 5
-              }
-            ].map((review) => (
-              <div
-                key={review.name}
-                className="p-6 rounded-2xl shadow-sm border"
-                style={{ backgroundColor: "#f8f9fc", borderColor: "#e5e7eb" }}
-              >
-                <div className="flex items-center gap-1 mb-3">
-                  {Array(review.rating).fill(0).map((_, i) => (
-                    <span key={i} className="text-yellow-400">⭐</span>
-                  ))}
-                </div>
-                <p className="text-gray-700 text-sm mb-4 leading-relaxed">"{review.text}"</p>
-                <p className="font-bold text-sm" style={{ color: "#0f4c81" }}>{review.name}</p>
-              </div>
-            ))}
-          </div>
+          {/* Avis clients - Slider */}
+          <TestimonialsSlider />
         </div>
       </section>
 
@@ -527,10 +683,11 @@ export default function SummerVibesPage() {
               const name = (form.elements.namedItem('name') as HTMLInputElement).value
               const phone = (form.elements.namedItem('phone') as HTMLInputElement).value
               const destination = (form.elements.namedItem('destination') as HTMLSelectElement).value
+              const date = (form.elements.namedItem('date') as HTMLInputElement).value
               const budget = (form.elements.namedItem('budget') as HTMLSelectElement).value
               
               const message = encodeURIComponent(
-                `Bonjour Easy2Book, je souhaite avoir un devis pour Summer Vibes 2026 !\n\nNom: ${name}\nTéléphone: ${phone}\nDestination: ${destination}\nBudget: ${budget}`
+                `Bonjour Easy2Book, je souhaite avoir un devis pour Summer Vibes 2026 !\n\nNom: ${name}\nTéléphone: ${phone}\nDestination: ${destination}\nDate: ${date}\nBudget: ${budget}`
               )
               window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank')
               trackWhatsAppClick('lead-form')
@@ -569,6 +726,14 @@ export default function SummerVibesPage() {
                 <option value="Mahdia">Mahdia</option>
                 <option value="Tabarka">Tabarka</option>
               </select>
+            </div>
+            <div>
+              <input
+                name="date"
+                type="date"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
             <div>
               <select
@@ -638,35 +803,7 @@ export default function SummerVibesPage() {
           <h2 className="text-center font-extrabold text-2xl sm:text-3xl mb-10 text-gray-900">
             Tout ce que vous devez savoir
           </h2>
-          <div className="space-y-4">
-            {[
-              {
-                q: "Comment payer ma réservation ?",
-                a: "Vous payez un acompte pour confirmer votre réservation, le reste est réglé directement à l'hôtel à votre arrivée. Simple et sécurisé !"
-              },
-              {
-                q: "Puis-je annuler ma réservation ?",
-                a: "Oui, selon les conditions de l'hôtel. Contactez-nous sur WhatsApp et nous vous expliquerons les modalités d'annulation."
-              },
-              {
-                q: "Les enfants sont-ils gratuits ?",
-                a: "Certains hôtels offrent la gratuité pour les enfants selon leur âge. Consultez nos catégories 'Enfant Gratuit' ou demandez-nous sur WhatsApp."
-              },
-              {
-                q: "Quand vais-je recevoir ma confirmation ?",
-                a: "Vous recevez votre confirmation de réservation par WhatsApp dans les 15 minutes suivant votre paiement d'acompte."
-              }
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="p-6 rounded-2xl shadow-sm border"
-                style={{ backgroundColor: "#f8f9fc", borderColor: "#e5e7eb" }}
-              >
-                <h3 className="font-bold text-base mb-2" style={{ color: "#0f4c81" }}>{item.q}</h3>
-                <p className="text-gray-700 text-sm leading-relaxed">{item.a}</p>
-              </div>
-            ))}
-          </div>
+          <FAQAccordion />
         </div>
       </section>
 
