@@ -378,55 +378,103 @@ export default function SummerVibesPage() {
           className="relative z-10 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
           style={{ backgroundColor: "rgba(245,194,66,0.18)", color: "#f5c242", border: "1px solid rgba(245,194,66,0.35)" }}
         >
-          ☀️ Des Offres Exclusives — Été 2026
+          🌴 Été 2026 — Places limitées
         </span>
 
         <h1 className="relative z-10 text-white font-extrabold leading-tight mb-4" style={{ fontSize: "clamp(2.2rem, 7vw, 4rem)" }}>
-          Summer Vibes<br />
-          <span style={{ color: "#f5c242" }}>Tunisia 2026</span>
+          Vos vacances d'été<br />
+          <span style={{ color: "#f5c242" }}>commencent ici</span>
         </h1>
 
-        <p className="relative z-10 text-blue-100 text-lg sm:text-xl max-w-lg mb-8 leading-relaxed">
-          Réservez votre hôtel en quelques secondes au <strong className="text-white">meilleur prix garanti</strong>, avec Easy2Book.
+        <p className="relative z-10 text-blue-100 text-lg sm:text-xl max-w-2xl mb-8 leading-relaxed">
+          Hôtels, voyages de noces, séjours famille et offres exclusives avec réservation rapide sur WhatsApp
         </p>
 
-        {/* USP Blocks - Side by Side */}
-        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 max-w-2xl w-full">
-          <div
-            className="flex items-start gap-3 px-5 py-4 rounded-2xl shadow-lg"
-            style={{ backgroundColor: "rgba(255,255,255,0.95)", border: "2px solid rgba(245,194,66,0.5)" }}
-          >
-            <span className="text-2xl">💳</span>
-            <div className="text-left">
-              <p className="text-gray-900 font-extrabold text-sm leading-none mb-1">Flexibilité de Paiement</p>
-              <p className="text-gray-700 text-xs font-medium mb-1">Payez une avance, le reste à l'hôtel !</p>
-              <p className="text-gray-600 text-xs leading-relaxed">Confirmez votre séjour dès maintenant sans bloquer tout votre budget. Ne payez la totalité qu'à votre arrivée à la réception.</p>
+        {/* Avantages - 4 points clés */}
+        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 max-w-3xl w-full">
+          {[
+            { icon: "⚡", text: "Réponse < 15 min" },
+            { icon: "💰", text: "Meilleurs prix" },
+            { icon: "💳", text: "Paiement simple" },
+            { icon: "🎧", text: "Assistance 24/7" },
+          ].map((item) => (
+            <div
+              key={item.text}
+              className="flex flex-col items-center gap-2 px-4 py-3 rounded-xl"
+              style={{ backgroundColor: "rgba(255,255,255,0.95)", border: "1px solid rgba(245,194,66,0.3)" }}
+            >
+              <span className="text-2xl">{item.icon}</span>
+              <span className="text-xs font-bold text-gray-800 text-center">{item.text}</span>
             </div>
-          </div>
-
-          <div
-            className="flex items-start gap-3 px-5 py-4 rounded-2xl shadow-lg"
-            style={{ backgroundColor: "rgba(255,255,255,0.95)", border: "2px solid rgba(245,194,66,0.5)" }}
-          >
-            <span className="text-2xl">🛡️</span>
-            <div className="text-left">
-              <p className="text-gray-900 font-extrabold text-sm leading-none mb-1">Rapidité & Sécurité</p>
-              <p className="text-gray-700 text-xs font-medium mb-1">Réponse en moins de 15 minutes</p>
-              <p className="text-gray-600 text-xs leading-relaxed">Traitement ultra-rapide de votre demande, conseils personnalisés et paiement d'acompte 100% sécurisé.</p>
-            </div>
-          </div>
+          ))}
         </div>
 
         <CTAButton
-          label="💬 Planifier mes vacances sur WhatsApp"
+          label="� Réserver sur WhatsApp"
           className="relative z-10 inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-2xl transition-all hover:brightness-110 active:scale-95"
-          style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
+          style={{ backgroundColor: "#25D366", color: "#fff" }}
           location="hero"
         />
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40" aria-hidden="true">
           <div className="w-px h-8 rounded-full" style={{ backgroundColor: "#f5c242" }} />
           <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#f5c242" }} />
+        </div>
+      </section>
+
+      {/* PREUVE SOCIALE */}
+      <section className="py-12 px-5 bg-white">
+        <div className="max-w-5xl mx-auto">
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-12 text-center">
+            {[
+              { value: "4.9/5", label: "Note moyenne", icon: "⭐" },
+              { value: "+1200", label: "Réservations", icon: "📅" },
+              { value: "+500", label: "Clients satisfaits", icon: "😊" },
+              { value: "+50", label: "Destinations", icon: "🌍" },
+            ].map((stat) => (
+              <div key={stat.label} className="flex flex-col items-center">
+                <span className="text-3xl mb-1">{stat.icon}</span>
+                <span className="text-2xl font-extrabold" style={{ color: "#0f4c81" }}>{stat.value}</span>
+                <span className="text-sm text-gray-600">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Avis clients */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {[
+              {
+                name: "Amira B.",
+                text: "Réservation rapide, équipe sérieuse. Tout s'est parfaitement déroulé pour notre séjour à Hammamet.",
+                rating: 5
+              },
+              {
+                name: "Karim M.",
+                text: "Excellent suivi jusqu'au voyage. L'équipe est réactive et les prix sont vraiment compétitifs.",
+                rating: 5
+              },
+              {
+                name: "Fatma T.",
+                text: "Prix moins cher qu'ailleurs. J'ai réservé pour toute la famille et nous avons adoré notre séjour.",
+                rating: 5
+              }
+            ].map((review) => (
+              <div
+                key={review.name}
+                className="p-6 rounded-2xl shadow-sm border"
+                style={{ backgroundColor: "#f8f9fc", borderColor: "#e5e7eb" }}
+              >
+                <div className="flex items-center gap-1 mb-3">
+                  {Array(review.rating).fill(0).map((_, i) => (
+                    <span key={i} className="text-yellow-400">⭐</span>
+                  ))}
+                </div>
+                <p className="text-gray-700 text-sm mb-4 leading-relaxed">"{review.text}"</p>
+                <p className="font-bold text-sm" style={{ color: "#0f4c81" }}>{review.name}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -465,6 +513,47 @@ export default function SummerVibesPage() {
       {/* CATÉGORIES HÔTELS */}
       <CategoriesSection whatsappNumber={WHATSAPP_NUMBER} onCtaClick={trackWhatsAppClick} />
 
+      {/* FAQ */}
+      <section className="py-16 px-5 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-center text-sm font-bold uppercase tracking-widest mb-2" style={{ color: "#0f4c81" }}>
+            Questions fréquentes
+          </p>
+          <h2 className="text-center font-extrabold text-2xl sm:text-3xl mb-10 text-gray-900">
+            Tout ce que vous devez savoir
+          </h2>
+          <div className="space-y-4">
+            {[
+              {
+                q: "Comment payer ma réservation ?",
+                a: "Vous payez un acompte pour confirmer votre réservation, le reste est réglé directement à l'hôtel à votre arrivée. Simple et sécurisé !"
+              },
+              {
+                q: "Puis-je annuler ma réservation ?",
+                a: "Oui, selon les conditions de l'hôtel. Contactez-nous sur WhatsApp et nous vous expliquerons les modalités d'annulation."
+              },
+              {
+                q: "Les enfants sont-ils gratuits ?",
+                a: "Certains hôtels offrent la gratuité pour les enfants selon leur âge. Consultez nos catégories 'Enfant Gratuit' ou demandez-nous sur WhatsApp."
+              },
+              {
+                q: "Quand vais-je recevoir ma confirmation ?",
+                a: "Vous recevez votre confirmation de réservation par WhatsApp dans les 15 minutes suivant votre paiement d'acompte."
+              }
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="p-6 rounded-2xl shadow-sm border"
+                style={{ backgroundColor: "#f8f9fc", borderColor: "#e5e7eb" }}
+              >
+                <h3 className="font-bold text-base mb-2" style={{ color: "#0f4c81" }}>{item.q}</h3>
+                <p className="text-gray-700 text-sm leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* BOTTOM CTA */}
       <section className="py-16 px-5 text-center" style={{ background: "linear-gradient(135deg, #0f4c81 0%, #0a3260 100%)" }}>
         <h2 className="text-white font-extrabold text-2xl sm:text-3xl mb-4">Prêt pour l&apos;aventure estivale ?</h2>
@@ -472,9 +561,9 @@ export default function SummerVibesPage() {
           Contactez-nous maintenant sur WhatsApp et recevez votre devis personnalisé en quelques minutes.
         </p>
         <CTAButton
-          label="💬 Je réserve sur WhatsApp"
+          label="� Réserver sur WhatsApp"
           className="inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-xl transition-all hover:brightness-110 active:scale-95"
-          style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
+          style={{ backgroundColor: "#25D366", color: "#fff" }}
           location="bottom-cta"
         />
 
