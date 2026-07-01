@@ -511,6 +511,89 @@ export default function SummerVibesPage() {
         </div>
       </section>
 
+      {/* MINI FORMULAIRE LEADS */}
+      <section className="py-16 px-5" style={{ backgroundColor: "#f8f9fc" }}>
+        <div className="max-w-xl mx-auto">
+          <p className="text-center text-sm font-bold uppercase tracking-widest mb-2" style={{ color: "#0f4c81" }}>
+            Recevez votre devis personnalisé
+          </p>
+          <h2 className="text-center font-extrabold text-2xl sm:text-3xl mb-6 text-gray-900">
+            Quelques informations pour commencer
+          </h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const form = e.target as HTMLFormElement
+              const name = (form.elements.namedItem('name') as HTMLInputElement).value
+              const phone = (form.elements.namedItem('phone') as HTMLInputElement).value
+              const destination = (form.elements.namedItem('destination') as HTMLSelectElement).value
+              const budget = (form.elements.namedItem('budget') as HTMLSelectElement).value
+              
+              const message = encodeURIComponent(
+                `Bonjour Easy2Book, je souhaite avoir un devis pour Summer Vibes 2026 !\n\nNom: ${name}\nTéléphone: ${phone}\nDestination: ${destination}\nBudget: ${budget}`
+              )
+              window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank')
+              trackWhatsAppClick('lead-form')
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <input
+                name="name"
+                type="text"
+                placeholder="Votre nom"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <input
+                name="phone"
+                type="tel"
+                placeholder="Votre numéro de téléphone"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <select
+                name="destination"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Destination souhaitée</option>
+                <option value="Hammamet">Hammamet</option>
+                <option value="Sousse">Sousse</option>
+                <option value="Monastir">Monastir</option>
+                <option value="Djerba">Djerba</option>
+                <option value="Mahdia">Mahdia</option>
+                <option value="Tabarka">Tabarka</option>
+              </select>
+            </div>
+            <div>
+              <select
+                name="budget"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Budget approximatif</option>
+                <option value="100-200 TND">100 - 200 TND / nuit</option>
+                <option value="200-300 TND">200 - 300 TND / nuit</option>
+                <option value="300-500 TND">300 - 500 TND / nuit</option>
+                <option value="500+ TND">500+ TND / nuit</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              className="w-full inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-extrabold shadow-xl transition-all hover:brightness-110 active:scale-95"
+              style={{ backgroundColor: "#25D366", color: "#fff" }}
+            >
+              🟢 Recevoir mon devis sur WhatsApp
+            </button>
+          </form>
+        </div>
+      </section>
+
       {/* AVANTAGES */}
       <section className="py-16 px-5" style={{ backgroundColor: "#f8f9fc" }}>
         <div className="max-w-4xl mx-auto">
