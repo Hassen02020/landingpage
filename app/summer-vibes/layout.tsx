@@ -1,9 +1,24 @@
 import type { Metadata } from "next"
 import Script from "next/script"
+import { FAQ_ITEMS } from "./data/faq"
 
 export const metadata: Metadata = {
   title: "Easy2Book | Hôtels Tunisie Été 2026 – Offres Exclusives",
   description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7 pour vos vacances en Tunisie.",
+  alternates: {
+    canonical: "https://landingpage-easy2book.vercel.app/summer-vibes",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   openGraph: {
     title: "Easy2Book | Hôtels Tunisie Été 2026 – Offres Exclusives",
     description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7.",
@@ -31,7 +46,7 @@ export const metadata: Metadata = {
   },
 }
 
-const jsonLd = {
+const jsonLdTravelAgency = {
   "@context": "https://schema.org",
   "@type": "TravelAgency",
   "name": "Easy2Book",
@@ -52,6 +67,19 @@ const jsonLd = {
   }
 }
 
+const jsonLdFAQPage = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    "name": item.q,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": item.a
+    }
+  }))
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -60,9 +88,14 @@ export default function RootLayout({
   return (
     <>
       <Script
-        id="json-ld"
+        id="json-ld-travel-agency"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdTravelAgency) }}
+      />
+      <Script
+        id="json-ld-faq"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFAQPage) }}
       />
       {children}
     </>
