@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { Badge } from "@/components/ui/Badge"
 import { ProviderSyncButton } from "@/components/admin/ProviderSyncButton"
+import { StagingRowActions } from "@/components/admin/StagingRowActions"
 import { formatPrice } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "Providers" }
@@ -42,7 +43,7 @@ export default async function AdminProvidersPage() {
     tenantId
       ? supabase
           .from("catalog_staging")
-          .select("id, supplier_sku, name, price_cents, stock, shipping_cents, supplier, status, providers(name)")
+          .select("id, supplier_sku, name, price_cents, stock, shipping_cents, supplier, status, matched_product_id, providers(name)")
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
           .limit(50)
@@ -145,8 +146,8 @@ export default async function AdminProvidersPage() {
       <div>
         <h2 className="font-display text-lg font-bold text-ink">Staged catalog</h2>
         <p className="mt-1 text-sm text-ink-500">
-          Normalized listings pulled from providers, awaiting review (Phase 10 — promoting these into real products isn&apos;t
-          built yet).
+          Normalized listings pulled from providers. Promoting one creates a draft product — nothing here reaches the
+          storefront until a staffer reviews and publishes it.
         </p>
         <div className="mt-3 overflow-x-auto rounded-2xl border border-ink-100 bg-white">
           <table className="w-full text-sm">
@@ -159,6 +160,7 @@ export default async function AdminProvidersPage() {
                 <th className="px-4 py-3 text-right">Stock</th>
                 <th className="px-4 py-3 text-right">Shipping</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -171,15 +173,24 @@ export default async function AdminProvidersPage() {
                   <td className="px-4 py-3 text-right text-ink-700">{row.stock}</td>
                   <td className="px-4 py-3 text-right text-ink-700">{formatPrice(row.shipping_cents)}</td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline" className="capitalize">
+                    <Badge variant={row.status === "promoted" ? "forest" : row.status === "rejected" ? "outline" : "sand"} className="capitalize">
                       {row.status}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {row.status === "pending" ? (
+                      <StagingRowActions stagingId={row.id} matchedProductId={row.matched_product_id} />
+                    ) : row.status === "promoted" && row.matched_product_id ? (
+                      <StagingRowActions stagingId={row.id} matchedProductId={row.matched_product_id} />
+                    ) : (
+                      <span className="text-xs text-ink-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))}
               {(!staged || staged.length === 0) && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-ink-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-ink-500">
                     Nothing staged yet.
                   </td>
                 </tr>
