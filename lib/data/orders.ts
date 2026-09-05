@@ -25,10 +25,18 @@ export type OrderSummary = {
     state: string
     postalCode: string
   } | null
+  shipments: {
+    carrier: string | null
+    trackingNumber: string | null
+    trackingUrl: string | null
+    status: string
+    shippedAt: string | null
+    deliveredAt: string | null
+  }[]
 }
 
 const ORDER_SELECT =
-  "id, order_number, status, total_cents, currency, created_at, order_items(product_name, variant_label, quantity, total_cents), order_addresses(type, full_name, line1, line2, city, state, postal_code)"
+  "id, order_number, status, total_cents, currency, created_at, order_items(product_name, variant_label, quantity, total_cents), order_addresses(type, full_name, line1, line2, city, state, postal_code), shipments(carrier, tracking_number, tracking_url, status, shipped_at, delivered_at)"
 
 function mapOrder(o: any): OrderSummary {
   const shipping = (o.order_addresses as any[])?.find((a) => a.type === "shipping")
@@ -50,6 +58,14 @@ function mapOrder(o: any): OrderSummary {
           postalCode: shipping.postal_code,
         }
       : null,
+    shipments: (o.shipments ?? []).map((s: any) => ({
+      carrier: s.carrier,
+      trackingNumber: s.tracking_number,
+      trackingUrl: s.tracking_url,
+      status: s.status,
+      shippedAt: s.shipped_at,
+      deliveredAt: s.delivered_at,
+    })),
   }
 }
 

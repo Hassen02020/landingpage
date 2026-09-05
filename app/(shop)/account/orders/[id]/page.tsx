@@ -61,6 +61,40 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </p>
         </div>
       )}
+
+      {order.shipments.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-ink-100 bg-white p-6">
+          <h2 className="text-sm font-semibold text-ink">Tracking</h2>
+          <p className="mt-1 text-xs text-ink-500">
+            {order.shipments.length > 1
+              ? "This order shipped in multiple packages."
+              : "This order shipped in one package."}
+          </p>
+          <div className="mt-3 space-y-3">
+            {order.shipments.map((shipment, i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <div>
+                  <p className="font-medium capitalize text-ink">{shipment.status}</p>
+                  {shipment.carrier && <p className="text-xs text-ink-500">{shipment.carrier}</p>}
+                </div>
+                {shipment.trackingNumber &&
+                  (shipment.trackingUrl ? (
+                    <a
+                      href={shipment.trackingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono text-xs text-forest hover:underline"
+                    >
+                      {shipment.trackingNumber}
+                    </a>
+                  ) : (
+                    <span className="font-mono text-xs text-ink-500">{shipment.trackingNumber}</span>
+                  ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -8,16 +8,27 @@ export type CheckFulfillmentState =
   | { success: true; itemsChecked: number }
   | { success: false; error: string }
 
+// order_routing.fulfillment_status -> shipments.status. 'processing' has no
+// tracking info yet, so it doesn't produce a shipment row at all — the
+// customer sees nothing until there's something real to show.
+const SHIPMENT_STATUS: Record<string, "shipped" | "delivered" | "exception"> = {
+  shipped: "shipped",
+  delivered: "delivered",
+  cancelled: "exception",
+}
+
 /**
  * Re-checks fulfillment status with the supplier for every placed
- * (order_routing.status = 'placed') item on an order.
+ * (order_routing.status = 'placed') item on an order, and — once there's
+ * real carrier/tracking info — carries it into PETORA's own `shipments`
+ * table (Phase 15), the one customers actually see.
  */
 export async function checkFulfillmentAction(orderId: string): Promise<CheckFulfillmentState> {
   const supabase = await createClient()
 
   const { data: routes } = await supabase
     .from("order_routing")
-    .select("id, provider_order_id, providers(code)")
+    .select("id, order_id, provider_order_id, providers(code)")
     .eq("order_id", orderId)
     .eq("status", "placed")
 
@@ -46,6 +57,23 @@ export async function checkFulfillmentAction(orderId: string): Promise<CheckFulf
         })
         .eq("id", route.id)
 
+      const shipmentStatus = SHIPMENT_STATUS[status.status]
+      if (shipmentStatus) {
+        await supabase.from("shipments").upsert(
+          {
+            order_id: route.order_id,
+            order_routing_id: route.id,
+            carrier: status.carrier ?? null,
+            tracking_number: status.trackingNumber ?? null,
+            tracking_url: status.trackingUrl ?? null,
+            status: shipmentStatus,
+            shipped_at: status.shippedAt ?? null,
+            delivered_at: status.deliveredAt ?? null,
+          },
+          { onConflict: "order_routing_id" }
+        )
+      }
+
       itemsChecked++
     } catch {
       // A single supplier's status check failing shouldn't block checking
@@ -56,5 +84,6 @@ export async function checkFulfillmentAction(orderId: string): Promise<CheckFulf
   }
 
   revalidatePath(`/admin/orders/${orderId}`)
+  revalidatePath(`/account/orders/${orderId}`)
   return { success: true, itemsChecked }
 }
