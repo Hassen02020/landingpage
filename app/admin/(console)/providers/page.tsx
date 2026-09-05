@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { Badge } from "@/components/ui/Badge"
 import { ProviderSyncButton } from "@/components/admin/ProviderSyncButton"
+import { InventorySyncButton } from "@/components/admin/InventorySyncButton"
 import { StagingRowActions } from "@/components/admin/StagingRowActions"
 import { formatPrice } from "@/lib/utils"
 
@@ -27,7 +28,7 @@ export default async function AdminProvidersPage() {
   const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", "petora").single()
   const tenantId = tenant?.id
 
-  const [{ data: providers }, { data: connections }, { data: syncRuns }, { data: staged }] = await Promise.all([
+  const [{ data: providers }, { data: connections }, { data: syncRuns }, { data: invSyncRuns }, { data: staged }] = await Promise.all([
     supabase.from("providers").select("id, code, name, status").order("code"),
     tenantId
       ? supabase.from("provider_connections").select("provider_id, status, connected_at, last_error").eq("tenant_id", tenantId)
@@ -36,6 +37,14 @@ export default async function AdminProvidersPage() {
       ? supabase
           .from("provider_sync_runs")
           .select("id, status, items_fetched, items_staged, started_at, finished_at, error, providers(name)")
+          .eq("tenant_id", tenantId)
+          .order("started_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as any[] }),
+    tenantId
+      ? supabase
+          .from("inventory_sync_runs")
+          .select("id, status, items_checked, items_adjusted, started_at, finished_at, error, providers(name)")
           .eq("tenant_id", tenantId)
           .order("started_at", { ascending: false })
           .limit(10)
@@ -92,7 +101,10 @@ export default async function AdminProvidersPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     {provider.status === "available" && tenantId ? (
-                      <ProviderSyncButton tenantId={tenantId} providerCode={provider.code} />
+                      <div className="flex items-center justify-end gap-2">
+                        <ProviderSyncButton tenantId={tenantId} providerCode={provider.code} />
+                        <InventorySyncButton tenantId={tenantId} providerCode={provider.code} />
+                      </div>
                     ) : (
                       <span className="text-xs text-ink-400">Not connected yet</span>
                     )}
@@ -135,6 +147,49 @@ export default async function AdminProvidersPage() {
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-ink-500">
                     No sync runs yet — click &ldquo;Sync now&rdquo; above.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">Recent inventory syncs</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Re-checks live stock for already-promoted listings and applies the movement since the last check (Commerce OS
+          Phase 12) — it never overwrites PETORA&apos;s own stock outright, only adjusts by what changed at the supplier.
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-2xl border border-ink-100 bg-white">
+          <table className="w-full text-sm">
+            <thead className="border-b border-ink-100 text-left text-xs uppercase tracking-wide text-ink-400">
+              <tr>
+                <th className="px-4 py-3">Provider</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Checked</th>
+                <th className="px-4 py-3 text-right">Adjusted</th>
+                <th className="px-4 py-3">Started</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(invSyncRuns ?? []).map((run: any) => (
+                <tr key={run.id} className="border-b border-ink-50 last:border-0 hover:bg-ink-50">
+                  <td className="px-4 py-3 text-ink-600">{run.providers?.name ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={SYNC_STATUS_VARIANT[run.status]} className="capitalize">
+                      {run.status}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-right text-ink-700">{run.items_checked}</td>
+                  <td className="px-4 py-3 text-right text-ink-700">{run.items_adjusted}</td>
+                  <td className="px-4 py-3 text-ink-500">{new Date(run.started_at).toLocaleString()}</td>
+                </tr>
+              ))}
+              {(!invSyncRuns || invSyncRuns.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-ink-500">
+                    No inventory syncs yet — click &ldquo;Sync stock&rdquo; above.
                   </td>
                 </tr>
               )}
