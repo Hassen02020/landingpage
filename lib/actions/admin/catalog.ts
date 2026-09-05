@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { slugify } from "@/lib/utils"
+import { computePrice } from "@/lib/pricing/compute"
 
 export type PromoteActionState =
   | { success: true; productId: string }
@@ -61,12 +62,32 @@ export async function promoteStagingAction(stagingId: string): Promise<PromoteAc
 
   if (!productId) return { success: false, error: "Could not find an available slug after several attempts." }
 
+  // Apply the tenant's default pricing rule (Phase 11) — without one, the
+  // listing promotes at cost (zero margin), which is visible in the UI as
+  // "no pricing rule applied" rather than silently happening.
+  const costCents = staging.price_cents
+  const { data: defaultRule } = await supabase
+    .from("pricing_rules")
+    .select("id, markup_type, min_margin_cents, markup_value")
+    .eq("tenant_id", staging.tenant_id)
+    .eq("is_default", true)
+    .maybeSingle()
+
+  const computed = defaultRule
+    ? computePrice(costCents, {
+        markupType: defaultRule.markup_type as "percentage" | "fixed_amount",
+        markupValue: defaultRule.markup_value,
+        minMarginCents: defaultRule.min_margin_cents,
+      })
+    : { priceCents: costCents, floorApplied: false }
+
   const { data: variant, error: variantError } = await supabase
     .from("product_variants")
     .insert({
       product_id: productId,
       sku: `IMP-${staging.supplier_sku}`,
-      price_cents: staging.price_cents,
+      price_cents: computed.priceCents,
+      cost_cents: costCents,
       is_default: true,
     })
     .select("id")
@@ -76,6 +97,14 @@ export async function promoteStagingAction(stagingId: string): Promise<PromoteAc
 
   await supabase.from("inventory").insert({ variant_id: variant.id, quantity_available: staging.stock })
   await supabase.from("catalog_staging").update({ status: "promoted", matched_product_id: productId }).eq("id", stagingId)
+  await supabase.from("price_history").insert({
+    tenant_id: staging.tenant_id,
+    variant_id: variant.id,
+    pricing_rule_id: defaultRule?.id ?? null,
+    cost_cents: costCents,
+    price_cents: computed.priceCents,
+    floor_applied: computed.floorApplied,
+  })
 
   const {
     data: { user },
