@@ -1,4 +1,5 @@
-import type { CatalogPage, NormalizedListing, ProviderAdapter, ProviderOrderRef, RawListing, RoutedOrderLine, StockLevel } from "./types"
+import type { CatalogPage, FulfillmentStatus, NormalizedListing, ProviderAdapter, ProviderOrderRef, RawListing, RoutedOrderLine, StockLevel } from "./types"
+import { deriveMockFulfillmentStatus } from "./mockFulfillment.ts"
 
 /**
  * Deterministic stand-in for a real supplier feed. Field names are
@@ -85,5 +86,9 @@ export const mockProviderAdapter: ProviderAdapter = {
       return { providerOrderId: "", status: "failed" }
     }
     return { providerOrderId: `MOCK-PO-${line.supplierSku}-${Date.now()}`, status: "placed" }
+  },
+
+  async fetchFulfillmentStatus(providerOrderId: string): Promise<FulfillmentStatus> {
+    return deriveMockFulfillmentStatus(providerOrderId, Date.now())
   },
 }

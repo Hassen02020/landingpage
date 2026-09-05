@@ -42,6 +42,15 @@ export type ProviderOrderRef = {
   status: "placed" | "failed"
 }
 
+export type FulfillmentStatus = {
+  status: "processing" | "shipped" | "delivered" | "cancelled"
+  carrier?: string
+  trackingNumber?: string
+  trackingUrl?: string
+  shippedAt?: string
+  deliveredAt?: string
+}
+
 export interface ProviderAdapter {
   code: string
 
@@ -54,10 +63,15 @@ export interface ProviderAdapter {
   /** Live stock check for one SKU, e.g. before confirming an order. */
   fetchStock(supplierSku: string): Promise<StockLevel>
 
-  /**
-   * Place a purchase with the supplier for a routed order line.
-   * Exercised by Phase 13 (Order Router), not yet built — implemented
-   * here so the adapter contract is complete and testable end to end.
-   */
+  /** Place a purchase with the supplier for a routed order line. Exercised by Phase 13 (Order Router). */
   placeOrder(line: RoutedOrderLine): Promise<ProviderOrderRef>
+
+  /**
+   * Check how a placed order is progressing at the supplier. Exercised by
+   * Phase 14 (Supplier Fulfillment) — the customer-facing tracking page
+   * (Phase 15) reads from PETORA's own `shipments` table, not from this
+   * call directly; this is what keeps that table's carrier/tracking
+   * fields current.
+   */
+  fetchFulfillmentStatus(providerOrderId: string): Promise<FulfillmentStatus>
 }

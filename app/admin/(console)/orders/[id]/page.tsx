@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect"
 import { RouteOrderButton } from "@/components/admin/RouteOrderButton"
+import { CheckFulfillmentButton } from "@/components/admin/CheckFulfillmentButton"
 import { Badge } from "@/components/ui/Badge"
 import { formatPrice } from "@/lib/utils"
 
@@ -13,6 +14,13 @@ const ROUTING_VARIANT: Record<string, "forest" | "sand" | "outline" | "coral"> =
   pending: "sand",
   failed: "coral",
   not_applicable: "outline",
+}
+
+const FULFILLMENT_VARIANT: Record<string, "forest" | "sand" | "outline" | "coral"> = {
+  processing: "sand",
+  shipped: "forest",
+  delivered: "forest",
+  cancelled: "coral",
 }
 
 export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,7 +39,9 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
   const { data: routing } = await supabase
     .from("order_routing")
-    .select("order_item_id, status, provider_order_id, error, providers(name)")
+    .select(
+      "order_item_id, status, provider_order_id, error, fulfillment_status, carrier, tracking_number, tracking_url, providers(name)"
+    )
     .eq("order_id", order.id)
 
   const routingByItem = new Map((routing ?? []).map((r: any) => [r.order_item_id, r]))
@@ -106,21 +116,41 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
               anywhere.
             </p>
           </div>
-          <RouteOrderButton orderId={order.id} />
+          <div className="flex items-center gap-2">
+            <RouteOrderButton orderId={order.id} />
+            <CheckFulfillmentButton orderId={order.id} />
+          </div>
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           {(order.order_items as any[]).map((item) => {
             const route = routingByItem.get(item.id)
             return (
-              <div key={item.id} className="flex items-center justify-between text-sm">
-                <span className="text-ink-700">{item.product_name}</span>
-                <div className="flex items-center gap-2">
-                  {route?.providers?.name && <span className="text-xs text-ink-500">{route.providers.name}</span>}
-                  {route?.provider_order_id && <span className="font-mono text-xs text-ink-400">{route.provider_order_id}</span>}
-                  <Badge variant={ROUTING_VARIANT[route?.status ?? "pending"]} className="capitalize">
-                    {route ? route.status.replace("_", " ") : "not routed yet"}
-                  </Badge>
+              <div key={item.id} className="text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-ink-700">{item.product_name}</span>
+                  <div className="flex items-center gap-2">
+                    {route?.providers?.name && <span className="text-xs text-ink-500">{route.providers.name}</span>}
+                    {route?.provider_order_id && <span className="font-mono text-xs text-ink-400">{route.provider_order_id}</span>}
+                    <Badge variant={ROUTING_VARIANT[route?.status ?? "pending"]} className="capitalize">
+                      {route ? route.status.replace("_", " ") : "not routed yet"}
+                    </Badge>
+                  </div>
                 </div>
+                {route?.status === "placed" && route.fulfillment_status && (
+                  <div className="mt-1 flex items-center justify-end gap-2 text-xs text-ink-500">
+                    <Badge variant={FULFILLMENT_VARIANT[route.fulfillment_status]} className="capitalize">
+                      {route.fulfillment_status}
+                    </Badge>
+                    {route.carrier && <span>{route.carrier}</span>}
+                    {route.tracking_url && route.tracking_number ? (
+                      <a href={route.tracking_url} className="font-mono text-forest hover:underline" target="_blank" rel="noreferrer">
+                        {route.tracking_number}
+                      </a>
+                    ) : (
+                      route.tracking_number && <span className="font-mono">{route.tracking_number}</span>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
