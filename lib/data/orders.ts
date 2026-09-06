@@ -16,7 +16,7 @@ export type OrderSummary = {
   totalCents: number
   currency: string
   createdAt: string
-  items: { productName: string; variantLabel: string | null; quantity: number; totalCents: number }[]
+  items: { id: string; productName: string; variantLabel: string | null; quantity: number; totalCents: number }[]
   shippingAddress: {
     fullName: string
     line1: string
@@ -33,10 +33,18 @@ export type OrderSummary = {
     shippedAt: string | null
     deliveredAt: string | null
   }[]
+  returns: {
+    id: string
+    status: string
+    reason: string | null
+    refundAmountCents: number | null
+    refundError: string | null
+    requestedAt: string
+  }[]
 }
 
 const ORDER_SELECT =
-  "id, order_number, status, total_cents, currency, created_at, order_items(product_name, variant_label, quantity, total_cents), order_addresses(type, full_name, line1, line2, city, state, postal_code), shipments(carrier, tracking_number, tracking_url, status, shipped_at, delivered_at)"
+  "id, order_number, status, total_cents, currency, created_at, order_items(id, product_name, variant_label, quantity, total_cents), order_addresses(type, full_name, line1, line2, city, state, postal_code), shipments(carrier, tracking_number, tracking_url, status, shipped_at, delivered_at), returns(id, status, reason, refund_amount_cents, refund_error, requested_at)"
 
 function mapOrder(o: any): OrderSummary {
   const shipping = (o.order_addresses as any[])?.find((a) => a.type === "shipping")
@@ -47,7 +55,13 @@ function mapOrder(o: any): OrderSummary {
     totalCents: o.total_cents,
     currency: o.currency,
     createdAt: o.created_at,
-    items: o.order_items ?? [],
+    items: (o.order_items ?? []).map((i: any) => ({
+      id: i.id,
+      productName: i.product_name,
+      variantLabel: i.variant_label,
+      quantity: i.quantity,
+      totalCents: i.total_cents,
+    })),
     shippingAddress: shipping
       ? {
           fullName: shipping.full_name,
@@ -65,6 +79,14 @@ function mapOrder(o: any): OrderSummary {
       status: s.status,
       shippedAt: s.shipped_at,
       deliveredAt: s.delivered_at,
+    })),
+    returns: (o.returns ?? []).map((r: any) => ({
+      id: r.id,
+      status: r.status,
+      reason: r.reason,
+      refundAmountCents: r.refund_amount_cents,
+      refundError: r.refund_error,
+      requestedAt: r.requested_at,
     })),
   }
 }
