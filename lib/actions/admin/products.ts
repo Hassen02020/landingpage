@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { productSchema } from "@/lib/validations/admin-product"
 import { slugify } from "@/lib/utils"
+import { checkQuota } from "@/lib/billing/quota"
 
 export type AdminActionState = { error?: string } | undefined
 
@@ -38,6 +39,27 @@ export async function createProductAction(_prevState: AdminActionState, formData
   const d = parsed.data
 
   const supabase = await createClient()
+
+  const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", "petora").single()
+  if (tenant) {
+    const { data: subscription } = await supabase
+      .from("tenant_billing_subscriptions")
+      .select("billing_plans(max_products)")
+      .eq("tenant_id", tenant.id)
+      .single()
+    const plan = subscription ? (Array.isArray(subscription.billing_plans) ? subscription.billing_plans[0] : subscription.billing_plans) : null
+    if (plan) {
+      const { count } = await supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenant.id)
+        .neq("status", "archived")
+      const quota = checkQuota(count ?? 0, plan.max_products)
+      if (!quota.allowed) {
+        return { error: `Your plan's product limit (${plan.max_products}) has been reached. Upgrade in Billing to add more.` }
+      }
+    }
+  }
 
   const { data: product, error: productError } = await supabase
     .from("products")
