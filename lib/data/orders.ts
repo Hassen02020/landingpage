@@ -1,0 +1,150 @@
+import { createClient } from "@/lib/supabase/server"
+
+async function safe<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    console.error(`${label}:`, err instanceof Error ? err.message : err)
+    return fallback
+  }
+}
+
+export type OrderSummary = {
+  id: string
+  orderNumber: string
+  status: string
+  totalCents: number
+  currency: string
+  createdAt: string
+  items: { id: string; productName: string; variantLabel: string | null; quantity: number; totalCents: number }[]
+  shippingAddress: {
+    fullName: string
+    line1: string
+    line2: string | null
+    city: string
+    state: string
+    postalCode: string
+  } | null
+  shipments: {
+    carrier: string | null
+    trackingNumber: string | null
+    trackingUrl: string | null
+    status: string
+    shippedAt: string | null
+    deliveredAt: string | null
+  }[]
+  returns: {
+    id: string
+    status: string
+    reason: string | null
+    refundAmountCents: number | null
+    refundError: string | null
+    requestedAt: string
+  }[]
+}
+
+const ORDER_SELECT =
+  "id, order_number, status, total_cents, currency, created_at, order_items(id, product_name, variant_label, quantity, total_cents), order_addresses(type, full_name, line1, line2, city, state, postal_code), shipments(carrier, tracking_number, tracking_url, status, shipped_at, delivered_at), returns(id, status, reason, refund_amount_cents, refund_error, requested_at)"
+
+function mapOrder(o: any): OrderSummary {
+  const shipping = (o.order_addresses as any[])?.find((a) => a.type === "shipping")
+  return {
+    id: o.id,
+    orderNumber: o.order_number,
+    status: o.status,
+    totalCents: o.total_cents,
+    currency: o.currency,
+    createdAt: o.created_at,
+    items: (o.order_items ?? []).map((i: any) => ({
+      id: i.id,
+      productName: i.product_name,
+      variantLabel: i.variant_label,
+      quantity: i.quantity,
+      totalCents: i.total_cents,
+    })),
+    shippingAddress: shipping
+      ? {
+          fullName: shipping.full_name,
+          line1: shipping.line1,
+          line2: shipping.line2,
+          city: shipping.city,
+          state: shipping.state,
+          postalCode: shipping.postal_code,
+        }
+      : null,
+    shipments: (o.shipments ?? []).map((s: any) => ({
+      carrier: s.carrier,
+      trackingNumber: s.tracking_number,
+      trackingUrl: s.tracking_url,
+      status: s.status,
+      shippedAt: s.shipped_at,
+      deliveredAt: s.delivered_at,
+    })),
+    returns: (o.returns ?? []).map((r: any) => ({
+      id: r.id,
+      status: r.status,
+      reason: r.reason,
+      refundAmountCents: r.refund_amount_cents,
+      refundError: r.refund_error,
+      requestedAt: r.requested_at,
+    })),
+  }
+}
+
+export async function getOrderByStripeSessionId(sessionId: string): Promise<OrderSummary | null> {
+  return safe("getOrderByStripeSessionId", async () => {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from("orders")
+      .select(ORDER_SELECT)
+      .eq("stripe_checkout_session_id", sessionId)
+      .maybeSingle()
+
+    if (error || !data) return null
+    return mapOrder(data)
+  }, null)
+}
+
+export async function getCustomerOrders(customerId: string): Promise<OrderSummary[]> {
+  return safe("getCustomerOrders", async () => {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from("orders")
+      .select(ORDER_SELECT)
+      .eq("customer_id", customerId)
+      .order("created_at", { ascending: false })
+
+    if (error || !data) return []
+    return (data as any[]).map(mapOrder)
+  }, [])
+}
+
+export async function getOrderById(id: string, customerId: string): Promise<OrderSummary | null> {
+  return safe("getOrderById", async () => {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from("orders")
+      .select(ORDER_SELECT)
+      .eq("id", id)
+      .eq("customer_id", customerId)
+      .maybeSingle()
+
+    if (error || !data) return null
+    return mapOrder(data)
+  }, null)
+}
+
+export async function getOrderByNumber(orderNumber: string, customerId: string): Promise<OrderSummary | null> {
+  return safe("getOrderByNumber", async () => {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from("orders")
+      .select(ORDER_SELECT)
+      .eq("order_number", orderNumber)
+      .eq("customer_id", customerId)
+      .maybeSingle()
+
+    if (error || !data) return null
+    return mapOrder(data)
+  }, null)
+}

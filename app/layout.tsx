@@ -1,69 +1,41 @@
 import type { Metadata } from "next"
-import Script from "next/script"
+import { Inter, Sora } from "next/font/google"
 import "./globals.css"
+import { MarketingScripts } from "@/components/analytics/MarketingScripts"
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" })
+const sora = Sora({ subsets: ["latin"], variable: "--font-sora", display: "swap" })
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://petora.com"
 
 export const metadata: Metadata = {
-  title: "Summer Vibes Tunisia 2026 — Easy2Book",
-  description:
-    "Réservez votre hôtel à Hammamet, Sousse ou Djerba au meilleur prix garanti. Enfant gratuit, Early Booking, Aquapark, Voyage de Noces — Easy2Book, votre centrale de réservation.",
-  openGraph: {
-    title: "Summer Vibes Tunisia 2026 — Easy2Book",
-    description: "Les meilleures offres hôtelières en Tunisie pour l'été 2026.",
-    type: "website",
-    url: "https://landingpage-easy2book.vercel.app",
-    siteName: "Easy2Book",
-    images: [
-      {
-        url: "https://landingpage-easy2book.vercel.app/logo.png",
-        width: 1200,
-        height: 630,
-        alt: "Easy2Book Summer Vibes 2026",
-      },
-    ],
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "PETORA — Better Care. Happier Pets.",
+    template: "%s | PETORA",
   },
-  other: {
-    "fb:page_id": "Easy2Bookplateforme",
+  description:
+    "Premium dog and cat food, treats, and everyday essentials for the pets you love. Shop best sellers, subscribe & save with Autoship, and get free shipping on your first order.",
+  openGraph: {
+    type: "website",
+    siteName: "PETORA",
+    title: "PETORA — Better Care. Happier Pets.",
+    description: "Premium food, treats and everyday essentials for the pets you love.",
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PETORA — Better Care. Happier Pets.",
+    description: "Premium food, treats and everyday essentials for the pets you love.",
   },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
-      <body className="antialiased">
-        {/* Meta Pixel */}
-        <Script
-          id="meta-pixel"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              !function(f,b,e,v,n,t,s)
-              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-              n.queue=[];t=b.createElement(e);t.async=!0;
-              t.src=v;s=b.getElementsByTagName(e)[0];
-              s.parentNode.insertBefore(t,s)}(window, document,'script',
-              'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init', '1674012850599992');
-              fbq('track', 'PageView');
-            `,
-          }}
-        />
-        <noscript>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1674012850599992&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
+    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
+      <body className="flex min-h-screen flex-col antialiased">
         {children}
+        <MarketingScripts />
       </body>
     </html>
   )
