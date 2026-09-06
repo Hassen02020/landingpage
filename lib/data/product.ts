@@ -21,7 +21,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailData 
          brands(name, slug),
          categories(slug),
          product_images(url, alt, sort_order),
-         product_variants(id, sku, size, flavor, price_cents, compare_at_price_cents, is_default, sort_order, inventory(quantity_available))`
+         product_variants(id, sku, size, flavor, price_cents, compare_at_price_cents, is_default, sort_order, inventory(quantity_available), recalls(reason, severity, status))`
       )
       .eq("slug", slug)
       .eq("status", "active")
@@ -63,6 +63,11 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailData 
           compareAtPriceCents: v.compare_at_price_cents,
           inStock: ((Array.isArray(v.inventory) ? v.inventory[0]?.quantity_available : v.inventory?.quantity_available) ?? 0) > 0,
         })),
+      activeRecalls: (data.product_variants as any[]).flatMap((v) =>
+        ((v.recalls as any[]) ?? [])
+          .filter((r) => r.status === "active")
+          .map((r) => ({ reason: r.reason, severity: r.severity }))
+      ),
     }
   }, null)
 }

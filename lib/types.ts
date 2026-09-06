@@ -64,6 +64,7 @@ export type ProductDetailData = {
   isSubscribable: boolean
   images: { url: string; alt: string | null }[]
   variants: ProductVariant[]
+  activeRecalls: { reason: string; severity: "low" | "medium" | "high" | "critical" }[]
 }
 
 export type ReviewData = {

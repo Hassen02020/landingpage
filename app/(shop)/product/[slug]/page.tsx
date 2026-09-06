@@ -87,6 +87,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }} />
 
+      {product.activeRecalls.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-coral-300 bg-coral-50 p-4 text-sm text-coral-700">
+          <p className="font-semibold">This product is subject to an active recall.</p>
+          {product.activeRecalls.map((recall, i) => (
+            <p key={i} className="mt-1">
+              {recall.reason}
+            </p>
+          ))}
+          <p className="mt-2 text-xs">Please stop use and contact us before purchasing or continuing to use this item.</p>
+        </div>
+      )}
+
       <div className="grid gap-10 lg:grid-cols-2">
         <ProductGallery images={product.images} alt={product.name} />
         <ProductPurchasePanel product={product} />
