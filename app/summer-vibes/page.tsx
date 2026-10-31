@@ -7,67 +7,19 @@ import { CategoriesSection } from "./components/CategoriesSection"
 import { TestimonialsSlider } from "./components/TestimonialsSlider"
 import { CountdownTimer } from "./components/CountdownTimer"
 import { FAQAccordion } from "./components/FAQAccordion"
-import { LeadForm } from "./components/LeadForm"
+import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { STATS } from "./data/stats"
 import { CATEGORIES } from "./config"
+import { WHATSAPP_NUMBER } from "@/lib/config"
+import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 
-declare global {
-  interface Window {
-    fbq?: (...args: unknown[]) => void
-  }
-}
-
-const WHATSAPP_NUMBER = "21698140514"
 const WHATSAPP_MESSAGE = encodeURIComponent(
   "Bonjour Easy2Book, je souhaite avoir le tarif pour Summer Vibes 2026 ! 🏖️\n\nMerci de me préciser :\n📅 Date du congés\n👥 Nombre d'adultes\n👶 Âges des enfants\n📍 Zone : Hammamet / Monastir / Sousse / Tabarka / Mahdia / Djerba"
 )
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`
 
-// Generate unique event ID for deduplication
-function generateEventId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
-}
-
-// Dual transmission function: Browser Pixel + Server CAPI
-async function sendEvent(eventName: string, customData: Record<string, unknown>): Promise<void> {
-  const eventId = generateEventId()
-
-  // 1. Send to Browser Pixel (existing implementation)
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    if (eventName === "Contact") {
-      window.fbq("track", eventName, { ...customData, eventID: eventId })
-    } else {
-      window.fbq("trackCustom", eventName, { ...customData, eventID: eventId })
-    }
-  }
-
-  // 2. Send to Server CAPI (new implementation)
-  try {
-    await fetch("/api/meta-capi", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        eventName,
-        customData,
-        eventId,
-      }),
-    })
-  } catch (error) {
-    console.error("CAPI send failed:", error)
-    // Silently fail - browser pixel still works
-  }
-}
-
-function trackWhatsAppClick(location: string = "general"): void {
-  sendEvent("Contact", {
-    content_category: "Summer Vibes 2026",
-    content_name: location,
-    value: 1,
-    currency: "TND",
-    user_segment: "summer_vibes_visitor"
-  })
+function trackWhatsAppClick(event: { currentTarget: HTMLAnchorElement }, location: string = "general"): void {
+  handleWhatsAppClick(event, { product: "hotel", location })
 }
 
 function trackCategoryChange(categoryId: string, categoryName: string): void {
@@ -234,7 +186,6 @@ export default function SummerVibesPage() {
             className="hidden sm:inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold transition-transform active:scale-95"
             style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
             location="header"
-            onCtaClick={trackWhatsAppClick}
           />
         </div>
       </header>
@@ -297,7 +248,6 @@ export default function SummerVibesPage() {
           className="relative z-10 inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-2xl transition-all hover:brightness-110 active:scale-95"
           style={{ backgroundColor: "#25D366", color: "#fff" }}
           location="hero"
-          onCtaClick={trackWhatsAppClick}
         />
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40" aria-hidden="true">
@@ -347,7 +297,14 @@ export default function SummerVibesPage() {
           <h2 className="text-center font-extrabold text-2xl sm:text-3xl mb-6 text-gray-900">
             Quelques informations pour commencer
           </h2>
-          <LeadForm onCtaClick={trackWhatsAppClick} />
+          <LeadCaptureForm
+            product="hotel"
+            formId="hotel-lead-form"
+            offers={CATEGORIES.map((c) => c.label)}
+            destinations={["Hammamet", "Sousse", "Monastir", "Djerba", "Mahdia", "Tabarka", "Tunis", "Tozeur"]}
+            tripTypes={["Famille", "Voyage de noces", "Entre amis", "Affaires", "Weekend"]}
+            budgets={["100-200 TND / nuit", "200-300 TND / nuit", "300-500 TND / nuit", "500+ TND / nuit"]}
+          />
         </div>
       </section>
 
@@ -384,7 +341,7 @@ export default function SummerVibesPage() {
       </section>
 
       {/* CATÉGORIES HÔTELS */}
-      <CategoriesSection whatsappNumber={WHATSAPP_NUMBER} onCtaClick={trackWhatsAppClick} />
+      <CategoriesSection whatsappNumber={WHATSAPP_NUMBER} />
 
       {/* FAQ */}
       <section className="py-16 px-5 bg-white">
@@ -410,7 +367,6 @@ export default function SummerVibesPage() {
           className="inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-xl transition-all hover:brightness-110 active:scale-95"
           style={{ backgroundColor: "#25D366", color: "#fff" }}
           location="bottom-cta"
-          onCtaClick={trackWhatsAppClick}
         />
 
         {/* Liens vers autres offres */}
@@ -444,12 +400,20 @@ export default function SummerVibesPage() {
       {/* FOOTER */}
       <footer className="py-6 px-5 text-center text-xs text-white/60" style={{ backgroundColor: "#071e3d" }}>
         © {new Date().getFullYear()} Easy2Book — Centrale de Réservation &nbsp;|&nbsp;
-        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors" onClick={() => trackWhatsAppClick("footer")}>
+        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors" onClick={(e) => trackWhatsAppClick(e, "footer")}>
           +216 98 140 514
         </a>
         &nbsp;|&nbsp;
         <a href="https://www.facebook.com/Easy2Bookplateforme" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
           Facebook
+        </a>
+        &nbsp;|&nbsp;
+        <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
+          Instagram
+        </a>
+        &nbsp;|&nbsp;
+        <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
+          TikTok
         </a>
       </footer>
 
@@ -458,7 +422,7 @@ export default function SummerVibesPage() {
         href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => trackWhatsAppClick("floating")}
+        onClick={(e) => trackWhatsAppClick(e, "floating")}
         aria-label="Nous contacter sur WhatsApp"
         className="fixed bottom-6 right-5 z-50 flex items-center justify-center rounded-full shadow-2xl transition-transform hover:scale-110 active:scale-95"
         style={{ backgroundColor: "#25D366", width: "60px", height: "60px" }}

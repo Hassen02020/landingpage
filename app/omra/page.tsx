@@ -2,53 +2,34 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import { LeadCaptureForm } from "../components/LeadCaptureForm"
+import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
+import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 
-declare global {
-  interface Window {
-    fbq?: (...args: unknown[]) => void
-  }
+const OMRA_PRICE = 4800
+
+function omraNiche(packageName: string): string {
+  return packageName.includes("المولد") ? "omra-mawlid" : "omra-ete"
 }
 
-const WHATSAPP_NUMBER = "21698140514"
-const PHONE_NUMBER = "98140514"
-
-function generateEventId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
-}
-
-async function sendEvent(eventName: string, customData: Record<string, unknown>): Promise<void> {
-  const eventId = generateEventId()
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    if (eventName === "Contact") {
-      window.fbq("track", eventName, { ...customData, eventID: eventId })
-    } else {
-      window.fbq("trackCustom", eventName, { ...customData, eventID: eventId })
-    }
-  }
-  try {
-    await fetch("/api/meta-capi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventName, customData, eventId }),
-    })
-  } catch (error) {
-    console.error("CAPI send failed:", error)
-  }
-}
-
-function trackWhatsAppClick(location: string = "general", packageName: string = ""): void {
-  sendEvent("Contact", {
-    content_category: "Omra Ete 2026",
-    content_name: location,
-    content_ids: packageName,
-    value: 4800,
-    currency: "TND",
-    user_segment: "omra_visitor",
+function trackWhatsAppClick(
+  event: { currentTarget: HTMLAnchorElement },
+  location: string = "general",
+  packageName: string = ""
+): void {
+  handleWhatsAppClick(event, {
+    product: "omra",
+    location,
+    offer: packageName || undefined,
+    niche: packageName ? omraNiche(packageName) : undefined,
+    value: OMRA_PRICE,
   })
 }
 
 function trackPackageClick(packageName: string, price: number, month: string): void {
   sendEvent("ViewContent", {
+    product: "omra",
+    niche: omraNiche(packageName),
     content_name: packageName,
     content_category: "Omra Package",
     content_ids: packageName,
@@ -176,7 +157,7 @@ function CTAButton({
 }) {
   const message = encodeURIComponent(
     packageName
-      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (4800 TND / 14 jours) 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
+      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (${OMRA_PRICE} TND / 14 jours) 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
       : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Été 2026. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
   )
   return (
@@ -184,7 +165,7 @@ function CTAButton({
       href={`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackWhatsAppClick(location, packageName)}
+      onClick={(e) => trackWhatsAppClick(e, location, packageName)}
       className={className}
     >
       {label}
@@ -285,7 +266,7 @@ export default function OmraPage() {
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center py-16">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-            � فتح باب التسجيل — عمرة الصيف 2026 + المولد النبوي
+            🕋 فتح باب التسجيل — عمرة الصيف 2026 + المولد النبوي
           </div>
 
           {/* Title */}
@@ -329,6 +310,8 @@ export default function OmraPage() {
                   key={item.id}
                   onClick={() => {
                     setActiveTab(item.id)
+                    const pkg = PACKAGES.find((p) => p.id === item.id)
+                    if (pkg) trackPackageClick(pkg.name, pkg.price, pkg.dateLabel)
                     const element = document.getElementById("packages-section")
                     if (element) element.scrollIntoView({ behavior: "smooth" })
                   }}
@@ -524,6 +507,24 @@ export default function OmraPage() {
         </div>
       </section>
 
+      {/* LEAD FORM */}
+      <section id="reservation" className="py-16 bg-emerald-50">
+        <div className="max-w-xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-black text-gray-900 mb-2">📝 احجز مكانك الآن</h2>
+            <p className="text-gray-600">اترك معلوماتك وسيتصل بك مستشارنا لتأكيد الحجز</p>
+          </div>
+          <div className="bg-white rounded-3xl shadow-xl p-6">
+            <LeadCaptureForm
+              product="omra"
+              lang="ar"
+              formId="omra-lead-form"
+              offers={PACKAGES.map((p) => `${p.name} — ${p.date}`)}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* BOTTOM CTA */}
       <section className="py-16 bg-gray-900 text-white text-center">
         <div className="max-w-2xl mx-auto px-4">
@@ -563,7 +564,7 @@ export default function OmraPage() {
               href={`https://wa.me/${WHATSAPP_NUMBER}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClick("footer")}
+              onClick={(e) => trackWhatsAppClick(e, "footer")}
               className="text-green-400 hover:text-green-300 font-semibold"
             >
               💬 WhatsApp
@@ -575,6 +576,12 @@ export default function OmraPage() {
               className="text-blue-400 hover:text-blue-300 font-semibold"
             >
               📘 Facebook
+            </a>
+            <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:text-pink-300 font-semibold">
+              📸 Instagram
+            </a>
+            <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white font-semibold">
+              🎵 TikTok
             </a>
             <a href="/summer-vibes" className="text-amber-400 hover:text-amber-300 font-semibold">
               ☀️ Summer Vibes

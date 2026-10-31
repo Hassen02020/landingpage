@@ -2,18 +2,21 @@
 
 import { useState } from "react"
 import { CATEGORIES } from "../config"
+import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
 
 interface CategoriesSectionProps {
   whatsappNumber: string
-  onCtaClick: (location: string) => void
 }
 
-export function CategoriesSection({ whatsappNumber, onCtaClick }: CategoriesSectionProps) {
+export function CategoriesSection({ whatsappNumber }: CategoriesSectionProps) {
   const [active, setActive] = useState("enfant-gratuit")
   const current = CATEGORIES.find((c) => c.id === active)!
 
   const handleCategoryChange = (catId: string) => {
     setActive(catId)
+    const cat = CATEGORIES.find((c) => c.id === catId)
+    // chaque catégorie = une niche testée (enfant gratuit, noces, burkini, aquapark…)
+    trackEvent("CategoryView", { product: "hotel", niche: catId, content_name: cat?.label, content_category: "hotel" })
   }
 
   return (
@@ -55,7 +58,7 @@ export function CategoriesSection({ whatsappNumber, onCtaClick }: CategoriesSect
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => onCtaClick(`hotel-${name}`)}
+                onClick={(e) => handleWhatsAppClick(e, { product: "hotel", location: `hotel-card`, offer: `${name} (${city})`, niche: current.id })}
                 className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer border border-gray-100"
               >
                 <div className="relative w-full overflow-hidden" style={{ height: "200px" }}>
