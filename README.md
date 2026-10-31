@@ -38,9 +38,11 @@ Le conseiller confirme la réservation ─► POST /api/leads/status (clé admin
 
 ## Mise en place de la base dédiée
 
-1. Créer un **nouveau** projet Supabase, réservé aux landing pages (ne pas réutiliser EasyV4 ni EasyV4-preview).
+1. Projet Supabase des landing pages : **`tdexdlukqciolslvjmhd`** (région eu-west-3), distinct d'EasyV4 et d'EasyV4-preview.
 2. Dans ce nouveau projet, ouvrir **SQL Editor** et exécuter `supabase/migrations/0001_landing_leads.sql`. Le script s'arrête de lui-même s'il est lancé sur une base EasyV4 ou s'il a déjà été appliqué.
 3. Saisir dans Vercel (ou `.env.local`) : `LANDING_SUPABASE_URL`, `LANDING_SUPABASE_SERVICE_ROLE_KEY` et `LANDING_ADMIN_API_KEY` (voir `.env.example`).
+
+L'application passe par l'API REST de Supabase (`https://tdexdlukqciolslvjmhd.supabase.co`) avec la clé `service_role`. La chaîne de connexion PostgreSQL (pooler, port 6543) n'est pas utilisée par le site : elle sert seulement aux outils d'administration. Ne jamais la committer avec son mot de passe.
 
 Sans ces variables, le site fonctionne quand même : `/api/leads` répond `stored: false` et le prospect est redirigé vers WhatsApp avec sa demande.
 
