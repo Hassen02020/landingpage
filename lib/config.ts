@@ -28,3 +28,7 @@ export const SOCIAL_LINKS = {
   instagram: "https://www.instagram.com/easy2book.2025/",
   tiktok: "https://www.tiktok.com/@easy2book",
 } as const
+
+// Version du texte de consentement affiché dans le formulaire (preuve conservée avec chaque lead).
+// À incrémenter à chaque modification des textes de LeadCaptureForm.
+export const CONSENT_TEXT_VERSION = "2026-11-v1"

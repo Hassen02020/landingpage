@@ -5,16 +5,13 @@ import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
 import { DbError, dbConfigured, insertOne, select } from "@/lib/server/db"
-import { PRODUCTS, isProduct, WHATSAPP_NUMBER, type Product } from "@/lib/config"
+import { CONSENT_TEXT_VERSION, PRODUCTS, isProduct, WHATSAPP_NUMBER, type Product } from "@/lib/config"
+import { logActivity, tunisDay } from "@/lib/server/crm"
+import { notifyNewLead } from "@/lib/server/notify"
 
 export const runtime = "nodejs"
 
 const DUPLICATE_WINDOW_MS = 10 * 60 * 1000
-
-/** Date du jour à Tunis (AAAA-MM-JJ), identique à la colonne générée `lead_day`. */
-function tunisDay(date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Tunis" }).format(date)
-}
 
 const int = (v: unknown, min: number, max: number, fallback: number): number => {
   const n = typeof v === "number" ? v : parseInt(String(v ?? ""), 10)
@@ -119,6 +116,7 @@ export async function POST(request: NextRequest) {
     trip_type: str(body.trip_type, 64) || null,
     message: str(body.message, 1000) || null,
     contact_consent: true,
+    consent_text_version: CONSENT_TEXT_VERSION,
     marketing_consent: marketingConsent,
     tracking_consent: trackingConsent,
     // données de campagne (sans identifiant personnel)
@@ -151,11 +149,13 @@ export async function POST(request: NextRequest) {
   }
 
   let stored = false
+  let leadId: string | null = null
   if (dbConfigured()) {
     // jusqu'à 3 essais : une collision de référence aléatoire est rejouée avec une nouvelle référence
     for (let attempt = 0; attempt < 3 && !stored; attempt++) {
       try {
-        await insertOne("landing_leads", { ...row, ref })
+        const saved = await insertOne<{ id: string }>("landing_leads", { ...row, ref })
+        leadId = saved?.id ?? null
         stored = true
       } catch (e) {
         if (!(e instanceof DbError && e.isUniqueViolation)) {
@@ -185,6 +185,27 @@ export async function POST(request: NextRequest) {
   }
 
   const tasks: Promise<unknown>[] = []
+  if (stored && leadId) {
+    tasks.push(
+      logActivity(leadId, { id: null, label: "système" }, "created", {
+        body: `Formulaire ${attr.landing_page || "/"} — consentement v${CONSENT_TEXT_VERSION}${marketingConsent ? ", marketing accepté" : ""}`,
+      }).catch(() => console.error("[leads] historique non écrit"))
+    )
+  }
+  // l'équipe est prévenue même si la base est indisponible (le lead n'est alors pas perdu)
+  tasks.push(
+    notifyNewLead({
+      id: leadId,
+      ref,
+      product,
+      offer,
+      firstName: firstName,
+      phone: phone!,
+      source: stored ? "formulaire" : "formulaire (NON ENREGISTRÉ en base)",
+      channel: attr.channel,
+      utmCampaign: attr.utm_campaign,
+    })
+  )
   if (trackingConsent) {
     const serverEvent = {
       eventName: "Lead",

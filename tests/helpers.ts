@@ -16,7 +16,7 @@ export const DB_URL = "https://landing-sb.test"
  */
 export function installFetchMock(opts: { dbStatus?: number } = {}) {
   const calls: Call[] = []
-  const db: Record<string, any[]> = { landing_leads: [], landing_events: [] }
+  const db: Record<string, any[]> = { landing_leads: [], landing_events: [], landing_lead_activities: [], landing_staff: [] }
   const tunisDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Tunis" }).format(new Date())
 
   vi.stubGlobal(
@@ -32,14 +32,19 @@ export function installFetchMock(opts: { dbStatus?: number } = {}) {
         if (opts.dbStatus) return new Response(JSON.stringify({ code: "XX000" }), { status: opts.dbStatus })
         const { pathname, search } = new URL(u)
         const table = pathname.replace("/rest/v1/", "")
-        const rows = db[table]
+        const rows = (db[table] ??= [])
         const q = decodeURIComponent(search)
         if (method === "POST") {
-          const row = { id: crypto.randomUUID(), created_at: new Date().toISOString(), lead_day: tunisDay(), status: "nouveau", ...body }
+          const row =
+            table === "landing_leads"
+              ? { id: crypto.randomUUID(), created_at: new Date().toISOString(), lead_day: tunisDay(), status: "nouveau", booked_at: null, booking_value: null, ...body }
+              : { id: rows.length + 1, created_at: new Date().toISOString(), ...body }
           const conflict =
             table === "landing_leads"
               ? rows.some((r) => r.ref === row.ref || r.idempotency_key === row.idempotency_key || (r.phone === row.phone && r.product === row.product && r.lead_day === row.lead_day))
-              : rows.some((r) => r.event_id === row.event_id)
+              : table === "landing_events"
+                ? rows.some((r) => r.event_id === row.event_id)
+                : false
           if (conflict) return new Response(JSON.stringify({ code: "23505" }), { status: 409 })
           rows.push(row)
           return new Response(JSON.stringify([row]), { status: 201 })
@@ -47,7 +52,7 @@ export function installFetchMock(opts: { dbStatus?: number } = {}) {
         // filtres simulés : id, ref, idempotency_key, phone (suffisant pour ces tests)
         const eqs = Array.from(q.matchAll(/(\w+)[.=]eq\.([^,&)]+)/g))
           .map((m) => [m[1], m[2]])
-          .filter(([k]) => ["id", "ref", "idempotency_key", "phone"].includes(k))
+          .filter(([k]) => ["id", "ref", "idempotency_key", "phone", "lead_id", "user_id"].includes(k))
         const match = (r: any) => eqs.length === 0 || eqs.some(([k, v]) => String(r[k]) === v)
         if (method === "GET") return new Response(JSON.stringify(rows.filter(match).reverse()), { status: 200 })
         if (method === "PATCH") {

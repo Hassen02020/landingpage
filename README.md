@@ -36,11 +36,53 @@ Le conseiller confirme la réservation ─► POST /api/leads/status (clé admin
    statut « reserve » + montant ─► (si consentement) Meta « Purchase » / TikTok « CompletePayment »
 ```
 
+## Mini-CRM : espace équipe `/admin`
+
+| Page | Rôle |
+|---|---|
+| `/admin/login` | Connexion (e-mail + mot de passe Supabase Auth du projet landing) |
+| `/admin` | Liste des leads : recherche (nom, téléphone, `E2B-…`), filtres statut / produit / canal, pagination |
+| `/admin?followUp=due` | Relances à faire |
+| `/admin/leads/[id]` | Fiche : demande, attribution, consentements, statut (montant obligatoire pour « réservé »), relance, responsable, notes, historique, bouton WhatsApp, retrait du consentement marketing |
+| `/admin/leads/new` | Saisie manuelle d'un prospect arrivé par WhatsApp ou téléphone |
+| `/admin/stats` | Performance par campagne et par niche |
+| `/admin/export` | Export CSV |
+
+**Accès** : un compte doit exister dans Supabase Auth **et** figurer, actif, dans `landing_staff`. Les deux contrôles sont faits côté serveur à chaque page et à chaque action. La base les impose aussi (politiques RLS via `landing_is_staff()`). La session est gardée en cookies httpOnly et rafraîchie par `middleware.ts`. Les pages ne sont pas indexées et les 5 tentatives de connexion par 15 minutes sont limitées par e-mail.
+
+**Historique** : chaque création, changement de statut, note, relance, assignation, retrait de consentement et anonymisation est inscrit dans `landing_lead_activities`, avec son auteur. Cette table est en ajout seul : un trigger interdit toute modification ou suppression, sauf la suppression en cascade d'un lead effacé.
+
+**Notifications** : à chaque nouveau lead, l'équipe est prévenue par e-mail (Resend) et/ou par webhook. C'est le cas même si la base est indisponible : le message indique alors « NON ENREGISTRÉ ».
+
+**Conservation des données** (`landing_purge_personal_data()`, planifiée chaque jour à 03:15 UTC si `pg_cron` est disponible) :
+
+| Donnée | Durée | Action |
+|---|---|---|
+| IP, navigateur, cookies publicitaires, identifiants de clic | 90 jours | effacés |
+| Événements de navigation (`landing_events`) | 13 mois | supprimés |
+| Leads non réservés | 24 mois | anonymisés |
+| Leads réservés | 36 mois | anonymisés |
+
+Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sql` avant application, ou par une migration ultérieure. Le droit à l'effacement s'exerce par `DELETE FROM landing_leads WHERE ref = '…'` dans l'éditeur SQL, ce qui supprime aussi l'historique du lead.
+
+### Ajouter un membre de l'équipe
+
+1. Dans Supabase > **Authentication > Users > Add user**, créez le compte avec son e-mail et un mot de passe, en cochant « Auto confirm ».
+2. Dans **SQL Editor**, exécutez :
+   ```sql
+   INSERT INTO public.landing_staff (user_id, email, full_name, role)
+   SELECT id, email, 'Prénom Nom', 'admin' FROM auth.users WHERE email = 'prenom@easy2book.tn';
+   ```
+3. Pour retirer un accès : `UPDATE public.landing_staff SET active = false WHERE email = '…';`
+
+Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to sign up » : seuls les comptes créés par un administrateur doivent exister.
+
 ## Mise en place de la base dédiée
 
 1. Projet Supabase des landing pages : **`tdexdlukqciolslvjmhd`** (région eu-west-3), distinct d'EasyV4 et d'EasyV4-preview.
-2. Dans ce nouveau projet, ouvrir **SQL Editor** et exécuter `supabase/migrations/0001_landing_leads.sql`. Le script s'arrête de lui-même s'il est lancé sur une base EasyV4 ou s'il a déjà été appliqué.
-3. Saisir dans Vercel (ou `.env.local`) : `LANDING_SUPABASE_URL`, `LANDING_SUPABASE_SERVICE_ROLE_KEY` et `LANDING_ADMIN_API_KEY` (voir `.env.example`).
+2. Dans ce projet, ouvrir **SQL Editor** et exécuter, dans l'ordre, `supabase/migrations/0001_landing_leads.sql` (**appliquée le 31/10/2026**), puis `supabase/migrations/0002_landing_crm.sql`. Chaque script s'arrête de lui-même sur une base EasyV4, si le précédent manque, ou s'il a déjà été appliqué.
+   **Ordre de déploiement** : appliquer `0002` **avant** de déployer ce code. Le formulaire enregistre `consent_text_version`, une colonne créée par `0002`.
+3. Saisir dans Vercel, **en Production uniquement** pour que les déploiements de test n'écrivent jamais dans la base réelle : `LANDING_SUPABASE_URL` et `LANDING_SUPABASE_PUBLISHABLE_KEY` (créées le 31/10/2026), `LANDING_SUPABASE_SERVICE_ROLE_KEY` (secrète, à saisir par vous), et, en option, `LANDING_ADMIN_API_KEY` et les variables de notification (voir `.env.example`).
 
 L'application passe par l'API REST de Supabase (`https://tdexdlukqciolslvjmhd.supabase.co`) avec la clé `service_role`. La chaîne de connexion PostgreSQL (pooler, port 6543) n'est pas utilisée par le site : elle sert seulement aux outils d'administration. Ne jamais la committer avec son mot de passe.
 

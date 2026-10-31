@@ -36,6 +36,9 @@ export function TrackingConsent() {
     }
   }
 
+  // espace équipe : ni traceurs publicitaires ni bandeau
+  if (pathname?.startsWith("/admin")) return null
+
   return (
     <>
       {consent === "granted" && (
