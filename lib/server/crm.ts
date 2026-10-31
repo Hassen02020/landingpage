@@ -211,27 +211,38 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   return { ok: true, conversion: "envoyée" }
 }
 
-export async function addNote(lead: LeadRow, body: string, actor: Actor): Promise<void> {
+export type EditResult = { ok: true } | { ok: false; error: string }
+const LOCKED: EditResult = { ok: false, error: "Lead anonymisé : modification impossible" }
+
+export async function addNote(lead: LeadRow, body: string, actor: Actor): Promise<EditResult> {
+  if (lead.anonymized_at) return LOCKED
   const text = body.trim().slice(0, 2000)
-  if (!text) return
+  if (!text) return { ok: false, error: "Note vide" }
   await logActivity(lead.id, actor, "note", { body: text })
+  return { ok: true }
 }
 
-export async function setFollowUp(lead: LeadRow, isoDate: string | null, actor: Actor): Promise<void> {
+export async function setFollowUp(lead: LeadRow, isoDate: string | null, actor: Actor): Promise<EditResult> {
+  if (lead.anonymized_at) return LOCKED
   const when = isoDate && !Number.isNaN(Date.parse(isoDate)) ? new Date(isoDate).toISOString() : null
   await update("landing_leads", `id=eq.${lead.id}`, { next_follow_up_at: when })
   await logActivity(lead.id, actor, "follow_up", { body: when ? `Relance prévue le ${when.slice(0, 16).replace("T", " ")} (UTC)` : "Relance supprimée" })
+  return { ok: true }
 }
 
-export async function assignLead(lead: LeadRow, userId: string | null, actor: Actor): Promise<void> {
-  if (userId !== null && !UUID_RE.test(userId)) return
+export async function assignLead(lead: LeadRow, userId: string | null, actor: Actor): Promise<EditResult> {
+  if (lead.anonymized_at) return LOCKED
+  if (userId !== null && !UUID_RE.test(userId)) return { ok: false, error: "Responsable invalide" }
   await update("landing_leads", `id=eq.${lead.id}`, { assigned_to: userId })
   await logActivity(lead.id, actor, "assignment", { body: userId ? `Assigné à ${userId}` : "Désassigné" })
+  return { ok: true }
 }
 
-export async function withdrawMarketing(lead: LeadRow, actor: Actor): Promise<void> {
+export async function withdrawMarketing(lead: LeadRow, actor: Actor): Promise<EditResult> {
+  if (lead.anonymized_at) return LOCKED
   await update("landing_leads", `id=eq.${lead.id}`, { marketing_consent: false, marketing_withdrawn_at: new Date().toISOString() })
   await logActivity(lead.id, actor, "marketing_withdrawn", { body: "Retrait du consentement marketing" })
+  return { ok: true }
 }
 
 export interface ManualLeadInput {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { changeStatus, createManualLead, getLead, listLeads, withdrawMarketing, type LeadRow } from "@/lib/server/crm"
+import { addNote, assignLead, changeStatus, createManualLead, getLead, listLeads, setFollowUp, withdrawMarketing, type LeadRow } from "@/lib/server/crm"
 import { configureAll, installFetchMock, DB_URL } from "./helpers"
 
 const actor = { id: "11111111-1111-1111-1111-111111111111", label: "agent@easy2book.tn" }
@@ -104,5 +104,20 @@ describe("withdrawMarketing", () => {
     expect(f.db.landing_leads[0].marketing_withdrawn_at).toBeTruthy()
     expect(f.db.landing_lead_activities[0].type).toBe("marketing_withdrawn")
     expect(DB_URL).toContain("landing-sb.test")
+  })
+})
+
+describe("lead anonymisé", () => {
+  it("toute modification est refusée (note, relance, assignation, consentement, statut)", async () => {
+    const f = installFetchMock()
+    const lead = seedLead(f, { anonymized_at: new Date().toISOString() } as Partial<LeadRow>)
+    for (const r of [
+      await addNote(lead, "texte", actor),
+      await setFollowUp(lead, new Date().toISOString(), actor),
+      await assignLead(lead, actor.id, actor),
+      await withdrawMarketing(lead, actor),
+      await changeStatus(lead, "contacte", actor),
+    ]) expect(r).toMatchObject({ ok: false, error: expect.stringContaining("anonymisé") })
+    expect(f.dbCalls().filter((c) => c.method !== "GET")).toHaveLength(0)
   })
 })

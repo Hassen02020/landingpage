@@ -32,3 +32,6 @@ export const SOCIAL_LINKS = {
 // Version du texte de consentement affiché dans le formulaire (preuve conservée avec chaque lead).
 // À incrémenter à chaque modification des textes de LeadCaptureForm.
 export const CONSENT_TEXT_VERSION = "2026-11-v1"
+
+// Captcha Cloudflare Turnstile (facultatif) : clé publique du widget
+export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ""

@@ -18,7 +18,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
             <Link href="/admin?followUp=due" className="hover:text-blue-800">Relances</Link>
             <Link href="/admin/leads/new" className="hover:text-blue-800">+ Nouveau lead</Link>
             <Link href="/admin/stats" className="hover:text-blue-800">Statistiques</Link>
-            <a href="/admin/export" className="hover:text-blue-800">Export CSV</a>
+            {staff.role === "admin" && <a href="/admin/export" className="hover:text-blue-800">Export CSV</a>}
           </nav>
           <form action={logoutAction} className="ml-auto flex items-center gap-2 text-sm">
             <span className="text-gray-500">{staff.email}</span>

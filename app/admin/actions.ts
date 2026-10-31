@@ -91,32 +91,36 @@ export async function changeStatusAction(fd: FormData): Promise<void> {
 export async function addNoteAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadOr404(fd)
-  await addNote(lead, field(fd, "body"), actorOf(staff))
+  const result = await addNote(lead, field(fd, "body"), actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=Note+ajout%C3%A9e`)
 }
 
 export async function followUpAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadOr404(fd)
-  await setFollowUp(lead, field(fd, "follow_up") || null, actorOf(staff))
+  const result = await setFollowUp(lead, field(fd, "follow_up") || null, actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=Relance+enregistr%C3%A9e`)
 }
 
 export async function assignAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadOr404(fd)
-  await assignLead(lead, field(fd, "assigned_to") || null, actorOf(staff))
+  const result = await assignLead(lead, field(fd, "assigned_to") || null, actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=Assignation+enregistr%C3%A9e`)
 }
 
 export async function withdrawMarketingAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadOr404(fd)
-  await withdrawMarketing(lead, actorOf(staff))
+  const result = await withdrawMarketing(lead, actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=Consentement+marketing+retir%C3%A9`)
 }
 

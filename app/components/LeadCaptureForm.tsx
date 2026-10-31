@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import Script from "next/script"
 import { getAttribution } from "@/lib/attribution"
 import { hasTrackingConsent } from "@/lib/consent"
-import { PRODUCTS, type Product } from "@/lib/config"
+import { PRODUCTS, TURNSTILE_SITE_KEY, type Product } from "@/lib/config"
 import { buildWhatsAppUrl, generateEventId, trackEvent } from "@/lib/tracking"
 
 type Lang = "fr" | "ar"
@@ -142,6 +143,7 @@ export function LeadCaptureForm({
       marketingConsent: Boolean(fd.get("marketing")),
       trackingConsent: hasTrackingConsent(),
       website: get("website"),
+      captchaToken: get("cf-turnstile-response") || undefined,
       attribution: (() => {
         try {
           return getAttribution()
@@ -182,6 +184,12 @@ export function LeadCaptureForm({
       form.reset()
       window.location.href = json.whatsappUrl
     } catch (err) {
+      // le jeton du captcha est à usage unique : nouveau défi pour un nouvel essai
+      try {
+        ;(window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset()
+      } catch {
+        /* ignore */
+      }
       const message = err instanceof Error && err.message !== "lead_failed" ? err.message : t.genericError
       setError(message)
       // le prospect peut toujours nous joindre : lien WhatsApp de secours
@@ -341,6 +349,13 @@ export function LeadCaptureForm({
         <input type="checkbox" name="marketing" value="1" className="mt-0.5" disabled={submitting} />
         <span>{t.marketing}</span>
       </label>
+
+      {TURNSTILE_SITE_KEY && (
+        <>
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
+          <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-language={lang} />
+        </>
+      )}
 
       <button
         type="submit"

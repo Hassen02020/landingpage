@@ -82,12 +82,21 @@ CREATE TABLE public.landing_lead_activities (
 );
 CREATE INDEX landing_lead_activities_lead_idx ON public.landing_lead_activities (lead_id, created_at DESC);
 
--- L'historique ne se modifie ni ne se supprime (même par l'API)
+-- L'historique ne se modifie ni ne se supprime (même par l'API). Seules exceptions :
+--   * suppression en cascade d'un lead (droit à l'effacement) ;
+--   * effacement du texte (body) par landing_purge_personal_data() lors d'une anonymisation.
 CREATE FUNCTION public.landing_activities_immutable() RETURNS trigger
   LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 BEGIN
   IF TG_OP = 'DELETE' AND pg_trigger_depth() > 1 THEN
-    RETURN OLD;   -- suppression en cascade d'un lead (droit à l'effacement)
+    RETURN OLD;
+  END IF;
+  IF TG_OP = 'UPDATE' AND current_setting('landing.purge', true) = 'on'
+     AND NEW.body IS NULL
+     AND (NEW.id, NEW.created_at, NEW.lead_id, NEW.actor_id, NEW.actor_label, NEW.type, NEW.from_status, NEW.to_status)
+         IS NOT DISTINCT FROM
+         (OLD.id, OLD.created_at, OLD.lead_id, OLD.actor_id, OLD.actor_label, OLD.type, OLD.from_status, OLD.to_status) THEN
+    RETURN NEW;
   END IF;
   RAISE EXCEPTION 'landing_lead_activities est en ajout seul';
 END $$;
@@ -104,29 +113,26 @@ REVOKE ALL ON public.landing_staff, public.landing_lead_activities FROM PUBLIC, 
 GRANT SELECT, INSERT, UPDATE ON public.landing_staff TO service_role;
 GRANT SELECT, INSERT ON public.landing_lead_activities TO service_role;
 
--- Défense en profondeur : un compte connecté MEMBRE ACTIF de l'équipe peut lire et
--- traiter les leads (le site passe par le serveur, mais la base l'impose aussi).
-GRANT SELECT, UPDATE ON public.landing_leads TO authenticated;
+-- Défense en profondeur : un compte connecté MEMBRE ACTIF de l'équipe peut seulement LIRE.
+-- Toute modification passe par le serveur du site (clé service_role), qui écrit l'historique :
+-- aucune modification directe par l'API Supabase ne peut contourner la traçabilité.
+GRANT SELECT ON public.landing_leads TO authenticated;
 GRANT SELECT ON public.landing_events TO authenticated;
-GRANT SELECT, INSERT ON public.landing_lead_activities TO authenticated;
+GRANT SELECT ON public.landing_lead_activities TO authenticated;
 GRANT SELECT ON public.landing_staff TO authenticated;
 
 CREATE POLICY landing_leads_staff_read ON public.landing_leads
   FOR SELECT TO authenticated USING (public.landing_is_staff());
-CREATE POLICY landing_leads_staff_update ON public.landing_leads
-  FOR UPDATE TO authenticated USING (public.landing_is_staff()) WITH CHECK (public.landing_is_staff());
 CREATE POLICY landing_events_staff_read ON public.landing_events
   FOR SELECT TO authenticated USING (public.landing_is_staff());
 CREATE POLICY landing_activities_staff_read ON public.landing_lead_activities
   FOR SELECT TO authenticated USING (public.landing_is_staff());
-CREATE POLICY landing_activities_staff_insert ON public.landing_lead_activities
-  FOR INSERT TO authenticated WITH CHECK (public.landing_is_staff() AND actor_id = auth.uid());
 CREATE POLICY landing_staff_self_or_staff ON public.landing_staff
   FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.landing_is_staff());
 
 -- ---------- 5. Conservation des données ----------
 -- Durées (à valider par Easy2Book) :
---   * identifiants publicitaires et techniques (IP, navigateur, cookies, clics) : 90 jours
+--   * identifiants publicitaires et techniques (IP, navigateur, cookies, clics, identifiant visiteur) : 90 jours
 --   * événements de navigation (landing_events) : 13 mois
 --   * leads non convertis (nouveau, contacte, qualifie, perdu) : anonymisés après 24 mois
 --   * leads réservés : anonymisés après 36 mois
@@ -143,8 +149,20 @@ BEGIN
           OR fbc IS NOT NULL OR ttp IS NOT NULL OR ip IS NOT NULL OR user_agent IS NOT NULL);
   GET DIAGNOSTICS n_ids = ROW_COUNT;
 
+  UPDATE landing_events SET visitor_id = NULL
+   WHERE created_at < now() - interval '90 days' AND visitor_id IS NOT NULL;
+
   DELETE FROM landing_events WHERE created_at < now() - interval '13 months';
   GET DIAGNOSTICS n_events = ROW_COUNT;
+
+  -- texte libre de l'historique (notes, commentaires) des leads à anonymiser
+  PERFORM set_config('landing.purge', 'on', true);
+  UPDATE landing_lead_activities a SET body = NULL
+    FROM landing_leads l
+   WHERE a.lead_id = l.id AND a.body IS NOT NULL AND l.anonymized_at IS NULL
+     AND ((l.status <> 'reserve' AND l.created_at < now() - interval '24 months')
+       OR (l.status = 'reserve' AND l.created_at < now() - interval '36 months'));
+  PERFORM set_config('landing.purge', 'off', true);
 
   WITH anonymized AS (
     UPDATE landing_leads
@@ -164,13 +182,6 @@ END $$;
 REVOKE ALL ON FUNCTION public.landing_purge_personal_data() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.landing_purge_personal_data() TO service_role;
 
--- Planification quotidienne (03:15, heure UTC) si l'extension pg_cron est disponible.
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_cron') THEN
-    CREATE EXTENSION IF NOT EXISTS pg_cron;
-    PERFORM cron.schedule('landing-purge-personal-data', '15 3 * * *', 'SELECT public.landing_purge_personal_data()');
-  ELSE
-    RAISE NOTICE 'pg_cron indisponible : lancer SELECT public.landing_purge_personal_data(); chaque jour.';
-  END IF;
-END $$;
+-- Planification : VOLONTAIREMENT ABSENTE tant que les durées ci-dessus ne sont pas validées.
+-- Après validation, activer pg_cron (Dashboard > Database > Extensions) puis exécuter :
+--   SELECT cron.schedule('landing-purge-personal-data', '15 3 * * *', 'SELECT public.landing_purge_personal_data()');

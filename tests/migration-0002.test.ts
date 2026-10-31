@@ -68,8 +68,10 @@ describe("migration 0002_landing_crm.sql", () => {
       expect(await as("authenticated", STAFF, async () => (await db.query("SELECT id FROM landing_leads")).rows.length)).toBe(0)
     })
 
-    it("un compte hors équipe ne peut pas modifier un lead", async () => {
-      await as("authenticated", OTHER, () => db.query(`UPDATE landing_leads SET status = 'perdu' WHERE id = '${leadId}'`))
+    it("aucun compte connecté (même membre) ne peut modifier un lead directement par l'API", async () => {
+      for (const uid of [OTHER, STAFF]) {
+        await expect(as("authenticated", uid, () => db.query(`UPDATE landing_leads SET status = 'perdu' WHERE id = '${leadId}'`))).rejects.toThrow(/permission denied/)
+      }
       expect((await db.query<{ status: string }>("SELECT status FROM landing_leads")).rows[0].status).toBe("nouveau")
     })
 
@@ -79,16 +81,16 @@ describe("migration 0002_landing_crm.sql", () => {
       await expect(as("anon", null, () => db.query("SELECT * FROM landing_staff"))).rejects.toThrow(/permission denied/)
     })
 
-    it("historique : un membre n'écrit qu'en son nom ; aucune modification ni suppression", async () => {
-      await as("authenticated", STAFF, () =>
-        db.query(`INSERT INTO landing_lead_activities (lead_id, actor_id, actor_label, type, body) VALUES ('${leadId}', '${STAFF}', 'agent', 'note', 'Appel')`)
-      )
+    it("historique : aucune écriture directe par un compte connecté ; aucune modification ni suppression", async () => {
       await expect(
         as("authenticated", STAFF, () =>
-          db.query(`INSERT INTO landing_lead_activities (lead_id, actor_id, actor_label, type) VALUES ('${leadId}', '${OTHER}', 'usurpation', 'note')`)
+          db.query(`INSERT INTO landing_lead_activities (lead_id, actor_id, actor_label, type, body) VALUES ('${leadId}', '${STAFF}', 'agent', 'note', 'Appel')`)
         )
-      ).rejects.toThrow()
+      ).rejects.toThrow(/permission denied/)
+      await db.query(`INSERT INTO landing_lead_activities (lead_id, actor_label, type, body) VALUES ('${leadId}', 'système', 'note', 'Appel')`)
+      expect(await as("authenticated", STAFF, async () => (await db.query("SELECT id FROM landing_lead_activities")).rows.length)).toBe(1)
       await expect(db.query("UPDATE landing_lead_activities SET body = 'modifié'")).rejects.toThrow(/ajout seul/)
+      await expect(db.query("UPDATE landing_lead_activities SET body = NULL")).rejects.toThrow(/ajout seul/) // hors purge
       await expect(db.query("DELETE FROM landing_lead_activities")).rejects.toThrow(/ajout seul/)
     })
 
@@ -115,11 +117,17 @@ describe("migration 0002_landing_crm.sql", () => {
     it("purge : identifiants après 90 jours, événements après 13 mois, anonymisation après 24 / 36 mois", async () => {
       await db.exec(`
         UPDATE landing_leads SET created_at = now() - interval '100 days', tracking_consent = true, ip = '1.2.3.4', fbclid = 'FB' WHERE id = '${leadId}';
-        INSERT INTO landing_events (event_name, event_id, created_at) VALUES ('Contact', 'evt-old-00001', now() - interval '14 months'), ('Contact', 'evt-new-00001', now());`)
+        INSERT INTO landing_events (event_name, event_id, visitor_id, created_at) VALUES
+          ('Contact', 'evt-old-00001', 'v-old', now() - interval '14 months'),
+          ('Contact', 'evt-mid-00001', 'v-mid', now() - interval '100 days'),
+          ('Contact', 'evt-new-00001', 'v-new', now());`)
       const oldLost = await addLead({ ref: "E2B-OLD234", idempotency_key: "evt-00000002", phone: "21622000001", status: "perdu" })
       const oldBooked = await addLead({ ref: "E2B-RES234", idempotency_key: "evt-00000003", phone: "21622000002", status: "reserve", booked_at: new Date().toISOString(), booking_value: 4800 })
       await db.exec(`
-        UPDATE landing_leads SET created_at = now() - interval '25 months' WHERE id IN ('${oldLost}', '${oldBooked}');`)
+        UPDATE landing_leads SET created_at = now() - interval '25 months' WHERE id IN ('${oldLost}', '${oldBooked}');
+        INSERT INTO landing_lead_activities (lead_id, actor_label, type, body) VALUES
+          ('${oldLost}', 'agent', 'note', 'Appelé au 22000001, mariage en juin'),
+          ('${oldBooked}', 'agent', 'note', 'Réservé, paie en 2 fois');`)
 
       const r = await as("service_role", null, () => db.query<{ r: Record<string, number> }>("SELECT public.landing_purge_personal_data() AS r"))
       expect((r as { rows: { r: Record<string, number> }[] }).rows[0].r).toEqual({ identifiants_effaces: 1, evenements_supprimes: 1, leads_anonymises: 1 })
@@ -131,6 +139,17 @@ describe("migration 0002_landing_crm.sql", () => {
       expect(rows.find((x) => x.ref === "E2B-OLD234")).toMatchObject({ phone: null, first_name: "Anonymisé" })
       expect(rows.find((x) => x.ref === "E2B-RES234")).toMatchObject({ phone: "21622000002", anonymized_at: null }) // réservé : 36 mois
       expect((await db.query("SELECT 1 FROM landing_lead_activities WHERE type = 'anonymized'")).rows).toHaveLength(1)
+      // notes de l'historique effacées pour le lead anonymisé, conservées pour le lead réservé (36 mois)
+      const notes = (await db.query<{ lead_id: string; body: string | null }>("SELECT lead_id, body FROM landing_lead_activities WHERE type = 'note'")).rows
+      expect(notes.find((n) => n.lead_id === oldLost)?.body).toBeNull()
+      expect(notes.find((n) => n.lead_id === oldBooked)?.body).toBe("Réservé, paie en 2 fois")
+      // identifiant visiteur des événements effacé après 90 jours
+      const ev = (await db.query<{ event_id: string; visitor_id: string | null }>("SELECT event_id, visitor_id FROM landing_events ORDER BY event_id")).rows
+      expect(ev).toEqual([{ event_id: "evt-mid-00001", visitor_id: null }, { event_id: "evt-new-00001", visitor_id: "v-new" }])
+    })
+
+    it("aucune purge n'est planifiée automatiquement (durées non validées)", async () => {
+      expect((await db.query("SELECT 1 FROM pg_extension WHERE extname = 'pg_cron'")).rows).toHaveLength(0)
     })
 
     it("la purge n'est pas exécutable par un compte connecté", async () => {

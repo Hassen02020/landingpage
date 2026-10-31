@@ -8,6 +8,7 @@ import { DbError, dbConfigured, insertOne, select } from "@/lib/server/db"
 import { CONSENT_TEXT_VERSION, PRODUCTS, isProduct, WHATSAPP_NUMBER, type Product } from "@/lib/config"
 import { logActivity, tunisDay } from "@/lib/server/crm"
 import { notifyNewLead } from "@/lib/server/notify"
+import { verifyCaptcha } from "@/lib/server/captcha"
 
 export const runtime = "nodejs"
 
@@ -58,6 +59,11 @@ export async function POST(request: NextRequest) {
   if (!phone) errors.phone = "Numéro invalide : 8 chiffres (ex. 98 140 514) ou format international (+33…)"
   if (body.contactConsent !== true) errors.contactConsent = "Merci d'accepter d'être recontacté au sujet de votre demande"
   if (Object.keys(errors).length) return NextResponse.json({ error: "Formulaire incomplet", errors }, { status: 422 })
+
+  // Captcha (si configuré) : vérifié côté serveur auprès de Cloudflare
+  if (!(await verifyCaptcha(str(body.captchaToken, 2048), ip))) {
+    return NextResponse.json({ error: "Vérification anti-robot échouée. Réessayez ou écrivez-nous sur WhatsApp." }, { status: 403 })
+  }
 
   const attr = flattenAttribution(body.attribution)
   const trackingConsent = body.trackingConsent === true
