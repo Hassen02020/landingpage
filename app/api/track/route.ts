@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import { flattenAttribution, obj, str } from "@/lib/server/attribution"
 import { clientIp } from "@/lib/server/hash"
+import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
-import { insertRowQuiet, supabaseConfigured } from "@/lib/server/supabase"
+import { ALLOWED_EVENTS } from "@/lib/server/events"
 
 export const runtime = "nodejs"
 
-// Événements enregistrés dans Supabase (table "events") pour analyser les niches.
-// Les événements d'engagement (scroll, temps passé) ne sont envoyés qu'aux pixels.
-const LOGGED_EVENTS = new Set(["Contact", "ViewContent", "CategoryView", "HotelClick", "PackageClick", "TripClick"])
-
+/**
+ * POST /api/track — relais serveur (Meta Conversions API + TikTok Events API)
+ * des événements du pixel navigateur, avec le même event_id (déduplication).
+ * N'envoie rien sans consentement explicite aux traceurs.
+ */
 export async function POST(request: NextRequest) {
+  if (!isAllowedOrigin(request.headers)) {
+    return NextResponse.json({ error: "Origine non autorisée" }, { status: 403 })
+  }
+
   let body: Record<string, unknown>
   try {
     body = obj(await request.json())
@@ -21,53 +27,49 @@ export async function POST(request: NextRequest) {
 
   const eventName = str(body.eventName, 64)
   const eventId = str(body.eventId, 64)
-  if (!eventName || !/^[A-Za-z][A-Za-z0-9_]*$/.test(eventName) || !eventId) {
-    return NextResponse.json({ error: "eventName et eventId requis" }, { status: 400 })
+  if (!eventName || !ALLOWED_EVENTS.has(eventName) || !eventId || !/^[A-Za-z0-9-]{8,64}$/.test(eventId)) {
+    return NextResponse.json({ error: "Événement non autorisé" }, { status: 400 })
   }
 
-  const customData = obj(body.customData)
-  const attr = flattenAttribution(body.attribution)
-  const user = {
-    visitorId: attr.visitor_id,
-    ip: clientIp(request.headers),
-    userAgent: request.headers.get("user-agent") || undefined,
-    fbp: attr.fbp,
-    fbc: attr.fbc,
-    ttp: attr.ttp,
-    ttclid: attr.ttclid,
+  // Sans consentement : on accepte la requête mais rien ne part chez Meta / TikTok.
+  if (body.consent !== "granted") return NextResponse.json({ ok: true, forwarded: false })
+
+  const ip = clientIp(request.headers)
+  if (rateLimited(ip && `track:${ip}`, 120, 60 * 1000)) {
+    return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 })
   }
+  // un même event_id n'est relayé qu'une fois
+  if (rememberOnce(["track", eventId], "1", 60 * 60 * 1000)) {
+    return NextResponse.json({ ok: true, forwarded: false, duplicate: true })
+  }
+
+  const rawData = obj(body.customData)
+  // seules des valeurs simples et courtes sont relayées
+  const customData: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(rawData).slice(0, 20)) {
+    if (!/^[a-z_]{1,40}$/.test(k)) continue
+    if (typeof v === "number" && Number.isFinite(v)) customData[k] = v
+    else if (typeof v === "string") customData[k] = v.slice(0, 200)
+  }
+
+  const attr = flattenAttribution(body.attribution)
   const serverEvent = {
     eventName,
     eventId,
     pageUrl: attr.page_url,
     referrer: attr.referrer,
     customData,
-    user,
+    user: {
+      visitorId: attr.visitor_id,
+      ip,
+      userAgent: request.headers.get("user-agent") || undefined,
+      fbp: attr.fbp,
+      fbc: attr.fbc,
+      ttp: attr.ttp,
+      ttclid: attr.ttclid,
+    },
   }
 
-  const tasks: Promise<unknown>[] = [sendMetaEvent(serverEvent), sendTikTokEvent(serverEvent)]
-
-  if (LOGGED_EVENTS.has(eventName) && supabaseConfigured()) {
-    tasks.push(
-      insertRowQuiet("events", {
-        event_name: eventName,
-        event_id: eventId,
-        visitor_id: attr.visitor_id,
-        ref: attr.ref,
-        product: str(customData.product, 32) || str(customData.content_category, 64),
-        offer: str(customData.content_ids) || undefined,
-        niche: str(customData.niche, 64) || str(customData.category_id, 64),
-        location: str(customData.content_name),
-        channel: attr.channel,
-        utm_source: attr.utm_source,
-        utm_campaign: attr.utm_campaign,
-        utm_content: attr.utm_content,
-        ad_id: attr.ad_id,
-        page_url: attr.page_url,
-      }).catch((e) => console.error("[track] supabase", e))
-    )
-  }
-
-  await Promise.allSettled(tasks)
-  return NextResponse.json({ ok: true })
+  await Promise.allSettled([sendMetaEvent(serverEvent), sendTikTokEvent(serverEvent)])
+  return NextResponse.json({ ok: true, forwarded: true })
 }

@@ -3,6 +3,7 @@
 // avec le même event_id, ce qui permet la déduplication navigateur/serveur.
 
 import { getAttribution } from "./attribution"
+import { hasTrackingConsent } from "./consent"
 import { WHATSAPP_NUMBER, type Product } from "./config"
 
 type Fbq = (...args: unknown[]) => void
@@ -64,6 +65,8 @@ export function trackEvent(
 ): string {
   const eventId = options.eventId || generateEventId()
   if (typeof window === "undefined") return eventId
+  // Sans consentement : rien n'est envoyé à Meta, TikTok ni au serveur.
+  if (!hasTrackingConsent()) return eventId
 
   let attribution
   try {
@@ -106,7 +109,7 @@ export function trackEvent(
   if (options.skipServer) return eventId
 
   try {
-    const body = JSON.stringify({ eventName, eventId, customData: data, attribution })
+    const body = JSON.stringify({ eventName, eventId, customData: data, attribution, consent: "granted" })
     // keepalive : l'envoi survit à l'ouverture de WhatsApp / au changement de page
     fetch("/api/track", {
       method: "POST",

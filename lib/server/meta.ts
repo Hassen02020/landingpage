@@ -67,9 +67,11 @@ export async function sendMetaEvent(event: ServerEvent): Promise<{ ok: boolean; 
     ],
   }
   if (process.env.META_TEST_EVENT_CODE) payload.test_event_code = process.env.META_TEST_EVENT_CODE
+  // jeton dans le corps (et non dans l'URL) pour ne pas l'exposer dans les journaux
+  payload.access_token = token
 
   try {
-    const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${pixelId}/events?access_token=${encodeURIComponent(token)}`, {
+    const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${encodeURIComponent(pixelId)}/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

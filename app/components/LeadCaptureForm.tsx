@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { getAttribution } from "@/lib/attribution"
+import { hasTrackingConsent } from "@/lib/consent"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { buildWhatsAppUrl, generateEventId, trackEvent } from "@/lib/tracking"
 
@@ -21,7 +22,8 @@ const T = {
     children: "Enfants",
     budget: "Budget approximatif",
     message: "Précisions (facultatif)",
-    consent: "J'accepte qu'Easy2Book me recontacte par téléphone / WhatsApp au sujet de ma demande.",
+    consent: "J'accepte qu'Easy2Book me recontacte par téléphone / WhatsApp au sujet de ma demande. (obligatoire)",
+    marketing: "J'accepte de recevoir les offres et promotions Easy2Book par WhatsApp / téléphone (facultatif).",
     submit: "🟢 Envoyer et continuer sur WhatsApp",
     sending: "Envoi en cours…",
     success: "✓ Demande enregistrée ! Votre référence :",
@@ -44,7 +46,8 @@ const T = {
     children: "الأطفال",
     budget: "الميزانية التقريبية",
     message: "ملاحظات (اختياري)",
-    consent: "أوافق على أن تتصل بي Easy2Book عبر الهاتف / واتساب بخصوص طلبي.",
+    consent: "أوافق على أن تتصل بي Easy2Book عبر الهاتف / واتساب بخصوص طلبي. (إجباري)",
+    marketing: "أوافق على تلقي عروض Easy2Book عبر واتساب / الهاتف (اختياري).",
     submit: "🟢 أرسل وواصل على واتساب",
     sending: "جاري الإرسال…",
     success: "✓ تم تسجيل طلبك! رقم المرجع:",
@@ -135,7 +138,9 @@ export function LeadCaptureForm({
       budget: get("budget"),
       trip_type: get("trip_type"),
       message: get("message"),
-      consent: true,
+      contactConsent: true,
+      marketingConsent: Boolean(fd.get("marketing")),
+      trackingConsent: hasTrackingConsent(),
       website: get("website"),
       attribution: (() => {
         try {
@@ -330,6 +335,11 @@ export function LeadCaptureForm({
       <label className="flex items-start gap-2 text-xs text-gray-600">
         <input type="checkbox" name="consent" value="1" className="mt-0.5" disabled={submitting} />
         <span>{t.consent}</span>
+      </label>
+
+      <label className="flex items-start gap-2 text-xs text-gray-600">
+        <input type="checkbox" name="marketing" value="1" className="mt-0.5" disabled={submitting} />
+        <span>{t.marketing}</span>
       </label>
 
       <button

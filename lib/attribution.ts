@@ -1,4 +1,6 @@
 // Attribution des visiteurs (client uniquement).
+// Sans consentement : données gardées pour la session seulement (sessionStorage),
+// aucun cookie, rien n'est transmis à Meta / TikTok (voir lib/consent.ts).
 // Capture les paramètres de campagne (UTM, fbclid, ttclid…) à l'arrivée sur le site,
 // garde le premier contact (first touch) et le dernier contact (last touch) afin que
 // chaque lead / clic WhatsApp soit rattaché à la publicité qui l'a généré.
@@ -35,6 +37,8 @@ export interface Attribution {
   referrer?: string
 }
 
+import { hasTrackingConsent } from "./consent"
+
 const KEY_VISITOR = "e2b_vid"
 const KEY_FIRST = "e2b_ft"
 const KEY_LAST = "e2b_lt"
@@ -55,7 +59,7 @@ const PARAMS = [
 
 function storageGet(key: string): string | null {
   try {
-    return window.localStorage.getItem(key)
+    return (hasTrackingConsent() && window.localStorage.getItem(key)) || window.sessionStorage.getItem(key)
   } catch {
     return null
   }
@@ -63,7 +67,9 @@ function storageGet(key: string): string | null {
 
 function storageSet(key: string, value: string): void {
   try {
-    window.localStorage.setItem(key, value)
+    // persistance longue (localStorage) uniquement avec consentement
+    if (hasTrackingConsent()) window.localStorage.setItem(key, value)
+    window.sessionStorage.setItem(key, value)
   } catch {
     // stockage indisponible (navigation privée) : on continue sans persistance
   }
@@ -125,12 +131,12 @@ export function detectChannel(params: URLSearchParams, referrer: string): Channe
 }
 
 function getVisitorId(): string {
-  let vid = storageGet(KEY_VISITOR) || readCookie(KEY_VISITOR)
+  let vid = storageGet(KEY_VISITOR) || (hasTrackingConsent() ? readCookie(KEY_VISITOR) : undefined)
   if (!vid) {
     vid = randomId()
   }
   storageSet(KEY_VISITOR, vid)
-  writeCookie(KEY_VISITOR, vid, 365)
+  if (hasTrackingConsent()) writeCookie(KEY_VISITOR, vid, 365)
   return vid
 }
 
@@ -153,7 +159,7 @@ export function captureAttribution(): void {
 
   // Meta : cookie _fbc à partir du fbclid si le pixel ne l'a pas encore créé
   const fbclid = params.get("fbclid")
-  if (fbclid && !readCookie("_fbc")) {
+  if (fbclid && hasTrackingConsent() && !readCookie("_fbc")) {
     writeCookie("_fbc", `fb.1.${Date.now()}.${fbclid}`, 90)
   }
 
@@ -192,9 +198,9 @@ export function getAttribution(): Attribution {
     ref: refFromVisitorId(vid),
     first_touch: parseTouch(storageGet(KEY_FIRST)),
     last_touch: parseTouch(storageGet(KEY_LAST)),
-    fbp: readCookie("_fbp"),
-    fbc: readCookie("_fbc"),
-    ttp: readCookie("_ttp"),
+    fbp: hasTrackingConsent() ? readCookie("_fbp") : undefined,
+    fbc: hasTrackingConsent() ? readCookie("_fbc") : undefined,
+    ttp: hasTrackingConsent() ? readCookie("_ttp") : undefined,
     page_url: window.location.href,
     referrer: document.referrer || undefined,
   }
