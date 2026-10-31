@@ -46,7 +46,13 @@ ALTER TABLE public.landing_leads
   ADD COLUMN updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
   ADD COLUMN consent_text_version   TEXT CHECK (char_length(consent_text_version) <= 32),
   ADD COLUMN marketing_withdrawn_at TIMESTAMPTZ,
-  ADD COLUMN anonymized_at          TIMESTAMPTZ;
+  ADD COLUMN anonymized_at          TIMESTAMPTZ,
+  -- dernière interaction (création, statut, note, relance…) : point de départ des durées de conservation
+  ADD COLUMN last_activity_at       TIMESTAMPTZ;
+UPDATE public.landing_leads SET last_activity_at = created_at;
+ALTER TABLE public.landing_leads
+  ALTER COLUMN last_activity_at SET DEFAULT now(),
+  ALTER COLUMN last_activity_at SET NOT NULL;
 
 -- Anonymisation : le téléphone peut être effacé, mais uniquement sur un lead anonymisé
 ALTER TABLE public.landing_leads ALTER COLUMN phone DROP NOT NULL;
@@ -66,6 +72,29 @@ BEGIN
 END $$;
 CREATE TRIGGER landing_leads_touch BEFORE UPDATE ON public.landing_leads
   FOR EACH ROW EXECUTE FUNCTION public.landing_touch_updated_at();
+
+-- Règles métier imposées par la base, quel que soit le rôle (service_role et postgres compris) :
+--   * un lead anonymisé ne peut plus être modifié (sauf par la purge) — l'effacement (DELETE) reste possible ;
+--   * la date de réservation (booked_at), une fois posée, ne change plus : une vente n'est jamais comptée deux fois.
+CREATE FUNCTION public.landing_leads_guard() RETURNS trigger
+  LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF current_setting('landing.purge', true) = 'on' THEN
+    RETURN NEW;
+  END IF;
+  IF OLD.anonymized_at IS NOT NULL THEN
+    RAISE EXCEPTION 'lead % anonymisé : modification interdite', OLD.ref;
+  END IF;
+  IF OLD.booked_at IS NOT NULL AND NEW.booked_at IS DISTINCT FROM OLD.booked_at THEN
+    RAISE EXCEPTION 'lead % : la date de réservation ne peut plus être modifiée', OLD.ref;
+  END IF;
+  IF NEW.anonymized_at IS NOT NULL THEN
+    RAISE EXCEPTION 'l''anonymisation est réservée à landing_purge_personal_data()';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER landing_leads_guard BEFORE UPDATE ON public.landing_leads
+  FOR EACH ROW EXECUTE FUNCTION public.landing_leads_guard();
 
 -- ---------- 3. Historique (ajout uniquement) ----------
 CREATE TABLE public.landing_lead_activities (
@@ -103,6 +132,29 @@ END $$;
 CREATE TRIGGER landing_lead_activities_no_update BEFORE UPDATE OR DELETE ON public.landing_lead_activities
   FOR EACH ROW EXECUTE FUNCTION public.landing_activities_immutable();
 
+-- TRUNCATE ne déclenche pas les triggers ligne par ligne : il est interdit séparément (tous rôles).
+CREATE FUNCTION public.landing_activities_no_truncate() RETURNS trigger
+  LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  RAISE EXCEPTION 'landing_lead_activities est en ajout seul (TRUNCATE interdit)';
+END $$;
+CREATE TRIGGER landing_lead_activities_no_truncate BEFORE TRUNCATE ON public.landing_lead_activities
+  FOR EACH STATEMENT EXECUTE FUNCTION public.landing_activities_no_truncate();
+
+-- Chaque activité (hors anonymisation) met à jour la dernière interaction du lead.
+CREATE FUNCTION public.landing_activity_touch_lead() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NEW.type <> 'anonymized' THEN
+    UPDATE public.landing_leads
+       SET last_activity_at = greatest(last_activity_at, NEW.created_at)
+     WHERE id = NEW.lead_id AND anonymized_at IS NULL;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER landing_lead_activities_touch_lead AFTER INSERT ON public.landing_lead_activities
+  FOR EACH ROW EXECUTE FUNCTION public.landing_activity_touch_lead();
+
 -- ---------- 4. Sécurité ----------
 ALTER TABLE public.landing_staff ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.landing_staff FORCE ROW LEVEL SECURITY;
@@ -110,8 +162,17 @@ ALTER TABLE public.landing_lead_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.landing_lead_activities FORCE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.landing_staff, public.landing_lead_activities FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.landing_staff TO service_role;
+
+-- service_role (clé serveur du site) : Supabase lui accorde par défaut TOUS les droits, y compris
+-- DELETE et TRUNCATE. On les retire, y compris sur les tables de 0001, et on ne rend que le strict
+-- nécessaire au code du site. Effacements et gestion de l'équipe : éditeur SQL (rôle postgres).
+REVOKE ALL ON public.landing_leads, public.landing_events, public.landing_staff, public.landing_lead_activities,
+              public.landing_campaign_performance, public.landing_niche_performance FROM service_role;
+GRANT SELECT, INSERT, UPDATE ON public.landing_leads TO service_role;
+GRANT SELECT, INSERT ON public.landing_events TO service_role;
 GRANT SELECT, INSERT ON public.landing_lead_activities TO service_role;
+GRANT SELECT ON public.landing_staff TO service_role;
+GRANT SELECT ON public.landing_campaign_performance, public.landing_niche_performance TO service_role;
 
 -- Défense en profondeur : un compte connecté MEMBRE ACTIF de l'équipe peut seulement LIRE.
 -- Toute modification passe par le serveur du site (clé service_role), qui écrit l'historique :
@@ -134,13 +195,16 @@ CREATE POLICY landing_staff_self_or_staff ON public.landing_staff
 -- Durées (à valider par Easy2Book) :
 --   * identifiants publicitaires et techniques (IP, navigateur, cookies, clics, identifiant visiteur) : 90 jours
 --   * événements de navigation (landing_events) : 13 mois
---   * leads non convertis (nouveau, contacte, qualifie, perdu) : anonymisés après 24 mois
---   * leads réservés : anonymisés après 36 mois
+--   * leads non convertis (nouveau, contacte, qualifie, perdu) : anonymisés 24 mois après la DERNIÈRE interaction
+--   * leads réservés : anonymisés 36 mois après la dernière interaction ou la réservation (la plus récente)
 CREATE FUNCTION public.landing_purge_personal_data() RETURNS jsonb
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   n_ids int; n_events int; n_leads int;
 BEGIN
+  -- autorise les mises à jour de purge malgré les règles métier (triggers), pour cette transaction seulement
+  PERFORM set_config('landing.purge', 'on', true);
+
   UPDATE landing_leads
      SET visitor_id = NULL, fbclid = NULL, ttclid = NULL, fbp = NULL, fbc = NULL, ttp = NULL,
          ip = NULL, user_agent = NULL
@@ -156,27 +220,26 @@ BEGIN
   GET DIAGNOSTICS n_events = ROW_COUNT;
 
   -- texte libre de l'historique (notes, commentaires) des leads à anonymiser
-  PERFORM set_config('landing.purge', 'on', true);
   UPDATE landing_lead_activities a SET body = NULL
     FROM landing_leads l
    WHERE a.lead_id = l.id AND a.body IS NOT NULL AND l.anonymized_at IS NULL
-     AND ((l.status <> 'reserve' AND l.created_at < now() - interval '24 months')
-       OR (l.status = 'reserve' AND l.created_at < now() - interval '36 months'));
-  PERFORM set_config('landing.purge', 'off', true);
+     AND ((l.status <> 'reserve' AND l.last_activity_at < now() - interval '24 months')
+       OR (l.status = 'reserve' AND greatest(l.last_activity_at, l.booked_at) < now() - interval '36 months'));
 
   WITH anonymized AS (
     UPDATE landing_leads
        SET first_name = 'Anonymisé', last_name = NULL, phone = NULL, message = NULL, notes = NULL,
            destination = NULL, visitor_ref = NULL, marketing_consent = false, anonymized_at = now()
      WHERE anonymized_at IS NULL
-       AND ((status <> 'reserve' AND created_at < now() - interval '24 months')
-         OR (status = 'reserve' AND created_at < now() - interval '36 months'))
+       AND ((status <> 'reserve' AND last_activity_at < now() - interval '24 months')
+         OR (status = 'reserve' AND greatest(last_activity_at, booked_at) < now() - interval '36 months'))
     RETURNING id
   )
   INSERT INTO landing_lead_activities (lead_id, actor_label, type, body)
   SELECT id, 'système', 'anonymized', 'Anonymisation automatique (durée de conservation atteinte)' FROM anonymized;
   GET DIAGNOSTICS n_leads = ROW_COUNT;
 
+  PERFORM set_config('landing.purge', 'off', true);
   RETURN jsonb_build_object('identifiants_effaces', n_ids, 'evenements_supprimes', n_events, 'leads_anonymises', n_leads);
 END $$;
 REVOKE ALL ON FUNCTION public.landing_purge_personal_data() FROM PUBLIC, anon, authenticated;

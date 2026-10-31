@@ -63,8 +63,10 @@ Le conseiller confirme la réservation ─► POST /api/leads/status (clé admin
 |---|---|---|
 | IP, navigateur, cookies publicitaires, identifiants de clic, identifiant visiteur (leads et événements) | 90 jours | effacés |
 | Événements de navigation (`landing_events`) | 13 mois | supprimés |
-| Leads non réservés | 24 mois | anonymisés, y compris le texte des notes de leur historique |
-| Leads réservés | 36 mois | anonymisés |
+| Leads non réservés | 24 mois après la **dernière interaction** (`last_activity_at`) | anonymisés, y compris le texte des notes de leur historique |
+| Leads réservés | 36 mois après la dernière interaction ou la réservation (la plus récente) | anonymisés ; le montant et la date de réservation sont conservés |
+
+`last_activity_at` est mise à jour automatiquement à chaque activité (création, statut, note, relance, assignation). Un client réservé ou recontacté récemment n'est donc jamais anonymisé, même si sa demande est ancienne.
 
 Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sql` avant application, ou par une migration ultérieure. Le droit à l'effacement s'exerce par `DELETE FROM landing_leads WHERE ref = '…'` dans l'éditeur SQL, ce qui supprime aussi l'historique du lead.
 
@@ -85,7 +87,7 @@ Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to
 1. Projet Supabase des landing pages : **`tdexdlukqciolslvjmhd`** (région eu-west-3), distinct d'EasyV4 et d'EasyV4-preview.
 2. Dans ce projet, ouvrir **SQL Editor** et exécuter, dans l'ordre, `supabase/migrations/0001_landing_leads.sql` (**appliquée le 31/10/2026**), puis `supabase/migrations/0002_landing_crm.sql`. Chaque script s'arrête de lui-même sur une base EasyV4, si le précédent manque, ou s'il a déjà été appliqué.
    **Ordre de déploiement** : appliquer `0002` **avant** de déployer ce code. Le formulaire enregistre `consent_text_version`, une colonne créée par `0002`.
-3. Saisir dans Vercel, **en Production uniquement** pour que les déploiements de test n'écrivent jamais dans la base réelle : `LANDING_SUPABASE_URL` et `LANDING_SUPABASE_PUBLISHABLE_KEY` (créées le 31/10/2026), `LANDING_SUPABASE_SERVICE_ROLE_KEY` (secrète, à saisir par vous), et, en option, `LANDING_ADMIN_API_KEY` et les variables de notification (voir `.env.example`).
+3. Saisir dans Vercel, **en Production uniquement** pour que les déploiements de test n'écrivent jamais dans la base réelle : `LANDING_SUPABASE_URL` et `LANDING_SUPABASE_PUBLISHABLE_KEY` (créées le 31/10/2026), `LANDING_SUPABASE_SERVICE_ROLE_KEY` (secrète, à saisir par vous), et, en option, les variables de notification et de captcha (voir `.env.example`). `LANDING_ADMIN_API_KEY` est déconseillée (voir « API d'administration »).
 
 L'application passe par l'API REST de Supabase (`https://tdexdlukqciolslvjmhd.supabase.co`) avec la clé `service_role`. La chaîne de connexion PostgreSQL (pooler, port 6543) n'est pas utilisée par le site : elle sert seulement aux outils d'administration. Ne jamais la committer avec son mot de passe.
 
@@ -111,7 +113,17 @@ Sans ces variables, le site fonctionne quand même : `/api/leads` répond `store
 **Sécurité** :
 - RLS activée et forcée sur les deux tables, sans aucune politique ;
 - `anon` et `authenticated` n'ont aucun droit (`REVOKE ALL`) ;
-- `service_role` (clé serveur) peut lire, insérer et modifier, mais pas supprimer. Les effacements se font à la main dans l'éditeur SQL.
+- `service_role` (clé serveur) : Supabase lui accorde par défaut **tous** les droits, y compris `DELETE` et `TRUNCATE`. `0001` seule ne les retirait pas : **c'est `0002` qui les retire**, sur toutes les tables landing, et ne rend que le nécessaire au site :
+  - leads : SELECT, INSERT, UPDATE ;
+  - événements et historique : SELECT, INSERT ;
+  - équipe et vues : SELECT.
+
+  Effacements, gestion de l'équipe et purge manuelle se font dans l'éditeur SQL.
+- **Règles métier imposées par la base**, quel que soit le rôle (y compris `service_role` et `postgres`) :
+  - un lead anonymisé ne peut plus être modifié, mais il peut être effacé ;
+  - l'anonymisation est réservée à la fonction de purge ;
+  - la date de réservation (`booked_at`) est définitive, ce qui empêche de compter une vente deux fois ;
+  - l'historique est en ajout seul, y compris contre `TRUNCATE`.
 
 ## Consentement
 
@@ -139,6 +151,8 @@ Un refus après acceptation supprime les cookies `_fbc`, `_fbp`, `_ttp`, `e2b_vi
 * `/api/track` ne relaie qu'une fois un même `event_id`.
 
 ## API d'administration
+
+> **Recommandation** : ne définissez `LANDING_ADMIN_API_KEY` que pour un besoin précis d'automatisation. Cette clé n'est rattachée à aucune personne : l'historique indique seulement « API », et l'export qu'elle autorise n'est pas limité au rôle `admin`. L'équipe doit utiliser `/admin`. Sans cette variable, les deux routes sont désactivées.
 
 Ces routes sont protégées par l'en-tête `x-api-key: <LANDING_ADMIN_API_KEY>`. La clé dans l'URL est refusée, tout comme une clé configurée de moins de 32 caractères.
 

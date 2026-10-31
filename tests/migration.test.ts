@@ -4,7 +4,12 @@ import { PGlite } from "@electric-sql/pglite"
 
 // Migration exécutée sur un vrai moteur PostgreSQL (PGlite, en mémoire), rôles Supabase recréés.
 const MIGRATION = readFileSync(new URL("../supabase/migrations/0001_landing_leads.sql", import.meta.url), "utf8")
-const ROLES = "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;"
+// Rôles Supabase + droits par défaut que Supabase applique au schéma public (tout aux trois rôles).
+const ROLES = `CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+  GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;`
 
 const lead = (o: Record<string, unknown> = {}) => ({
   ref: "E2B-ABC234",
@@ -118,13 +123,13 @@ describe("migration 0001_landing_leads.sql", () => {
       await db.exec("RESET ROLE")
     })
 
-    it("service_role peut lire, écrire et mettre à jour, mais pas supprimer", async () => {
+    it("0001 seule : service_role garde DELETE via les droits par défaut Supabase (retiré par 0002)", async () => {
       await db.exec("SET ROLE service_role")
       expect((await db.query("SELECT count(*)::int AS n FROM landing_leads")).rows[0]).toEqual({ n: 1 })
       await insert(db, lead({ ref: "E2B-XYZ888", idempotency_key: "evt-00000010", phone: "21622000000" }))
       await db.query("UPDATE landing_leads SET status = 'contacte'")
       expect((await db.query<{ n: number }>("SELECT count(*)::int AS n FROM landing_campaign_performance")).rows[0].n).toBeGreaterThan(0)
-      await expect(db.query("DELETE FROM landing_leads")).rejects.toThrow(/permission denied/)
+      await expect(db.query("DELETE FROM landing_leads WHERE ref = 'E2B-XYZ888'")).resolves.toBeTruthy()
       await db.exec("RESET ROLE")
     })
 

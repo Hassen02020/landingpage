@@ -1,6 +1,6 @@
 # active-memory handoff: Easy2Book — landing pages Meta/TikTok/WhatsApp + mini-CRM autonome
 
-**Handoff #1** · 2026-10-31 · Lineage: #1 (2026-10-31): landing pages connectées Meta/TikTok/WhatsApp, séparation totale d'EasyV4, base Supabase dédiée, mini-CRM /admin, audits successifs ; en attente du GO sur 6 corrections de sécurité de la migration 0002
+**Handoff #1** · 2026-10-31 · Lineage: #1 (2026-10-31): landing pages connectées Meta/TikTok/WhatsApp, séparation totale d'EasyV4, base Supabase dédiée, mini-CRM /admin, audits successifs ; 6 corrections de sécurité de 0002 faites (commit « fix(sécurité): 0002 … »), 0002 toujours non appliquée
 
 ## 0. Instructions for Claude (read first)
 
@@ -130,7 +130,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Durées de conservation **proposées, non validées** : identifiants pub/techniques 90 jours ; `landing_events` 13 mois ; leads non réservés anonymisés 24 mois ; réservés 36 mois.
 
 **Tests (au commit `2373022`)**
-- `npm test` : 128 réussis / 0 échoué (14 fichiers), dont migrations `0001`+`0002` sur PGlite.
+- `npm test` : 136 réussis / 0 échoué (14 fichiers), dont 43 tests de migrations `0001`+`0002` sur PGlite **avec les droits par défaut Supabase simulés**.
 - `NODE_PATH=$(npm root -g) node tests/e2e/consent.e2e.mjs http://localhost:3456` : 11 / 0.
 - `npm run typecheck`, `npm run build` : OK.
 - Non exécutés : Supabase Auth réel, API Supabase avec clé secrète, `0002` sur Supabase, envois réels Meta/TikTok/Resend/Turnstile, charge, restauration.
@@ -145,28 +145,22 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 |---|---|---|---|
 | Landing pages + tracking + consentement | fait | branche, `app/`, `lib/` | contenu (dates, images) à corriger |
 | `0001_landing_leads.sql` | appliquée en prod | `supabase/migrations/`, version `bfd90e5` | inchangée depuis |
-| `0002_landing_crm.sql` | prête, non appliquée | `supabase/migrations/` | 6 corrections proposées en attente de GO (section 11) |
+| `0002_landing_crm.sql` | prête, **6 corrections de sécurité intégrées**, non appliquée | `supabase/migrations/` | à appliquer par l'utilisateur après les prérequis (section 11) |
 | Mini-CRM `/admin` | fait (non testé en réel) | `app/admin/` | connexion Supabase Auth réelle non testée |
-| README / `.env.example` | à jour au commit `2373022` | racine | README affirme « pas de DELETE » : faux avec les droits par défaut Supabase (à corriger) |
+| README / `.env.example` | à jour (droits service_role, règles métier en base, conservation depuis la dernière interaction, clé API déconseillée) | racine | — |
 | PR #2 | brouillon, description à jour (`2373022`) | lien section 8 | marquée NON PRÊTE |
 | Ce fichier handoff | commité | `handoff-landingpage-easy2book.md` (racine du dépôt) | à mettre à jour à chaque passation |
 
 **Dernière vérification (6 points), résultats prouvés :**
 1. Rôle admin contrôlé côté serveur : ✅ (`app/admin/export/route.ts:13`, rôle relu en base `lib/server/auth.ts:77-82`) ; seule fonction réservée = export ; `/api/leads/export` ouvert à `LANDING_ADMIN_API_KEY`.
 2. RLS : ✅ `anon` aucun droit ; `authenticated` SELECT seul + filtré par `landing_is_staff()`.
-3. `service_role` : ❌ garde tous les droits (droits par défaut Supabase) → `TRUNCATE` historique, `DELETE` leads, `TRUNCATE` événements, ré-identification d'un lead anonymisé, remise à NULL de `booked_at`, `INSERT` dans `landing_staff` possibles.
-4. Leads anonymisés : protégés dans toute l'application (`lib/server/crm.ts` gardes l.165, 218, 226, 234, 242 avant toutes les écritures l.179, 228, 236, 243) ; ❌ aucune protection en base.
-5. Purge : ❌ durées comptées depuis `created_at` → un lead créé il y a 37 mois et réservé il y a 2 jours est anonymisé ; un lead créé il y a 25 mois et rappelé hier aussi. Montant/`booked_at`/preuve de consentement conservés.
+3. `service_role` : ❌ (corrigé dans `0002`, non appliquée) garde tous les droits (droits par défaut Supabase) → `TRUNCATE` historique, `DELETE` leads, `TRUNCATE` événements, ré-identification d'un lead anonymisé, remise à NULL de `booked_at`, `INSERT` dans `landing_staff` possibles.
+4. Leads anonymisés (corrigé en base dans `0002`) : protégés dans toute l'application (`lib/server/crm.ts` gardes l.165, 218, 226, 234, 242 avant toutes les écritures l.179, 228, 236, 243) ; ❌ aucune protection en base.
+5. Purge (corrigé dans `0002` : depuis `last_activity_at` / `booked_at`) : ❌ durées comptées depuis `created_at` → un lead créé il y a 37 mois et réservé il y a 2 jours est anonymisé ; un lead créé il y a 25 mois et rappelé hier aussi. Montant/`booked_at`/preuve de consentement conservés.
 6. `0002` cohérente avec `0001` appliquée : ✅.
 
 ## 11. Next steps
-1. **Next action:** sur GO de l'utilisateur, appliquer dans `0002` (non appliquée) les 6 corrections proposées, ajouter les tests correspondants (avec simulation des droits par défaut Supabase : `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES/SEQUENCES/FUNCTIONS TO anon, authenticated, service_role`), lancer `npm test` / build / e2e, pousser sur la branche et mettre à jour la PR #2 :
-   - (1) `REVOKE ALL` à `service_role` sur toutes les tables/vues landing puis droits minimaux (leads : SELECT, INSERT, UPDATE ; événements et historique : SELECT, INSERT ; `landing_staff` et vues : SELECT) ;
-   - (2) trigger interdisant `TRUNCATE` de l'historique ;
-   - (3) trigger sur `landing_leads` : refus de toute modification d'un lead anonymisé (hors purge) et `booked_at` non modifiable une fois posé ;
-   - (4) durées de conservation à partir de la dernière interaction (`last_activity_at` mis à jour par trigger sur l'historique, combiné à `booked_at`) ;
-   - (5) corriger README / commentaires (affirmation « pas de DELETE ») ;
-   - (6) recommander de ne pas définir `LANDING_ADMIN_API_KEY` en production.
+1. **Next action:** les 6 corrections de `0002` sont faites (service_role sans DELETE/TRUNCATE ; TRUNCATE historique interdit ; trigger `landing_leads_guard` : lead anonymisé figé, anonymisation réservée à la purge, `booked_at` définitif ; `last_activity_at` + purge depuis la dernière interaction ; README corrigé ; `LANDING_ADMIN_API_KEY` déconseillée). Prochaine action : attendre que l'utilisateur traite les prérequis du point 2, puis, sur GO, vérifier en lecture seule l'application de `0002` (`landing_staff` doit passer de `404 PGRST205` à `401 42501`, colonne `source` présente).
 2. Côté utilisateur, avant toute fusion : confirmer la révocation de l'ancienne clé secrète ; vérifier/désactiver le déploiement automatique des migrations de l'intégration GitHub Supabase ; valider les durées ; fermer les inscriptions publiques ; appliquer `0002` (puis vérification en lecture seule par Claude sur GO) ; créer les comptes équipe ; projet Supabase de test pour la Preview et retrait des variables Meta en Preview ; contenu (dates, images, page de confidentialité, logo OG).
 3. Tests réels sur environnement de test, puis GO de fusion.
 
@@ -174,7 +168,6 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - L'ancienne clé secrète `sb_secret_…` a-t-elle été révoquée ? (oui / non / à vérifier)
 - Réglages de l'intégration GitHub Supabase : déploiement automatique des migrations sur `main` activé ? (désactiver / renommer les migrations et marquer `0001` comme appliquée)
 - Durées de conservation à valider (90 j / 13 mois / 24 mois / 36 mois ou autres) et contrainte légale de conservation des ventes en Tunisie (validation juridique).
-- GO pour les 6 corrections de `0002` ? (tout / partiel / non)
 - Créer un projet Supabase de test pour la Preview ? Retirer `META_ACCESS_TOKEN` / `META_PIXEL_ID` de la Preview ?
 - Conserver `LANDING_ADMIN_API_KEY` en production ?
 - Le connecteur Supabase peut-il être reconnecté sur le compte/organisation possédant `tdexdlukqciolslvjmhd` ?
@@ -183,4 +176,4 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Nothing to attach. Tout est dans le dépôt `Hassen02020/landingpage`, branche `claude/exciting-volta-ndkljc` (la nouvelle session doit être ouverte sur ce dépôt et cette branche).
 
 ---
-<sub>Audit: 13/13 sections · 12 rules · 8 corrections · 60+ data points · secrets removed: yes · generated by active-memory</sub>
+<sub>Audit: 13/13 sections · 12 rules · 8 corrections · 60+ data points · secrets removed: yes · generated by active-memory · mis à jour après les corrections de sécurité de 0002</sub>
