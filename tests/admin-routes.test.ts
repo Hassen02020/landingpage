@@ -43,10 +43,10 @@ describe("POST /api/leads/status", () => {
 
   it("réservation : met à jour le lead et envoie Purchase / CompletePayment (event_id stable)", async () => {
     const f = installFetchMock()
-    await leadPOST(post("/api/leads", lead()))
-    const res = await statusPOST(post("/api/leads/status", { ref: "E2B-QWE234", status: "reserve", booking_value: 4800 }, admin))
+    const { ref } = await (await leadPOST(post("/api/leads", lead()))).json()
+    const res = await statusPOST(post("/api/leads/status", { ref, status: "reserve", booking_value: 4800 }, admin))
     const json = await res.json()
-    expect(json).toMatchObject({ ok: true, conversion: "envoyée", lead: { ref: "E2B-QWE234", status: "reserve" } })
+    expect(json).toMatchObject({ ok: true, conversion: "envoyée", lead: { ref, status: "reserve" } })
     const row = f.db.landing_leads[0]
     expect(row).toMatchObject({ status: "reserve", booking_value: 4800 })
     expect(row.booked_at).toBeTruthy()
@@ -57,11 +57,19 @@ describe("POST /api/leads/status", () => {
 
   it("réservation d'un prospect sans consentement traceurs : aucune conversion envoyée", async () => {
     const f = installFetchMock()
-    await leadPOST(post("/api/leads", lead({ trackingConsent: false })))
-    const json = await (await statusPOST(post("/api/leads/status", { ref: "E2B-QWE234", status: "reserve", booking_value: 4800 }, admin))).json()
+    const { ref } = await (await leadPOST(post("/api/leads", lead({ trackingConsent: false })))).json()
+    const json = await (await statusPOST(post("/api/leads/status", { ref, status: "reserve", booking_value: 4800 }, admin))).json()
     expect(json.conversion).toBe("sans consentement")
     expect(f.meta()).toHaveLength(0)
     expect(f.tiktok()).toHaveLength(0)
+  })
+
+  it("la référence visiteur (navigateur) ne permet pas de modifier un lead", async () => {
+    const f = installFetchMock()
+    await leadPOST(post("/api/leads", lead()))
+    const res = await statusPOST(post("/api/leads/status", { ref: "E2B-QWE234", status: "perdu" }, admin))
+    expect(res.status).toBe(404)
+    expect(f.db.landing_leads[0].status).toBe("nouveau")
   })
 
   it("lead inconnu : 404", async () => {
@@ -92,7 +100,7 @@ describe("GET /api/leads/export", () => {
     const res = await exportGET(request("GET", "/api/leads/export?format=csv", undefined, admin))
     expect(res.headers.get("content-type")).toContain("text/csv")
     const csv = await res.text()
-    expect(csv.split("\n")[0]).toContain("created_at,ref,status,first_name")
+    expect(csv.split("\n")[0]).toContain("created_at,ref,visitor_ref,status,first_name")
     expect(csv).toContain("'=HYPERLINK(evil)")
   })
 })

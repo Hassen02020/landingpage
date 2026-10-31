@@ -78,15 +78,22 @@ describe("migration 0001_landing_leads.sql", () => {
       await expect(insert(db, lead({ tracking_consent: true, fbclid: "FB1", ip: "1.2.3.4" }))).resolves.toBeTruthy()
     })
 
+    it("référence du lead unique ; référence visiteur partageable", async () => {
+      await insert(db, lead({ visitor_ref: "E2B-VIS234" }))
+      await expect(insert(db, lead({ idempotency_key: "evt-00000002", phone: "21622123456" }))).rejects.toThrow(/landing_leads_ref_uq/)
+      await expect(insert(db, lead({ ref: "E2B-XYZ234", idempotency_key: "evt-00000003", phone: "21622123456", visitor_ref: "E2B-VIS234" }))).resolves.toBeTruthy()
+      await expect(insert(db, lead({ ref: "E2B-XYZ567", idempotency_key: "evt-00000004", phone: "21622999999", visitor_ref: "bad" }))).rejects.toThrow()
+    })
+
     it("anti-doublon : même idempotency_key", async () => {
       await insert(db, lead())
-      await expect(insert(db, lead({ phone: "21622123456" }))).rejects.toThrow(/duplicate key/)
+      await expect(insert(db, lead({ ref: "E2B-XYZ234", phone: "21622123456" }))).rejects.toThrow(/landing_leads_idempotency_key_uq/)
     })
 
     it("anti-doublon : même téléphone + même produit le même jour ; autre produit accepté", async () => {
       await insert(db, lead())
-      await expect(insert(db, lead({ idempotency_key: "evt-00000002" }))).rejects.toThrow(/landing_leads_phone_product_day_uq/)
-      await expect(insert(db, lead({ idempotency_key: "evt-00000003", product: "hotel" }))).resolves.toBeTruthy()
+      await expect(insert(db, lead({ ref: "E2B-XYZ234", idempotency_key: "evt-00000002" }))).rejects.toThrow(/landing_leads_phone_product_day_uq/)
+      await expect(insert(db, lead({ ref: "E2B-XYZ567", idempotency_key: "evt-00000003", product: "hotel" }))).resolves.toBeTruthy()
     })
 
     it("landing_events : événement hors liste refusé, event_id unique", async () => {
@@ -107,14 +114,14 @@ describe("migration 0001_landing_leads.sql", () => {
       await expect(db.query("SELECT * FROM landing_leads")).rejects.toThrow(/permission denied/)
       await expect(db.query("SELECT * FROM landing_events")).rejects.toThrow(/permission denied/)
       await expect(db.query("SELECT * FROM landing_campaign_performance")).rejects.toThrow(/permission denied/)
-      await expect(insert(db, lead({ idempotency_key: "evt-00000009", phone: "21622000000" }))).rejects.toThrow(/permission denied/)
+      await expect(insert(db, lead({ ref: "E2B-XYZ999", idempotency_key: "evt-00000009", phone: "21622000000" }))).rejects.toThrow(/permission denied/)
       await db.exec("RESET ROLE")
     })
 
     it("service_role peut lire, écrire et mettre à jour, mais pas supprimer", async () => {
       await db.exec("SET ROLE service_role")
       expect((await db.query("SELECT count(*)::int AS n FROM landing_leads")).rows[0]).toEqual({ n: 1 })
-      await insert(db, lead({ idempotency_key: "evt-00000010", phone: "21622000000" }))
+      await insert(db, lead({ ref: "E2B-XYZ888", idempotency_key: "evt-00000010", phone: "21622000000" }))
       await db.query("UPDATE landing_leads SET status = 'contacte'")
       expect((await db.query<{ n: number }>("SELECT count(*)::int AS n FROM landing_campaign_performance")).rows[0].n).toBeGreaterThan(0)
       await expect(db.query("DELETE FROM landing_leads")).rejects.toThrow(/permission denied/)

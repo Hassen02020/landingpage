@@ -55,7 +55,11 @@ Sans ces variables, le site fonctionne quand même : `/api/leads` répond `store
 | `landing_campaign_performance` | Vue : leads → réservations → chiffre d'affaires par canal, campagne et produit |
 | `landing_niche_performance` | Vue : clics, leads et réservations par niche |
 
-**Contraintes (CHECK)** : format de la référence `E2B-XXXXXX`, téléphone normalisé, listes fermées (`product`, `status`, `event_name`), longueurs maximales, nombre de voyageurs, montant ≥ 0, statut `reserve` ⇒ `booked_at` renseigné, accord de recontact obligatoire. Les identifiants publicitaires (`visitor_id`, `fbclid`, `ttclid`, `fbp`, `fbc`, `ttp`, `ip`, `user_agent`) sont interdits si `tracking_consent = false`.
+**Deux références distinctes** :
+- `ref` est la référence du lead. Elle est générée par le serveur, unique en base (`landing_leads_ref_uq`), envoyée dans le message WhatsApp qui suit le formulaire et utilisée par `/api/leads/status`. Le navigateur ne peut jamais la fixer.
+- `visitor_ref` est le code du visiteur, calculé dans le navigateur. Il n'est pas unique et sert seulement à relier un lead à ses clics WhatsApp (`landing_events.visitor_ref`). Il ne permet de modifier aucun lead.
+
+**Contraintes (CHECK)** : format `E2B-XXXXXX` des références, téléphone normalisé, listes fermées (`product`, `status`, `event_name`), longueurs maximales, nombre de voyageurs, montant ≥ 0, statut `reserve` ⇒ `booked_at` renseigné, accord de recontact obligatoire. Les identifiants publicitaires (`visitor_id`, `fbclid`, `ttclid`, `fbp`, `fbc`, `ttp`, `ip`, `user_agent`) sont interdits si `tracking_consent = false`.
 
 **Anti-doublons en base** : index uniques sur `idempotency_key` (= `event_id` du formulaire) et sur `(phone, product, lead_day)`, où `lead_day` est le jour à l'heure de Tunis. Un même prospect ne peut donc créer qu'une demande par produit et par jour.
 
@@ -105,7 +109,7 @@ curl -X POST -H "x-api-key: $LANDING_ADMIN_API_KEY" -H "content-type: applicatio
   https://landingpage-easy2book.vercel.app/api/leads/status
 ```
 
-Statuts : `nouveau` → `contacte` → `qualifie` → `reserve` | `perdu`. L'export CSV peut servir à alimenter manuellement un autre outil. Aucune synchronisation automatique avec EasyV4 n'est prévue.
+`ref` désigne la référence du **lead**, renvoyée par le formulaire, et non le code visiteur. Statuts : `nouveau` → `contacte` → `qualifie` → `reserve` | `perdu`. L'export CSV peut servir à alimenter manuellement un autre outil. Aucune synchronisation automatique avec EasyV4 n'est prévue.
 
 ## Sécurité
 

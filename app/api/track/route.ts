@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         event_name: eventName,
         event_id: eventId,
         visitor_id: attr.visitor_id ?? null,
-        ref: attr.ref ?? null,
+        visitor_ref: attr.ref ?? null,
         product: isProduct(product) ? product : null,
         offer: str(customData.content_ids) || null,
         niche: str(customData.niche, 64) || null,

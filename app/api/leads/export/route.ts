@@ -5,7 +5,7 @@ import { dbConfigured, select } from "@/lib/server/db"
 export const runtime = "nodejs"
 
 const COLUMNS = [
-  "created_at", "ref", "status", "first_name", "last_name", "phone", "product", "offer", "niche",
+  "created_at", "ref", "visitor_ref", "status", "first_name", "last_name", "phone", "product", "offer", "niche",
   "destination", "travel_date", "travel_period", "adults", "children", "budget", "message",
   "marketing_consent", "channel", "utm_source", "utm_medium", "utm_campaign", "utm_content", "ad_id",
   "landing_page", "booking_value", "booked_at",

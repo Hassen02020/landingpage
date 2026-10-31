@@ -35,14 +35,17 @@ describe("POST /api/leads", () => {
     const res = await POST(post("/api/leads", base))
     const json = await res.json()
     expect(res.status).toBe(200)
-    expect(json).toMatchObject({ ok: true, ref: "E2B-ABC234", stored: true })
-    expect(json.whatsappUrl).toContain(encodeURIComponent("Réf: E2B-ABC234"))
+    expect(json).toMatchObject({ ok: true, stored: true })
+    expect(json.ref).toMatch(/^E2B-[2-9A-HJ-NP-Z]{6}$/)
+    expect(json.ref).not.toBe("E2B-ABC234") // la référence du lead est générée par le serveur
+    expect(json.whatsappUrl).toContain(encodeURIComponent(`Réf: ${json.ref}`))
 
     const [insert] = f.dbCalls()
     expect(insert.url).toBe(`${DB_URL}/rest/v1/landing_leads`)
     expect((insert.init.headers as Record<string, string>).Authorization).toBe("Bearer service-role-test")
     expect(insert.body).toMatchObject({
-      ref: "E2B-ABC234",
+      ref: json.ref,
+      visitor_ref: "E2B-ABC234",
       idempotency_key: "lead-evt-0001",
       first_name: "Ahmed",
       last_name: "Ben Ali",
@@ -107,10 +110,10 @@ describe("POST /api/leads", () => {
 
   it("bloque les doublons en mémoire : même event_id, puis même téléphone + produit", async () => {
     const f = installFetchMock()
-    await POST(post("/api/leads", base))
+    const first = await (await POST(post("/api/leads", base))).json()
     const second = await (await POST(post("/api/leads", base))).json()
     const third = await (await POST(post("/api/leads", { ...base, eventId: "lead-evt-0003", phone: "+21698140514" }))).json()
-    expect(second).toMatchObject({ ok: true, duplicate: true, ref: "E2B-ABC234" })
+    expect(second).toMatchObject({ ok: true, duplicate: true, ref: first.ref })
     expect(third).toMatchObject({ ok: true, duplicate: true })
     expect(f.db.landing_leads).toHaveLength(1)
     expect(f.meta()).toHaveLength(1)
@@ -118,10 +121,10 @@ describe("POST /api/leads", () => {
 
   it("bloque les doublons en base (autre instance serveur) et renvoie la référence existante", async () => {
     const f = installFetchMock()
-    await POST(post("/api/leads", base))
+    const first = await (await POST(post("/api/leads", base))).json()
     __resetGuards() // simule une autre instance : mémoire vide
     const json = await (await POST(post("/api/leads", { ...base, eventId: "lead-evt-0009", attribution: { ref: "E2B-ZZZ999" } }))).json()
-    expect(json).toMatchObject({ ok: true, duplicate: true, ref: "E2B-ABC234" })
+    expect(json).toMatchObject({ ok: true, duplicate: true, ref: first.ref })
     expect(f.db.landing_leads).toHaveLength(1)
     expect(f.meta()).toHaveLength(1) // pas de second événement Lead
   })
@@ -170,6 +173,26 @@ describe("POST /api/leads", () => {
     const json = await (await POST(post("/api/leads", base))).json()
     expect(json).toMatchObject({ ok: true, stored: false })
     expect(f.calls.some((c) => c.url.includes("crygnaichvlxavvbifqi"))).toBe(false)
+  })
+
+  it("une référence visiteur identique ne permet pas de viser le lead d'un autre prospect", async () => {
+    const f = installFetchMock()
+    const a = await (await POST(post("/api/leads", base))).json()
+    const b = await (await POST(post("/api/leads", { ...base, eventId: "lead-evt-0005", phone: "22000111" }))).json()
+    expect(a.ref).not.toBe(b.ref)
+    expect(f.db.landing_leads.map((r) => r.visitor_ref)).toEqual(["E2B-ABC234", "E2B-ABC234"])
+    expect(new Set(f.db.landing_leads.map((r) => r.ref)).size).toBe(2)
+  })
+
+  it("rejoue l'insertion avec une nouvelle référence en cas de collision", async () => {
+    const f = installFetchMock()
+    f.db.landing_leads.push({ ref: "E2B-AAAAAA", idempotency_key: "other-0001", phone: "21600000000", product: "hotel", lead_day: "2000-01-01" })
+    const hash = await import("@/lib/server/hash")
+    const spy = vi.spyOn(hash, "randomRef").mockReturnValueOnce("E2B-AAAAAA").mockReturnValueOnce("E2B-BBBBBB")
+    const json = await (await POST(post("/api/leads", base))).json()
+    expect(json).toMatchObject({ ok: true, stored: true, ref: "E2B-BBBBBB" })
+    expect(f.db.landing_leads).toHaveLength(2)
+    spy.mockRestore()
   })
 
   it("remplace un event_id malformé", async () => {

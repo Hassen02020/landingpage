@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // une même réf peut couvrir plusieurs demandes d'un visiteur : on cible la plus récente
+    // ref : référence du lead, générée par le serveur et unique en base (index landing_leads_ref_uq)
     const filter = id ? `id=eq.${id}` : `ref=eq.${ref}`
-    const [lead] = await select<LeadRow>("landing_leads", `${filter}&order=created_at.desc&limit=1`)
+    const [lead] = await select<LeadRow>("landing_leads", `${filter}&limit=1`)
     if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 })
 
     const patch: Record<string, unknown> = { status, status_updated_at: new Date().toISOString() }

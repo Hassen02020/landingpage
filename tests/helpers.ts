@@ -38,7 +38,7 @@ export function installFetchMock(opts: { dbStatus?: number } = {}) {
           const row = { id: crypto.randomUUID(), created_at: new Date().toISOString(), lead_day: tunisDay(), status: "nouveau", ...body }
           const conflict =
             table === "landing_leads"
-              ? rows.some((r) => r.idempotency_key === row.idempotency_key || (r.phone === row.phone && r.product === row.product && r.lead_day === row.lead_day))
+              ? rows.some((r) => r.ref === row.ref || r.idempotency_key === row.idempotency_key || (r.phone === row.phone && r.product === row.product && r.lead_day === row.lead_day))
               : rows.some((r) => r.event_id === row.event_id)
           if (conflict) return new Response(JSON.stringify({ code: "23505" }), { status: 409 })
           rows.push(row)

@@ -30,7 +30,10 @@ CREATE TABLE public.landing_leads (
   lead_day            DATE GENERATED ALWAYS AS ((created_at AT TIME ZONE 'Africa/Tunis')::date) STORED,
 
   -- identification de la demande
+  -- référence du lead : générée par le serveur, unique (jamais fournie par le navigateur)
   ref                 TEXT NOT NULL CHECK (ref ~ '^E2B-[A-Z0-9]{6}$'),
+  -- code du visiteur (navigateur), non unique : relie le lead à ses clics WhatsApp
+  visitor_ref         TEXT CHECK (visitor_ref ~ '^E2B-[A-Z0-9]{6}$'),
   idempotency_key     TEXT NOT NULL CHECK (char_length(idempotency_key) BETWEEN 8 AND 64),
 
   -- prospect
@@ -105,7 +108,8 @@ CREATE UNIQUE INDEX landing_leads_phone_product_day_uq ON public.landing_leads (
 
 -- Recherche et analyses
 CREATE INDEX landing_leads_created_at_idx ON public.landing_leads (created_at DESC);
-CREATE INDEX landing_leads_ref_idx ON public.landing_leads (ref);
+CREATE UNIQUE INDEX landing_leads_ref_uq ON public.landing_leads (ref);
+CREATE INDEX landing_leads_visitor_ref_idx ON public.landing_leads (visitor_ref);
 CREATE INDEX landing_leads_status_idx ON public.landing_leads (status);
 CREATE INDEX landing_leads_campaign_idx ON public.landing_leads (channel, utm_campaign);
 
@@ -120,7 +124,7 @@ CREATE TABLE public.landing_events (
   event_name    TEXT NOT NULL CHECK (event_name IN ('Contact', 'ViewContent', 'CategoryView', 'HotelClick')),
   event_id      TEXT NOT NULL CHECK (char_length(event_id) BETWEEN 8 AND 64),
   visitor_id    TEXT CHECK (char_length(visitor_id) <= 64),
-  ref           TEXT CHECK (ref ~ '^E2B-[A-Z0-9]{6}$'),
+  visitor_ref   TEXT CHECK (visitor_ref ~ '^E2B-[A-Z0-9]{6}$'),
   product       TEXT CHECK (product IN ('omra', 'voyage', 'hotel', 'autre')),
   offer         TEXT CHECK (char_length(offer) <= 255),
   niche         TEXT CHECK (char_length(niche) <= 64),
@@ -134,6 +138,7 @@ CREATE TABLE public.landing_events (
 
 CREATE UNIQUE INDEX landing_events_event_id_uq ON public.landing_events (event_id);
 CREATE INDEX landing_events_created_at_idx ON public.landing_events (created_at DESC);
+CREATE INDEX landing_events_visitor_ref_idx ON public.landing_events (visitor_ref);
 CREATE INDEX landing_events_name_product_idx ON public.landing_events (event_name, product, niche);
 
 COMMENT ON TABLE public.landing_events IS

@@ -67,7 +67,9 @@ export async function POST(request: NextRequest) {
   const marketingConsent = body.marketingConsent === true
   const rawEventId = str(body.eventId, 64)
   const eventId = rawEventId && /^[A-Za-z0-9-]{8,64}$/.test(rawEventId) ? rawEventId : crypto.randomUUID()
-  const ref = attr.ref || randomRef()
+  // Référence du lead : TOUJOURS générée par le serveur (unique en base).
+  // Le code visiteur du navigateur (attr.ref) est conservé à part, dans visitor_ref.
+  let ref = randomRef()
 
   const offer = str(body.offer)
   const travelDate = str(body.travel_date, 10)
@@ -75,29 +77,32 @@ export async function POST(request: NextRequest) {
   const children = int(body.children, 0, 20, 0)
   const [firstName, ...rest] = name!.split(/\s+/)
 
-  const whatsappText = [
+  const whatsappUrlFor = (leadRef: string) => {
+    const whatsappText = [
     `Bonjour Easy2Book 👋 je souhaite réserver : ${PRODUCTS[product]}${offer ? ` — ${offer}` : ""}`,
     `Nom : ${name}`,
     str(body.destination) ? `Destination : ${str(body.destination)}` : null,
     travelDate ? `Date : ${travelDate}` : str(body.travel_period, 64) ? `Période : ${str(body.travel_period, 64)}` : null,
     `Voyageurs : ${adults} adulte(s)${children ? ` + ${children} enfant(s)` : ""}`,
     "",
-    `Réf: ${ref}`,
-  ]
-    .filter((l) => l !== null)
-    .join("\n")
-  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappText)}`
+    `Réf: ${leadRef}`,
+    ]
+      .filter((l) => l !== null)
+      .join("\n")
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappText)}`
+  }
 
   // Anti-doublon : double clic (même event_id) ou nouvel envoi identique en 10 min
   const already =
     rememberOnce(["event", eventId], ref, DUPLICATE_WINDOW_MS) ??
     rememberOnce(["lead", phone!, product], ref, DUPLICATE_WINDOW_MS)
   if (already) {
-    return NextResponse.json({ ok: true, duplicate: true, ref: already, stored: false, whatsappUrl })
+    return NextResponse.json({ ok: true, duplicate: true, ref: already, stored: false, whatsappUrl: whatsappUrlFor(already) })
   }
 
   const row: Record<string, unknown> = {
     ref,
+    visitor_ref: attr.ref ?? null,
     idempotency_key: eventId,
     first_name: cut(firstName, 100),
     last_name: cut(rest.join(" "), 100) || null,
@@ -147,20 +152,33 @@ export async function POST(request: NextRequest) {
 
   let stored = false
   if (dbConfigured()) {
-    try {
-      await insertOne("landing_leads", row)
-      stored = true
-    } catch (e) {
-      if (e instanceof DbError && e.isUniqueViolation) {
-        // doublon détecté par la base (autre instance serveur, ou même jour) : on renvoie la référence existante
-        const existing = await select<{ ref: string }>(
-          "landing_leads",
-          `select=ref&or=(idempotency_key.eq.${encodeURIComponent(eventId)},and(phone.eq.${phone},product.eq.${product},lead_day.eq.${tunisDay()}))&limit=1`
-        ).catch(() => [])
-        return NextResponse.json({ ok: true, duplicate: true, ref: existing[0]?.ref ?? ref, stored: true, whatsappUrl })
+    // jusqu'à 3 essais : une collision de référence aléatoire est rejouée avec une nouvelle référence
+    for (let attempt = 0; attempt < 3 && !stored; attempt++) {
+      try {
+        await insertOne("landing_leads", { ...row, ref })
+        stored = true
+      } catch (e) {
+        if (!(e instanceof DbError && e.isUniqueViolation)) {
+          // on ne bloque pas le prospect : il reste orienté vers WhatsApp
+          console.error("[leads] enregistrement impossible", e instanceof Error ? e.message : "erreur")
+          break
+        }
+        // vrai doublon (même envoi, ou même téléphone + produit le même jour) : on renvoie la référence existante
+        let existing: { ref: string }[] = []
+        try {
+          existing = await select<{ ref: string }>(
+            "landing_leads",
+            `select=ref&or=(idempotency_key.eq.${encodeURIComponent(eventId)},and(phone.eq.${phone},product.eq.${product},lead_day.eq.${tunisDay()}))&limit=1`
+          )
+        } catch {
+          console.error("[leads] vérification de doublon impossible")
+          break
+        }
+        if (existing[0]) {
+          return NextResponse.json({ ok: true, duplicate: true, ref: existing[0].ref, stored: true, whatsappUrl: whatsappUrlFor(existing[0].ref) })
+        }
+        ref = randomRef() // sinon : collision sur la référence aléatoire, nouvel essai
       }
-      // on ne bloque pas le prospect : il reste orienté vers WhatsApp
-      console.error("[leads] enregistrement impossible", e instanceof Error ? e.message : "erreur")
     }
   } else {
     console.warn("[leads] base des landing pages non configurée — lead non enregistré", { ref, product })
@@ -198,5 +216,5 @@ export async function POST(request: NextRequest) {
   }
 
   await Promise.allSettled(tasks)
-  return NextResponse.json({ ok: true, ref, stored, whatsappUrl })
+  return NextResponse.json({ ok: true, ref, stored, whatsappUrl: whatsappUrlFor(ref) })
 }

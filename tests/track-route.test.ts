@@ -31,7 +31,7 @@ describe("POST /api/track", () => {
     const f = installFetchMock()
     await POST(post("/api/track", { ...body, customData: { ...body.customData, niche: "omra-ete", content_ids: "foj1" } }))
     expect(f.db.landing_events).toHaveLength(1)
-    expect(f.db.landing_events[0]).toMatchObject({ event_name: "Contact", event_id: "track-evt-0001", product: "omra", niche: "omra-ete", offer: "foj1", channel: "meta" })
+    expect(f.db.landing_events[0]).toMatchObject({ event_name: "Contact", event_id: "track-evt-0001", visitor_ref: null, product: "omra", niche: "omra-ete", offer: "foj1", channel: "meta" })
   })
 
   it("filtre les données personnalisées (clés invalides et objets)", async () => {
