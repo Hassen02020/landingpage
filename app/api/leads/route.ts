@@ -4,19 +4,16 @@ import { clientIp, normalizePhone, randomRef } from "@/lib/server/hash"
 import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
-import { forwardLeadToCrm, type EasyV4LeadInput } from "@/lib/server/crm"
+import { DbError, dbConfigured, insertOne, select } from "@/lib/server/db"
 import { PRODUCTS, isProduct, WHATSAPP_NUMBER, type Product } from "@/lib/config"
 
 export const runtime = "nodejs"
 
 const DUPLICATE_WINDOW_MS = 10 * 60 * 1000
 
-// Produits des landing pages → `leads.product_type` d'EasyV4 (contrainte leads_product_type_check)
-const PRODUCT_TO_EASYV4: Record<Product, EasyV4LeadInput["productType"]> = {
-  omra: "omra",
-  voyage: "package",
-  hotel: "hotel",
-  autre: "general",
+/** Date du jour à Tunis (AAAA-MM-JJ), identique à la colonne générée `lead_day`. */
+function tunisDay(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Tunis" }).format(date)
 }
 
 const int = (v: unknown, min: number, max: number, fallback: number): number => {
@@ -30,7 +27,8 @@ const cut = (v: string | undefined, max: number) => (v ? v.slice(0, max) : undef
  * POST /api/leads — formulaire des landing pages.
  * 1. contrôles : origine, débit, champ piège, validation, accord de recontact
  * 2. anti-doublon (même téléphone + même produit en 10 min, ou même event_id)
- * 3. transmission au CRM EasyV4 (aucun stockage local)
+ * 3. enregistrement dans la base Supabase DÉDIÉE aux landing pages (pas le CRM EasyV4) ;
+ *    doublons bloqués aussi en base (idempotency_key, téléphone + produit + jour)
  * 4. événement "Lead" Meta / TikTok UNIQUEMENT si consentement traceurs = granted
  * Réponse : code de référence + lien WhatsApp pré-rempli.
  */
@@ -95,39 +93,80 @@ export async function POST(request: NextRequest) {
     rememberOnce(["event", eventId], ref, DUPLICATE_WINDOW_MS) ??
     rememberOnce(["lead", phone!, product], ref, DUPLICATE_WINDOW_MS)
   if (already) {
-    return NextResponse.json({ ok: true, duplicate: true, ref: already, forwarded: false, whatsappUrl })
+    return NextResponse.json({ ok: true, duplicate: true, ref: already, stored: false, whatsappUrl })
   }
 
-  // Détails sans colonne dédiée dans EasyV4 : regroupés dans `message` (saisis par le visiteur)
-  const details = [
-    travelDate ? `Date souhaitée : ${travelDate}` : null,
-    str(body.travel_period, 64) ? `Période : ${str(body.travel_period, 64)}` : null,
-    `Voyageurs : ${adults} adulte(s), ${children} enfant(s)`,
-    str(body.budget, 64) ? `Budget : ${str(body.budget, 64)}` : null,
-    str(body.trip_type, 64) ? `Type : ${str(body.trip_type, 64)}` : null,
-    str(body.message, 1000) ? `Message : ${str(body.message, 1000)}` : null,
-    `Réf landing : ${ref}`,
-  ]
-    .filter(Boolean)
-    .join("\n")
-
-  const sourcePath = (attr.landing_page && attr.landing_page.startsWith("/") ? attr.landing_page : "/").split("?")[0]
-  const crmInput: EasyV4LeadInput = {
-    firstName: cut(firstName, 100)!,
-    lastName: cut(rest.join(" "), 100) || undefined,
-    phone: `+${phone}`,
-    message: cut(details, 2000),
-    productType: PRODUCT_TO_EASYV4[product],
-    productLabel: cut(offer, 255),
-    sourcePage: cut(`landing-easy2book${sourcePath}`, 255)!,
-    destination: cut(str(body.destination), 128),
-    intention: adults + children >= 10 ? "groupe" : "standard",
-    campaignRef: cut(attr.utm_campaign, 255),
-    marketingConsent,
+  const row: Record<string, unknown> = {
+    ref,
+    idempotency_key: eventId,
+    first_name: cut(firstName, 100),
+    last_name: cut(rest.join(" "), 100) || null,
+    phone,
+    product,
+    offer: cut(offer, 255) || null,
+    niche: str(body.niche, 64) || null,
+    destination: str(body.destination, 128) || null,
+    travel_date: travelDate && /^\d{4}-\d{2}-\d{2}$/.test(travelDate) ? travelDate : null,
+    travel_period: str(body.travel_period, 64) || null,
+    adults,
+    children,
+    budget: str(body.budget, 64) || null,
+    trip_type: str(body.trip_type, 64) || null,
+    message: str(body.message, 1000) || null,
+    contact_consent: true,
+    marketing_consent: marketingConsent,
+    tracking_consent: trackingConsent,
+    // données de campagne (sans identifiant personnel)
+    channel: attr.channel ?? null,
+    utm_source: attr.utm_source ?? null,
+    utm_medium: attr.utm_medium ?? null,
+    utm_campaign: attr.utm_campaign ?? null,
+    utm_content: attr.utm_content ?? null,
+    utm_term: attr.utm_term ?? null,
+    campaign_id: attr.campaign_id ?? null,
+    adset_id: attr.adset_id ?? null,
+    ad_id: attr.ad_id ?? null,
+    first_channel: attr.first_channel ?? null,
+    first_utm_source: attr.first_utm_source ?? null,
+    first_utm_campaign: attr.first_utm_campaign ?? null,
+    landing_page: attr.landing_page ?? null,
+    // identifiants publicitaires : uniquement avec consentement (contrainte en base)
+    ...(trackingConsent
+      ? {
+          visitor_id: attr.visitor_id ?? null,
+          fbclid: attr.fbclid ?? null,
+          ttclid: attr.ttclid ?? null,
+          fbp: attr.fbp ?? null,
+          fbc: attr.fbc ?? null,
+          ttp: attr.ttp ?? null,
+          ip: ip ?? null,
+          user_agent: cut(request.headers.get("user-agent") || undefined, 500) ?? null,
+        }
+      : {}),
   }
 
-  const tasks: Promise<unknown>[] = [forwardLeadToCrm(crmInput, eventId)]
+  let stored = false
+  if (dbConfigured()) {
+    try {
+      await insertOne("landing_leads", row)
+      stored = true
+    } catch (e) {
+      if (e instanceof DbError && e.isUniqueViolation) {
+        // doublon détecté par la base (autre instance serveur, ou même jour) : on renvoie la référence existante
+        const existing = await select<{ ref: string }>(
+          "landing_leads",
+          `select=ref&or=(idempotency_key.eq.${encodeURIComponent(eventId)},and(phone.eq.${phone},product.eq.${product},lead_day.eq.${tunisDay()}))&limit=1`
+        ).catch(() => [])
+        return NextResponse.json({ ok: true, duplicate: true, ref: existing[0]?.ref ?? ref, stored: true, whatsappUrl })
+      }
+      // on ne bloque pas le prospect : il reste orienté vers WhatsApp
+      console.error("[leads] enregistrement impossible", e instanceof Error ? e.message : "erreur")
+    }
+  } else {
+    console.warn("[leads] base des landing pages non configurée — lead non enregistré", { ref, product })
+  }
 
+  const tasks: Promise<unknown>[] = []
   if (trackingConsent) {
     const serverEvent = {
       eventName: "Lead",
@@ -158,9 +197,6 @@ export async function POST(request: NextRequest) {
     tasks.push(sendMetaEvent(serverEvent), sendTikTokEvent(serverEvent))
   }
 
-  const [crm] = await Promise.allSettled(tasks)
-  const forwarded = crm.status === "fulfilled" && (crm.value as { ok: boolean }).ok
-  if (!forwarded) console.warn("[leads] lead non transmis au CRM", { ref, product })
-
-  return NextResponse.json({ ok: true, ref, forwarded, whatsappUrl })
+  await Promise.allSettled(tasks)
+  return NextResponse.json({ ok: true, ref, stored, whatsappUrl })
 }

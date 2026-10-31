@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { POST } from "@/app/api/leads/route"
 import { __resetGuards } from "@/lib/server/guard"
-import { configureAll, installFetchMock, post } from "./helpers"
+import { DB_URL, configureAll, installFetchMock, post } from "./helpers"
 
 const base = {
   eventId: "lead-evt-0001",
@@ -9,6 +9,7 @@ const base = {
   phone: "98 140 514",
   product: "voyage",
   offer: "Istanbul Été 2026",
+  niche: "Turquie",
   adults: 2,
   children: 1,
   contactConsent: true,
@@ -17,7 +18,8 @@ const base = {
   attribution: {
     visitor_id: "visitor-1",
     ref: "E2B-ABC234",
-    last_touch: { channel: "meta", utm_source: "facebook", utm_campaign: "voyages_ete", landing_page: "/voyages-organises" },
+    fbp: "fb.1.1.123",
+    last_touch: { channel: "meta", utm_source: "facebook", utm_campaign: "voyages_ete", ad_id: "AD1", fbclid: "FB1", landing_page: "/voyages-organises" },
   },
 }
 
@@ -28,28 +30,35 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs())
 
 describe("POST /api/leads", () => {
-  it("transmet le lead au CRM EasyV4 selon le contrat submitLead", async () => {
+  it("enregistre le lead dans la base dédiée des landing pages", async () => {
     const f = installFetchMock()
     const res = await POST(post("/api/leads", base))
     const json = await res.json()
     expect(res.status).toBe(200)
-    expect(json).toMatchObject({ ok: true, ref: "E2B-ABC234", forwarded: true })
+    expect(json).toMatchObject({ ok: true, ref: "E2B-ABC234", stored: true })
     expect(json.whatsappUrl).toContain(encodeURIComponent("Réf: E2B-ABC234"))
 
-    const [crm] = f.crm()
-    expect((crm.init.headers as Record<string, string>).Authorization).toBe("Bearer crm-secret")
-    expect((crm.init.headers as Record<string, string>)["Idempotency-Key"]).toBe("lead-evt-0001")
-    expect(crm.body).toEqual({
-      firstName: "Ahmed",
-      lastName: "Ben Ali",
-      phone: "+21698140514",
-      message: expect.stringContaining("Réf landing : E2B-ABC234"),
-      productType: "package",
-      productLabel: "Istanbul Été 2026",
-      sourcePage: "landing-easy2book/voyages-organises",
-      intention: "standard",
-      campaignRef: "voyages_ete",
-      marketingConsent: false,
+    const [insert] = f.dbCalls()
+    expect(insert.url).toBe(`${DB_URL}/rest/v1/landing_leads`)
+    expect((insert.init.headers as Record<string, string>).Authorization).toBe("Bearer service-role-test")
+    expect(insert.body).toMatchObject({
+      ref: "E2B-ABC234",
+      idempotency_key: "lead-evt-0001",
+      first_name: "Ahmed",
+      last_name: "Ben Ali",
+      phone: "21698140514",
+      product: "voyage",
+      offer: "Istanbul Été 2026",
+      niche: "Turquie",
+      contact_consent: true,
+      marketing_consent: false,
+      tracking_consent: true,
+      channel: "meta",
+      utm_campaign: "voyages_ete",
+      ad_id: "AD1",
+      visitor_id: "visitor-1",
+      fbclid: "FB1",
+      fbp: "fb.1.1.123",
     })
   })
 
@@ -60,63 +69,73 @@ describe("POST /api/leads", () => {
     expect(f.tiktok()[0].body.data[0]).toMatchObject({ event: "SubmitForm", event_id: "lead-evt-0001" })
   })
 
-  it("n'envoie RIEN à Meta ni à TikTok sans consentement aux traceurs", async () => {
+  it("sans consentement traceurs : rien chez Meta/TikTok et aucun identifiant publicitaire stocké", async () => {
     const f = installFetchMock()
     const res = await POST(post("/api/leads", { ...base, trackingConsent: false }))
     expect(res.status).toBe(200)
-    expect(f.crm()).toHaveLength(1)
     expect(f.meta()).toHaveLength(0)
     expect(f.tiktok()).toHaveLength(0)
+    const row = f.dbCalls()[0].body
+    expect(row.tracking_consent).toBe(false)
+    for (const k of ["visitor_id", "fbclid", "ttclid", "fbp", "fbc", "ttp", "ip", "user_agent"]) expect(row).not.toHaveProperty(k)
+    expect(row.utm_campaign).toBe("voyages_ete") // donnée de campagne non personnelle conservée
   })
 
-  it("transmet le consentement marketing tel que coché (jamais implicite)", async () => {
-    const f = installFetchMock()
+  it("enregistre le consentement marketing tel que coché (jamais implicite)", async () => {
+    let f = installFetchMock()
     await POST(post("/api/leads", { ...base, marketingConsent: true }))
-    expect(f.crm()[0].body.marketingConsent).toBe(true)
+    expect(f.dbCalls()[0].body.marketing_consent).toBe(true)
     __resetGuards()
-    const g = installFetchMock()
+    f = installFetchMock()
     await POST(post("/api/leads", { ...base, eventId: "lead-evt-0002", marketingConsent: "yes" }))
-    expect(g.crm()[0].body.marketingConsent).toBe(false)
+    expect(f.dbCalls()[0].body.marketing_consent).toBe(false)
   })
 
   it("refuse un téléphone invalide ou l'absence d'accord de recontact", async () => {
     const f = installFetchMock()
     const res = await POST(post("/api/leads", { ...base, phone: "123", contactConsent: false }))
     expect(res.status).toBe(422)
-    const json = await res.json()
-    expect(Object.keys(json.errors).sort()).toEqual(["contactConsent", "phone"])
+    expect(Object.keys((await res.json()).errors).sort()).toEqual(["contactConsent", "phone"])
     expect(f.calls).toHaveLength(0)
   })
 
   it("ignore silencieusement les robots (champ piège)", async () => {
     const f = installFetchMock()
-    const res = await POST(post("/api/leads", { ...base, website: "http://spam" }))
-    expect(res.status).toBe(200)
+    expect((await POST(post("/api/leads", { ...base, website: "http://spam" }))).status).toBe(200)
     expect(f.calls).toHaveLength(0)
   })
 
-  it("bloque les doublons : même event_id, puis même téléphone + produit", async () => {
+  it("bloque les doublons en mémoire : même event_id, puis même téléphone + produit", async () => {
     const f = installFetchMock()
     await POST(post("/api/leads", base))
     const second = await (await POST(post("/api/leads", base))).json()
     const third = await (await POST(post("/api/leads", { ...base, eventId: "lead-evt-0003", phone: "+21698140514" }))).json()
     expect(second).toMatchObject({ ok: true, duplicate: true, ref: "E2B-ABC234" })
     expect(third).toMatchObject({ ok: true, duplicate: true })
-    expect(f.crm()).toHaveLength(1)
+    expect(f.db.landing_leads).toHaveLength(1)
     expect(f.meta()).toHaveLength(1)
+  })
+
+  it("bloque les doublons en base (autre instance serveur) et renvoie la référence existante", async () => {
+    const f = installFetchMock()
+    await POST(post("/api/leads", base))
+    __resetGuards() // simule une autre instance : mémoire vide
+    const json = await (await POST(post("/api/leads", { ...base, eventId: "lead-evt-0009", attribution: { ref: "E2B-ZZZ999" } }))).json()
+    expect(json).toMatchObject({ ok: true, duplicate: true, ref: "E2B-ABC234" })
+    expect(f.db.landing_leads).toHaveLength(1)
+    expect(f.meta()).toHaveLength(1) // pas de second événement Lead
   })
 
   it("accepte le même téléphone pour un autre produit", async () => {
     const f = installFetchMock()
     await POST(post("/api/leads", base))
     await POST(post("/api/leads", { ...base, eventId: "lead-evt-0004", product: "omra" }))
-    expect(f.crm().map((c) => c.body.productType)).toEqual(["package", "omra"])
+    expect(f.db.landing_leads.map((r) => r.product)).toEqual(["voyage", "omra"])
   })
 
   it("refuse une origine étrangère", async () => {
     const f = installFetchMock()
-    const res = await POST(post("/api/leads", base, { origin: "https://evil.example" }))
-    expect(res.status).toBe(403)
+    expect((await POST(post("/api/leads", base, { origin: "https://evil.example" }))).status).toBe(403)
     expect(f.calls).toHaveLength(0)
   })
 
@@ -124,36 +143,36 @@ describe("POST /api/leads", () => {
     installFetchMock()
     const statuses: number[] = []
     for (let i = 0; i < 6; i++) {
-      const res = await POST(
-        post("/api/leads", { ...base, eventId: `rate-evt-000${i}`, phone: `2212345${i}` }, { "x-forwarded-for": "9.9.9.9" })
-      )
+      const res = await POST(post("/api/leads", { ...base, eventId: `rate-evt-000${i}`, phone: `2212345${i}` }, { "x-forwarded-for": "9.9.9.9" }))
       statuses.push(res.status)
     }
     expect(statuses).toEqual([200, 200, 200, 200, 200, 429])
   })
 
-  it("répond quand même (WhatsApp) si le CRM n'est pas configuré ou refuse", async () => {
-    vi.stubEnv("EASYV4_LEAD_INTAKE_URL", "")
+  it("répond quand même (WhatsApp) si la base n'est pas configurée ou en erreur", async () => {
+    vi.stubEnv("LANDING_SUPABASE_URL", "")
     let f = installFetchMock()
     let json = await (await POST(post("/api/leads", base))).json()
-    expect(json).toMatchObject({ ok: true, forwarded: false })
-    expect(f.crm()).toHaveLength(0)
+    expect(json).toMatchObject({ ok: true, stored: false })
+    expect(f.dbCalls()).toHaveLength(0)
 
     __resetGuards()
     configureAll()
-    f = installFetchMock({ crmStatus: 500 })
+    f = installFetchMock({ dbStatus: 500 })
     json = await (await POST(post("/api/leads", base))).json()
-    expect(json).toMatchObject({ ok: true, forwarded: false })
+    expect(json).toMatchObject({ ok: true, stored: false })
     expect(json.whatsappUrl).toMatch(/^https:\/\/wa\.me\/21698140514\?text=/)
   })
 
-  it("marque un groupe de 10 voyageurs ou plus en intention « groupe »", async () => {
+  it("refuse de se connecter au CRM EasyV4, même mal configuré", async () => {
+    vi.stubEnv("LANDING_SUPABASE_URL", "https://crygnaichvlxavvbifqi.supabase.co")
     const f = installFetchMock()
-    await POST(post("/api/leads", { ...base, product: "omra", adults: 8, children: 2 }))
-    expect(f.crm()[0].body).toMatchObject({ productType: "omra", intention: "groupe" })
+    const json = await (await POST(post("/api/leads", base))).json()
+    expect(json).toMatchObject({ ok: true, stored: false })
+    expect(f.calls.some((c) => c.url.includes("crygnaichvlxavvbifqi"))).toBe(false)
   })
 
-  it("rejette un event_id malformé en le remplaçant", async () => {
+  it("remplace un event_id malformé", async () => {
     const f = installFetchMock()
     await POST(post("/api/leads", { ...base, eventId: "<bad id>" }))
     expect(f.meta()[0].body.data[0].event_id).toMatch(/^[0-9a-f-]{36}$/)

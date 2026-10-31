@@ -1,14 +1,17 @@
 # Easy2Book — Landing pages campagnes (Meta, TikTok, WhatsApp)
 
-Landing pages des campagnes publicitaires Easy2Book. Elles accueillent le trafic des publicités, relient chaque visiteur à la publicité d'origine et transmettent les demandes au **CRM EasyV4**. Ce projet ne stocke **aucun lead**.
+Landing pages des campagnes publicitaires Easy2Book. Elles accueillent le trafic des publicités, relient chaque visiteur à la publicité d'origine et enregistrent les demandes dans une **base Supabase dédiée**.
 
-| Page | Contenu | `product` | `productType` EasyV4 |
-|---|---|---|---|
-| `/` | Hub : les 3 offres en bref + formulaire de devis | choisi par le visiteur | — |
-| `/voyages-organises` | Voyages organisés (Turquie, Malaisie & Bali, Égypte, Maroc…) | `voyage` | `package` |
-| `/omra` | Omra 2026 (page en arabe) | `omra` | `omra` |
-| `/summer-vibes` | Promos hôtels Tunisie (catégories = niches testées) | `hotel` | `hotel` |
-| — | Autre demande | `autre` | `general` |
+> **Projet entièrement séparé du CRM EasyV4.** Ce dépôt ne lit ni n'écrit rien dans EasyV4 ou EasyV4-preview :
+> - le code refuse de se connecter à ces deux projets (`lib/server/db.ts`) ;
+> - la migration SQL s'arrête si elle détecte une base EasyV4.
+
+| Page | Contenu | `product` |
+|---|---|---|
+| `/` | Hub : les 3 offres en bref + formulaire de devis | choisi par le visiteur |
+| `/voyages-organises` | Voyages organisés (Turquie, Malaisie & Bali, Égypte, Maroc…) | `voyage` |
+| `/omra` | Omra 2026 (page en arabe) | `omra` |
+| `/summer-vibes` | Promos hôtels Tunisie (catégories = niches testées) | `hotel` |
 
 Réseaux : [Facebook](https://www.facebook.com/Easy2Bookplateforme) · [Instagram](https://www.instagram.com/easy2book.2025/) · [TikTok](https://www.tiktok.com/@easy2book)
 
@@ -21,19 +24,43 @@ Pub Meta / TikTok ──► landing page
                        │   │   attribution gardée pour la session seulement
                        │   └─ acceptation : Meta Pixel + TikTok Pixel chargés,
                        │       UTM / fbclid / ttclid mémorisés, code visiteur E2B-XXXXXX
-                       │
-       ┌───────────────┴───────────────────┐
-  clic WhatsApp                        formulaire  ─► POST /api/leads
-  message + « Réf: E2B-… »                │  contrôles : origine, débit, champ piège,
-       │                                  │  téléphone, accord de recontact, doublons
-  (si consentement)                       ├─► CRM EasyV4 (contrat submitLead)
-  POST /api/track                         ├─► (si consentement) Meta CAPI « Lead »
-   ├─► Meta CAPI « Contact »              │     + TikTok « SubmitForm », même event_id
-   └─► TikTok « Contact »                 └─► redirection WhatsApp pré-remplie
-       même event_id que le pixel
+       ┌───────────────┴────────────────────┐
+  clic WhatsApp                         formulaire ─► POST /api/leads
+  message + « Réf: E2B-… »                 │  contrôles : origine, débit, champ piège,
+       │ (si consentement)                 │  téléphone, accord de recontact, doublons
+  POST /api/track                          ├─► Supabase landing : table landing_leads
+   ├─► Meta CAPI / TikTok (même event_id)  ├─► (si consentement) Meta « Lead » + TikTok
+   └─► Supabase landing : landing_events   │     « SubmitForm », même event_id
+                                           └─► redirection WhatsApp pré-remplie
+Le conseiller confirme la réservation ─► POST /api/leads/status (clé admin)
+   statut « reserve » + montant ─► (si consentement) Meta « Purchase » / TikTok « CompletePayment »
 ```
 
-La validation des réservations (statuts, conversions « Purchase ») relève d'EasyV4. Ce projet n'expose aucune API de statut ni d'export.
+## Mise en place de la base dédiée
+
+1. Créer un **nouveau** projet Supabase, réservé aux landing pages (ne pas réutiliser EasyV4 ni EasyV4-preview).
+2. Dans ce nouveau projet, ouvrir **SQL Editor** et exécuter `supabase/migrations/0001_landing_leads.sql`. Le script s'arrête de lui-même s'il est lancé sur une base EasyV4 ou s'il a déjà été appliqué.
+3. Saisir dans Vercel (ou `.env.local`) : `LANDING_SUPABASE_URL`, `LANDING_SUPABASE_SERVICE_ROLE_KEY` et `LANDING_ADMIN_API_KEY` (voir `.env.example`).
+
+Sans ces variables, le site fonctionne quand même : `/api/leads` répond `stored: false` et le prospect est redirigé vers WhatsApp avec sa demande.
+
+### Contenu de la migration
+
+| Objet | Rôle |
+|---|---|
+| `landing_leads` | Demandes : prospect, offre, consentements, statut commercial, attribution |
+| `landing_events` | Clics WhatsApp et offres consultées (visiteurs consentants uniquement) |
+| `landing_campaign_performance` | Vue : leads → réservations → chiffre d'affaires par canal, campagne et produit |
+| `landing_niche_performance` | Vue : clics, leads et réservations par niche |
+
+**Contraintes (CHECK)** : format de la référence `E2B-XXXXXX`, téléphone normalisé, listes fermées (`product`, `status`, `event_name`), longueurs maximales, nombre de voyageurs, montant ≥ 0, statut `reserve` ⇒ `booked_at` renseigné, accord de recontact obligatoire. Les identifiants publicitaires (`visitor_id`, `fbclid`, `ttclid`, `fbp`, `fbc`, `ttp`, `ip`, `user_agent`) sont interdits si `tracking_consent = false`.
+
+**Anti-doublons en base** : index uniques sur `idempotency_key` (= `event_id` du formulaire) et sur `(phone, product, lead_day)`, où `lead_day` est le jour à l'heure de Tunis. Un même prospect ne peut donc créer qu'une demande par produit et par jour.
+
+**Sécurité** :
+- RLS activée et forcée sur les deux tables, sans aucune politique ;
+- `anon` et `authenticated` n'ont aucun droit (`REVOKE ALL`) ;
+- `service_role` (clé serveur) peut lire, insérer et modifier, mais pas supprimer. Les effacements se font à la main dans l'éditeur SQL.
 
 ## Consentement
 
@@ -41,58 +68,57 @@ La validation des réservations (statuts, conversions « Purchase ») relève d'
 |---|---|---|
 | Scripts Meta Pixel / TikTok Pixel | non chargés | chargés |
 | Événements navigateur → Meta / TikTok | aucun | envoyés (`eventID` / `event_id`) |
-| `/api/track` → Meta CAPI / TikTok Events API | aucun appel (le serveur revérifie `consent`) | relayés |
-| Événement « Lead » serveur (téléphone haché) | non envoyé (`trackingConsent: false`) | envoyé |
-| Cookies `_fbc`, `e2b_vid` | non posés | posés (`_fbc` depuis `fbclid`) |
+| `/api/track` (Meta CAPI, TikTok, `landing_events`) | aucun appel (le serveur revérifie `consent`) | relayés et journalisés |
+| Événement « Lead » serveur (téléphone haché) | non envoyé | envoyé |
+| Identifiants publicitaires dans `landing_leads` | non stockés (interdit en base) | stockés |
+| Conversion « Purchase » à la réservation | non envoyée | envoyée |
+| Cookies `_fbc`, `e2b_vid` | non posés | posés |
 | Attribution UTM | `sessionStorage` (fin de session) | `localStorage` |
-| Référence `E2B-…` dans WhatsApp | oui (donnée interne, non transmise à un tiers) | oui |
-| Lead transmis au CRM EasyV4 | oui, si la case « être recontacté » est cochée | oui |
-| `marketingConsent` transmis à EasyV4 | `true` seulement si la case facultative « offres et promotions » est cochée (jamais par défaut) | idem |
+| Lead enregistré | oui, si la case « être recontacté » est cochée | oui |
+| `marketing_consent` | `true` seulement si la case facultative « offres et promotions » est cochée (jamais par défaut) | idem |
 
 Un refus après acceptation supprime les cookies `_fbc`, `_fbp`, `_ttp`, `e2b_vid` et l'attribution stockée.
 
 ## Déduplication navigateur / serveur
 
-* **Meta** : `fbq('track', nom, données, { eventID })` côté navigateur et `event_id` identique dans l'API Conversions (`lib/tracking.ts`, `lib/server/meta.ts`).
-* **TikTok** : `ttq.track(nom, données, { event_id })` et `event_id` identique dans l'Events API, avec le même nom d'événement (`Lead` → `SubmitForm`, `Contact` → `Contact`).
-* **Lead** : l'`event_id` est créé par le formulaire. Il est envoyé au pixel (sans relais `/api/track`) et à `/api/leads`, qui le réutilise pour Meta et TikTok et le transmet à EasyV4 en en-tête `Idempotency-Key`.
+* **Meta** : `fbq('track', nom, données, { eventID })` côté navigateur, `event_id` identique côté API Conversions.
+* **TikTok** : `ttq.track(nom, données, { event_id })` côté navigateur, `event_id` identique côté Events API, avec le même nom d'événement (`Lead` → `SubmitForm`).
+* **Lead** : l'`event_id` est créé par le formulaire et envoyé au pixel (sans relais `/api/track`) et à `/api/leads`. Le serveur le réutilise pour Meta et TikTok et l'enregistre comme `idempotency_key`.
+* **Purchase** : `event_id = purchase-<id du lead>`, stable, donc un renvoi est dédupliqué.
 * `/api/track` ne relaie qu'une fois un même `event_id`.
 
-Ces règles sont vérifiées par les tests `tests/tracking-client.test.ts`, `tests/leads-route.test.ts` et `tests/track-route.test.ts`.
+## API d'administration
+
+Ces routes sont protégées par l'en-tête `x-api-key: <LANDING_ADMIN_API_KEY>`. La clé dans l'URL est refusée, tout comme une clé configurée de moins de 32 caractères.
+
+```bash
+# Export (json ou csv) — filtres : since=AAAA-MM-JJ, product, status, channel, limit (≤ 5000)
+curl -H "x-api-key: $LANDING_ADMIN_API_KEY" "https://landingpage-easy2book.vercel.app/api/leads/export?format=csv&since=2026-11-01"
+```
+
+```bash
+# Valider une réservation (booking_value obligatoire pour « reserve »)
+curl -X POST -H "x-api-key: $LANDING_ADMIN_API_KEY" -H "content-type: application/json" \
+  -d '{"ref":"E2B-7K3QFM","status":"reserve","booking_value":4800}' \
+  https://landingpage-easy2book.vercel.app/api/leads/status
+```
+
+Statuts : `nouveau` → `contacte` → `qualifie` → `reserve` | `perdu`. L'export CSV peut servir à alimenter manuellement un autre outil. Aucune synchronisation automatique avec EasyV4 n'est prévue.
 
 ## Sécurité
 
-* **Secrets** : `META_ACCESS_TOKEN`, `TIKTOK_ACCESS_TOKEN` et `EASYV4_LEAD_INTAKE_TOKEN` sont lus côté serveur uniquement et ne sont jamais préfixés `NEXT_PUBLIC_`. Le jeton Meta est envoyé dans le corps de la requête, pas dans l'URL. Les erreurs du CRM sont journalisées sans données personnelles.
+* **Secrets** : `LANDING_SUPABASE_SERVICE_ROLE_KEY`, `LANDING_ADMIN_API_KEY`, `META_ACCESS_TOKEN` et `TIKTOK_ACCESS_TOKEN` sont lus côté serveur uniquement. Le jeton Meta passe dans le corps de la requête, pas dans l'URL. Les erreurs journalisées ne contiennent pas de données personnelles.
 * **Origine** : `/api/leads` et `/api/track` refusent (403) un en-tête `Origin` étranger au site (`NEXT_PUBLIC_SITE_URL`, `ALLOWED_ORIGINS`).
-* **Validation** : longueurs bornées, téléphone tunisien (8 chiffres) ou international avec indicatif, `event_id` au format `[A-Za-z0-9-]{8,64}`, liste fermée d'événements relayés, données personnalisées filtrées (clés `a-z_`, valeurs simples).
-* **Anti-abus** : champ piège invisible, limite de débit par IP (5 leads / 10 min, 120 événements / min).
-* **Anti-doublons** : même `event_id`, ou même téléphone pour le même produit dans les 10 minutes → réponse `duplicate: true`, rien n'est retransmis.
-* **Limites connues** : les compteurs (débit, doublons) sont en mémoire, donc propres à chaque instance serverless. Ils arrêtent les doubles clics et les abus simples, pas une attaque distribuée. La protection définitive contre les doublons doit être assurée par EasyV4 via l'`Idempotency-Key`.
-
-## Prérequis côté EasyV4 (bloquant pour la transmission des leads)
-
-EasyV4 ne reçoit aujourd'hui les leads du site que par l'action serveur `app/actions/submit-lead.ts`. Celle-ci n'est appelable que depuis l'application EasyV4 elle-même. Il faut donc un endpoint HTTP dans EasyV4 (par exemple `POST /api/public/leads`) qui :
-
-1. vérifie `Authorization: Bearer <EASYV4_LEAD_INTAKE_TOKEN>` (comparaison à temps constant) ;
-2. valide le corps avec le même schéma zod que `submitLead` ;
-3. appelle `captureWebsiteLeadCore` dans `withTenantContext`, avec l'agence par défaut et l'origine `{ actorRef: "landing_easy2book", source: "website_form" }` ;
-4. utilise l'en-tête `Idempotency-Key` pour ignorer un double envoi.
-
-Corps envoyé par ce projet (`lib/server/crm.ts`) :
-
-```json
-{
-  "firstName": "Ahmed", "lastName": "Ben Ali", "phone": "+21698140514",
-  "message": "Voyageurs : 2 adulte(s), 1 enfant(s)\nRéf landing : E2B-7K3QFM",
-  "productType": "package", "productLabel": "Istanbul Été 2026",
-  "sourcePage": "landing-easy2book/voyages-organises", "destination": "Hammamet",
-  "intention": "standard", "campaignRef": "voyages_ete", "marketingConsent": false
-}
-```
-
-Tant que cet endpoint n'existe pas, laisser `EASYV4_LEAD_INTAKE_URL` vide. `/api/leads` répond alors `forwarded: false` et le prospect est redirigé vers WhatsApp avec sa demande.
-
-**Données non transmises au CRM** (le schéma EasyV4 n'a pas de colonne pour elles) : `utm_source`, `utm_medium`, `utm_content`, `ad_id`, `fbclid` et `ttclid`. Seuls `campaignRef` (= `utm_campaign`) et la référence `E2B-…` (dans `message`) arrivent dans EasyV4.
+* **Validation** :
+  - téléphone tunisien ou international ;
+  - longueurs bornées ;
+  - `event_id` au format `[A-Za-z0-9-]{8,64}` ;
+  - liste fermée d'événements relayés ;
+  - données personnalisées filtrées ;
+  - filtres d'export validés (pas d'injection dans les requêtes Supabase) ;
+  - neutralisation des formules dans le CSV ;
+  - mêmes règles reprises par les contraintes SQL.
+* **Anti-abus** : champ piège, limite de débit par IP (5 leads / 10 min, 120 événements / min). Ces compteurs sont en mémoire, donc propres à chaque instance. La garantie définitive contre les doublons vient des index uniques en base.
 
 ## URL à mettre dans les publicités
 
@@ -122,7 +148,7 @@ Liens en bio ou partagés sur WhatsApp : `?utm_source=instagram_bio&utm_campaign
   * `app/page.tsx` : « Early booking jusqu'à -40% ».
 * **Images non vérifiées** : 22 images distinctes d'images.unsplash.com (13 dans `summer-vibes/config.ts`, 9 dans `voyages-organises/page.tsx`, 2 reprises dans `app/page.tsx`). Elles n'ont pas pu être chargées depuis l'environnement de développement (réseau bloqué). Ce sont des photos génériques : elles ne représentent pas les hôtels nommés.
 * **Image de partage** : `public/logo.png` mesure 3750×3750 px (1,4 Mo), alors que les balises Open Graph annoncent 1200×630.
-* **Politique de confidentialité** : ce site n'a pas encore de page dédiée. Le bandeau de consentement n'y renvoie donc pas.
+* **Politique de confidentialité** : ce site n'a pas encore de page dédiée (à créer, avec la durée de conservation des leads).
 
 ## Développement et tests
 
@@ -130,7 +156,7 @@ Liens en bio ou partagés sur WhatsApp : `?utm_source=instagram_bio&utm_campaign
 npm install
 npm run dev          # http://localhost:3000
 npm run typecheck    # TypeScript
-npm test             # tests unitaires et d'API (Vitest)
+npm test             # Vitest : API, déduplication, consentement + migration SQL sur PostgreSQL (PGlite)
 npm run build
 ```
 

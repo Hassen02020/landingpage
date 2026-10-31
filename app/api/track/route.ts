@@ -4,7 +4,9 @@ import { clientIp } from "@/lib/server/hash"
 import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
-import { ALLOWED_EVENTS } from "@/lib/server/events"
+import { ALLOWED_EVENTS, LOGGED_EVENTS } from "@/lib/server/events"
+import { dbConfigured, insertQuiet } from "@/lib/server/db"
+import { isProduct } from "@/lib/config"
 
 export const runtime = "nodejs"
 
@@ -70,6 +72,30 @@ export async function POST(request: NextRequest) {
     },
   }
 
-  await Promise.allSettled([sendMetaEvent(serverEvent), sendTikTokEvent(serverEvent)])
+  const tasks: Promise<unknown>[] = [sendMetaEvent(serverEvent), sendTikTokEvent(serverEvent)]
+
+  // Journal des interactions (visiteurs consentants) pour tester les niches
+  if (LOGGED_EVENTS.has(eventName) && dbConfigured()) {
+    const product = customData.product
+    tasks.push(
+      insertQuiet("landing_events", {
+        event_name: eventName,
+        event_id: eventId,
+        visitor_id: attr.visitor_id ?? null,
+        ref: attr.ref ?? null,
+        product: isProduct(product) ? product : null,
+        offer: str(customData.content_ids) || null,
+        niche: str(customData.niche, 64) || null,
+        location: str(customData.content_name) || null,
+        channel: attr.channel ?? null,
+        utm_source: attr.utm_source ?? null,
+        utm_campaign: attr.utm_campaign ?? null,
+        utm_content: attr.utm_content ?? null,
+        ad_id: attr.ad_id ?? null,
+      }).catch((e) => console.error("[track] journal", e instanceof Error ? e.message : "erreur"))
+    )
+  }
+
+  await Promise.allSettled(tasks)
   return NextResponse.json({ ok: true, forwarded: true })
 }
