@@ -82,11 +82,24 @@ Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sq
 
 Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to sign up » : seuls les comptes créés par un administrateur doivent exister.
 
+## Écrans d'administration (rôle « admin »)
+
+| Écran | Rôle |
+|---|---|
+| `/admin/stats` | **Marketing** (leads, statuts, CA par campagne / groupe d'annonces / annonce, sur une période), **Équipe** (actions, contactés, réservés, taux de conclusion par membre), **Offres**, **Niches**. |
+| `/admin/calculateur` | Simulation de rentabilité : coût par lead, taux de contact et de réservation, marge par personne → profit, ROAS, coût par lead maximal. Propose les taux réels des 90 derniers jours. |
+| `/admin/integrations` | Pixel Meta + jeton API Conversions, pixel TikTok + jeton Events API, code de test, activation, bouton « Tester ». Un champ vide reprend la variable Vercel. Paramètres d'URL à coller dans les publicités. |
+| `/admin/protection` | Téléphones et IP bloqués (aussi depuis la fiche d'un lead), pays autorisés d'après l'IP. Un lead bloqué reçoit un refus sans détail. |
+| `/admin/promos` | Codes promo (pourcentage ou montant, produit, dates, nombre maximal d'utilisations). Vérifiés à l'envoi du formulaire, comptés, affichés sur le lead et dans le message WhatsApp. |
+
+Les jetons Meta / TikTok sont **chiffrés** (AES-256-GCM) par le serveur avant d'être enregistrés ; la base ne garde que le texte chiffré et les 4 derniers caractères. La clé est dérivée de `LANDING_SECRETS_KEY` si elle existe, sinon de `LANDING_SUPABASE_SERVICE_ROLE_KEY` : après une rotation de cette clé, ressaisir les jetons dans `/admin/integrations` (l'écran le signale). Toutes les modifications d'intégration sont journalisées (qui, quand, quels champs, jamais les valeurs).
+
 ## Mise en place de la base dédiée
 
 1. Projet Supabase des landing pages : **`tdexdlukqciolslvjmhd`** (région eu-west-3), distinct d'EasyV4 et d'EasyV4-preview.
 2. Dans ce projet, ouvrir **SQL Editor** et exécuter, dans l'ordre, `supabase/migrations/0001_landing_leads.sql` (**appliquée le 31/10/2026**), puis `supabase/migrations/0002_landing_crm.sql`. Chaque script s'arrête de lui-même sur une base EasyV4, si le précédent manque, ou s'il a déjà été appliqué.
    **Ordre de déploiement** : appliquer `0002` **avant** de déployer ce code. Le formulaire enregistre `consent_text_version`, une colonne créée par `0002`.
+   Puis `supabase/migrations/0003_landing_admin.sql` (intégrations, protection, codes promo), **avant** de déployer la version qui contient ces écrans : sans elle, le site fonctionne (variables Vercel, aucune règle de protection) mais un code promo saisi est refusé.
 3. Saisir dans Vercel, **en Production uniquement** pour que les déploiements de test n'écrivent jamais dans la base réelle : `LANDING_SUPABASE_URL` et `LANDING_SUPABASE_PUBLISHABLE_KEY` (créées le 31/10/2026), `LANDING_SUPABASE_SERVICE_ROLE_KEY` (secrète, à saisir par vous), et, en option, les variables de notification et de captcha (voir `.env.example`). `LANDING_ADMIN_API_KEY` est déconseillée (voir « API d'administration »).
 
 L'application passe par l'API REST de Supabase (`https://tdexdlukqciolslvjmhd.supabase.co`) avec la clé `service_role`. La chaîne de connexion PostgreSQL (pooler, port 6543) n'est pas utilisée par le site : elle sert seulement aux outils d'administration. Ne jamais la committer avec son mot de passe.

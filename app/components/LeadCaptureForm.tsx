@@ -23,6 +23,7 @@ const T = {
     children: "Enfants",
     budget: "Budget approximatif",
     message: "Précisions (facultatif)",
+    promo: "Code promo (facultatif)",
     consent: "J'accepte qu'Easy2Book me recontacte par téléphone / WhatsApp au sujet de ma demande. (obligatoire)",
     marketing: "J'accepte de recevoir les offres et promotions Easy2Book par WhatsApp / téléphone (facultatif).",
     submit: "🟢 Envoyer et continuer sur WhatsApp",
@@ -47,6 +48,7 @@ const T = {
     children: "الأطفال",
     budget: "الميزانية التقريبية",
     message: "ملاحظات (اختياري)",
+    promo: "كود التخفيض (اختياري)",
     consent: "أوافق على أن تتصل بي Easy2Book عبر الهاتف / واتساب بخصوص طلبي. (إجباري)",
     marketing: "أوافق على تلقي عروض Easy2Book عبر واتساب / الهاتف (اختياري).",
     submit: "🟢 أرسل وواصل على واتساب",
@@ -80,6 +82,8 @@ export interface LeadCaptureFormProps {
   onOfferChange?: (offer: string) => void
   /** Choix du nombre d'adultes (par défaut 1 à 10). */
   adultOptions?: number[]
+  /** Champ « code promo » (codes gérés dans /admin/promos). */
+  showPromo?: boolean
 }
 
 const PHONE_RE = /^(?:(?:\+|00)216)?[234579]\d{7}$|^(?:\+|00)\d{9,15}$/
@@ -103,6 +107,7 @@ export function LeadCaptureForm({
   offerValue,
   onOfferChange,
   adultOptions = [1, 2, 3, 4, 5, 6, 8, 10],
+  showPromo = false,
 }: LeadCaptureFormProps) {
   const t = T[lang]
   const [selectedProduct, setSelectedProduct] = useState<Product>(product || "voyage")
@@ -150,6 +155,7 @@ export function LeadCaptureForm({
       budget: get("budget"),
       trip_type: get("trip_type"),
       message: get("message"),
+      promo_code: get("promo_code") || undefined,
       contactConsent: true,
       marketingConsent: Boolean(fd.get("marketing")),
       trackingConsent: hasTrackingConsent(),
@@ -356,6 +362,19 @@ export function LeadCaptureForm({
             </option>
           ))}
         </select>
+      )}
+
+      {showPromo && (
+        <input
+          name="promo_code"
+          type="text"
+          placeholder={t.promo}
+          autoComplete="off"
+          maxLength={32}
+          disabled={submitting}
+          className={`${inputCls} uppercase`}
+          dir="ltr"
+        />
       )}
 
       <textarea name="message" rows={2} placeholder={t.message} disabled={submitting} className={inputCls} maxLength={1000} />

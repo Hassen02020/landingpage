@@ -66,6 +66,9 @@ export interface LeadRow {
   utm_source: string | null
   utm_campaign: string | null
   utm_content: string | null
+  utm_term?: string | null
+  adset_id?: string | null
+  promo_code?: string | null // colonne ajoutée par 0003
   ad_id: string | null
   landing_page: string | null
   visitor_id: string | null

@@ -34,6 +34,23 @@ export function installFetchMock(opts: { dbStatus?: number } = {}) {
         const table = pathname.replace("/rest/v1/", "")
         const rows = (db[table] ??= [])
         const q = decodeURIComponent(search)
+        if (method === "POST" && table.startsWith("rpc/")) {
+          if (table === "rpc/landing_redeem_promo") {
+            const promo = (db.landing_promo_codes ??= []).find((p: any) => p.code === String(body.p_code).toUpperCase())
+            if (!promo) return new Response("[]", { status: 200 })
+            promo.used_count = (promo.used_count ?? 0) + 1
+            return new Response(JSON.stringify([{ code: promo.code }]), { status: 200 })
+          }
+          return new Response("[]", { status: 200 })
+        }
+        const onConflict = new URL(u).searchParams.get("on_conflict")
+        if (method === "POST" && onConflict) {
+          const keys = onConflict.split(",")
+          const existing = rows.find((r) => keys.every((k) => r[k] === body[k]))
+          if (existing) Object.assign(existing, body)
+          else rows.push({ id: rows.length + 1, created_at: new Date().toISOString(), ...body })
+          return new Response(null, { status: 201 })
+        }
         if (method === "POST") {
           const row =
             table === "landing_leads"
@@ -47,12 +64,14 @@ export function installFetchMock(opts: { dbStatus?: number } = {}) {
                 : false
           if (conflict) return new Response(JSON.stringify({ code: "23505" }), { status: 409 })
           rows.push(row)
-          return new Response(JSON.stringify([row]), { status: 201 })
+          // comme PostgREST : corps vide avec « return=minimal »
+          const minimal = String((init.headers as Record<string, string> | undefined)?.Prefer ?? "").includes("return=minimal")
+          return minimal ? new Response(null, { status: 201 }) : new Response(JSON.stringify([row]), { status: 201 })
         }
         // filtres simulés : id, ref, idempotency_key, phone (suffisant pour ces tests)
         const eqs = Array.from(q.matchAll(/(\w+)[.=]eq\.([^,&)]+)/g))
           .map((m) => [m[1], m[2]])
-          .filter(([k]) => ["id", "ref", "idempotency_key", "phone", "lead_id", "user_id"].includes(k))
+          .filter(([k]) => ["id", "ref", "idempotency_key", "phone", "lead_id", "user_id", "provider", "code"].includes(k))
         const match = (r: any) => eqs.length === 0 || eqs.some(([k, v]) => String(r[k]) === v)
         if (method === "GET") return new Response(JSON.stringify(rows.filter(match).reverse()), { status: 200 })
         if (method === "PATCH") {

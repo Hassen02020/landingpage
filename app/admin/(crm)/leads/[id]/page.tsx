@@ -4,6 +4,8 @@ import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
 import { SOURCE_LABELS, STATUSES, STATUS_LABELS, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
 import { addNoteAction, assignAction, changeStatusAction, followUpAction, withdrawMarketingAction } from "../../../actions"
 import { STATUS_COLORS, formatDate } from "../../../format"
+import { blockLeadPhoneAction } from "../../../settings-actions"
+import { currentStaff } from "@/lib/server/auth"
 
 export const dynamic = "force-dynamic"
 
@@ -24,7 +26,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 export default async function LeadPage({ params, searchParams }: { params: { id: string }; searchParams: { ok?: string; erreur?: string } }) {
   const lead = await getLead(params.id)
   if (!lead) notFound()
-  const [activities, staff] = await Promise.all([getActivities(lead.id), listStaff().catch(() => [])])
+  const [activities, staff, me] = await Promise.all([getActivities(lead.id), listStaff().catch(() => []), currentStaff()])
   const locked = Boolean(lead.anonymized_at)
   const wa = lead.phone ? `https://wa.me/${lead.phone}?text=${encodeURIComponent(`Bonjour ${lead.first_name}, Easy2Book au sujet de votre demande ${lead.ref}.`)}` : null
 
@@ -53,14 +55,24 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <Row label="Voyageurs" value={`${lead.adults} adulte(s), ${lead.children} enfant(s)`} />
           <Row label="Budget" value={lead.budget} />
           <Row label="Message" value={lead.message} />
+          <Row label="Code promo" value={lead.promo_code ?? null} />
           <Row label="Source" value={lead.source ? SOURCE_LABELS[lead.source as Source] : null} />
           <Row label="Reçu le" value={formatDate(lead.created_at)} />
           <Row label="Montant réservé" value={lead.booking_value !== null ? `${lead.booking_value} TND` : null} />
+          {me?.role === "admin" && lead.phone && !locked && (
+            <form action={blockLeadPhoneAction} className="mt-3">
+              <input type="hidden" name="phone" value={lead.phone} />
+              <input type="hidden" name="ref" value={lead.ref} />
+              <input type="hidden" name="leadId" value={lead.id} />
+              <button className="text-xs underline text-red-700">🚫 Bloquer ce numéro (faux lead / spam)</button>
+            </form>
+          )}
         </section>
         <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
           <h2 className="font-bold mb-2">Attribution et consentements</h2>
           <Row label="Canal" value={lead.channel} />
           <Row label="Campagne" value={lead.utm_campaign} />
+          <Row label="Groupe d'annonces" value={lead.utm_term || lead.adset_id} />
           <Row label="Annonce" value={lead.utm_content || lead.ad_id} />
           <Row label="Page d'arrivée" value={lead.landing_page} />
           <Row label="Code visiteur" value={lead.visitor_ref} />

@@ -9,6 +9,8 @@ import { CONSENT_TEXT_VERSION, PRODUCTS, isProduct, WHATSAPP_NUMBER, type Produc
 import { logActivity, tunisDay } from "@/lib/server/crm"
 import { notifyNewLead } from "@/lib/server/notify"
 import { verifyCaptcha } from "@/lib/server/captcha"
+import { checkLead } from "@/lib/server/protection"
+import { discountLabel, findUsablePromo, normalizeCode, redeemPromo, type PromoRow } from "@/lib/server/promo"
 
 export const runtime = "nodejs"
 
@@ -65,6 +67,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Vérification anti-robot échouée. Réessayez ou écrivez-nous sur WhatsApp." }, { status: 403 })
   }
 
+  // Protection (/admin/protection) : numéro ou IP bloqués, pays non autorisé → refus sans détail
+  const protection = await checkLead({ phone, ip, country: request.headers.get("x-vercel-ip-country") })
+  if (protection.blocked) {
+    console.warn("[leads] refusé par la protection", protection.reason)
+    return NextResponse.json({ error: "Demande refusée. Contactez-nous directement par téléphone." }, { status: 403 })
+  }
+
+  // Code promo (facultatif) : vérifié ici, consommé seulement si le lead est enregistré
+  const promoInput = str(body.promo_code, 64)
+  let promo: PromoRow | null = null
+  if (promoInput) {
+    promo = dbConfigured() ? await findUsablePromo(promoInput, product).catch(() => null) : null
+    if (!promo) {
+      return NextResponse.json({ error: "Code promo invalide ou expiré", errors: { promo_code: "Code promo invalide ou expiré." } }, { status: 422 })
+    }
+  }
+
   const attr = flattenAttribution(body.attribution)
   const trackingConsent = body.trackingConsent === true
   const marketingConsent = body.marketingConsent === true
@@ -87,6 +106,7 @@ export async function POST(request: NextRequest) {
     str(body.destination) ? `Destination : ${str(body.destination)}` : null,
     travelDate ? `Date : ${travelDate}` : str(body.travel_period, 64) ? `Période : ${str(body.travel_period, 64)}` : null,
     `Voyageurs : ${adults} adulte(s)${children ? ` + ${children} enfant(s)` : ""}`,
+    promo ? `Code promo : ${promo.code} (${discountLabel(promo)})` : null,
     "",
     `Réf: ${leadRef}`,
     ]
@@ -121,6 +141,7 @@ export async function POST(request: NextRequest) {
     budget: str(body.budget, 64) || null,
     trip_type: str(body.trip_type, 64) || null,
     message: str(body.message, 1000) || null,
+    ...(promo ? { promo_code: normalizeCode(promo.code) } : {}),
     contact_consent: true,
     consent_text_version: CONSENT_TEXT_VERSION,
     marketing_consent: marketingConsent,
@@ -191,11 +212,14 @@ export async function POST(request: NextRequest) {
   }
 
   const tasks: Promise<unknown>[] = []
+  if (stored && leadId && promo) {
+    tasks.push(redeemPromo(promo.code, product).catch(() => console.error("[leads] utilisation du code promo non comptée")))
+  }
   if (stored && leadId) {
     tasks.push(
       logActivity(leadId, { id: null, label: "système" }, "created", {
         body: `Formulaire ${attr.landing_page || "/"} — consentement v${CONSENT_TEXT_VERSION}${marketingConsent ? ", marketing accepté" : ""}`,
-      }).catch(() => console.error("[leads] historique non écrit"))
+      }).catch((e) => console.error("[leads] historique non écrit", e instanceof Error ? e.message : "erreur"))
     )
   }
   // l'équipe est prévenue même si la base est indisponible (le lead n'est alors pas perdu)
