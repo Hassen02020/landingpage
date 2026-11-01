@@ -102,7 +102,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | Connecteur Supabase de la session | ne voit que EasyV4 ; accès landing → « permission denied » |
 | `0001` | ✅ appliquée (31/10/2026) ; colonnes `ref`, `visitor_ref`, `lead_day`, `idempotency_key`, `tracking_consent` confirmées |
 | `0002` | ✅ appliquée par l'utilisateur le 2026-11-01 (version `c5c4290`) — vérifié : `landing_staff`, `landing_lead_activities`, colonnes `source`, `last_activity_at`, `consent_text_version`… → `42501` (existent, clé publique refusée) |
-| Auth | `disable_signup: false` encore le 2026-11-01 alors que l'utilisateur déclare l'avoir désactivé — à revérifier |
+| Auth | ✅ `disable_signup: true` vérifié le 2026-11-01 ; fournisseur email actif |
 | Intégration GitHub Supabase | active (check « Supabase Preview » sur la PR, *skipped*) — réglages de migration auto non vérifiés |
 | Projets EasyV4 interdits | `crygnaichvlxavvbifqi` (EasyV4), `fxjhahtqrglktrmgqkvs` (EasyV4-preview) — refusés par `lib/server/db.ts` |
 
@@ -160,7 +160,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 6. `0002` cohérente avec `0001` appliquée : ✅.
 
 ## 11. Next steps
-1. **Next action:** les 6 corrections de `0002` sont faites (service_role sans DELETE/TRUNCATE ; TRUNCATE historique interdit ; trigger `landing_leads_guard` : lead anonymisé figé, anonymisation réservée à la purge, `booked_at` définitif ; `last_activity_at` + purge depuis la dernière interaction ; README corrigé ; `LANDING_ADMIN_API_KEY` déconseillée). `0002` appliquée et vérifiée (2026-11-01). Déclarés faits par l'utilisateur, non vérifiables par Claude : révocation de l'ancienne clé, désactivation du déploiement auto des migrations GitHub. Compte équipe créé le 2026-11-01 : `direction@easy2book.tn`, Hassen Tarhouni, rôle `admin`, actif (sortie SQL fournie par l'utilisateur). Prochaine action : obtenir la fermeture des inscriptions (`disable_signup` encore `false` après vérification), puis tests réels sur environnement de test.
+1. **Next action:** les 6 corrections de `0002` sont faites (service_role sans DELETE/TRUNCATE ; TRUNCATE historique interdit ; trigger `landing_leads_guard` : lead anonymisé figé, anonymisation réservée à la purge, `booked_at` définitif ; `last_activity_at` + purge depuis la dernière interaction ; README corrigé ; `LANDING_ADMIN_API_KEY` déconseillée). `0002` appliquée et vérifiée (2026-11-01). Déclarés faits par l'utilisateur, non vérifiables par Claude : révocation de l'ancienne clé, désactivation du déploiement auto des migrations GitHub. Compte équipe créé le 2026-11-01 : `direction@easy2book.tn`, Hassen Tarhouni, rôle `admin`, actif (sortie SQL fournie par l'utilisateur). Inscriptions publiques fermées (vérifié). Prochaine action : tests réels de /admin (environnement de test, ou GO explicite pour un test contrôlé en production), puis contenu, puis GO de fusion.
 2. Côté utilisateur, avant toute fusion : confirmer la révocation de l'ancienne clé secrète ; vérifier/désactiver le déploiement automatique des migrations de l'intégration GitHub Supabase ; valider les durées ; fermer les inscriptions publiques ; appliquer `0002` (puis vérification en lecture seule par Claude sur GO) ; créer les comptes équipe ; projet Supabase de test pour la Preview et retrait des variables Meta en Preview ; contenu (dates, images, page de confidentialité, logo OG).
 3. Tests réels sur environnement de test, puis GO de fusion.
 
