@@ -188,3 +188,11 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - **Migration `0003_landing_admin.sql` à appliquer par l'utilisateur AVANT le déploiement du lot 1.** Testée sous PGlite (6 tests : droits, journal en ajout seul, jeton chiffré obligatoire, promo atomique).
 - Jeton Meta toujours invalide (code 190) : à régénérer, puis à saisir dans `/admin/integrations` (plus besoin de Vercel).
 - Lots suivants prévus : lot 2 catalogue d'offres + catégories (pages publiques pilotées par l'admin) ; lot 3 essentiels CRM (tableau de bord, pipeline, actions groupées, gestion de l'équipe, modèles WhatsApp, doublons).
+
+## Mise à jour — lots 2 et 3 (01/11/2026, nuit)
+
+- Lot 1 fusionné (PR #5) et déployé ; migration 0003 appliquée par l'utilisateur (« Success. No rows returned »), vérifiée en lecture (42501 sur les nouvelles tables).
+- Lot 2 (PR #6, déployé `dpl_H4MH4nrsSk8SkrghAhp8TurRmKt4`) : catalogue d'offres et catégories, `/omra` piloté par la catégorie `omra-2027` (repli sur les offres intégrées), pages `/c/<adresse>`. **Migration 0004 à appliquer** (sinon `/c/...` = 404 et `/omra` = offres intégrées).
+- Lot 3 : accueil avec cartes du jour, filtres rapides, actions groupées ; pipeline ; modèles WhatsApp ; doublons ; gestion de l'équipe (API admin Supabase Auth, mot de passe provisoire) ; « Mon compte ». **Migration 0005 à appliquer après 0004.**
+- Tests : 176/176 (migrations 0003/0004/0005 sous PGlite), e2e 11/11 et 9/9.
+- Toujours en attente : nouveau jeton Meta (à saisir dans /admin/integrations).

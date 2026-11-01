@@ -112,8 +112,11 @@ export interface LeadFilters {
   product?: string
   channel?: string
   q?: string
-  followUp?: string // "due" : relances échues
+  followUp?: string // "due" : relances échues (dossiers ouverts)
+  assigned?: string // "me" | "none" | identifiant d'un membre
+  open?: string // "1" : nouveaux, contactés et qualifiés seulement
   page?: number
+  me?: string // identifiant du membre connecté (pour assigned=me)
 }
 
 export const PAGE_SIZE = 50
@@ -124,7 +127,11 @@ export async function listLeads(f: LeadFilters): Promise<LeadRow[]> {
   if (isStatus(f.status)) q.push(`status=eq.${f.status}`)
   if (isProduct(f.product)) q.push(`product=eq.${f.product}`)
   if (f.channel && /^[a-z_]{1,32}$/.test(f.channel)) q.push(`channel=eq.${f.channel}`)
-  if (f.followUp === "due") q.push(`next_follow_up_at=lte.${new Date().toISOString()}`)
+  if (f.followUp === "due") q.push(`next_follow_up_at=lte.${new Date().toISOString()}`, "status=in.(nouveau,contacte,qualifie)")
+  if (f.open === "1" && f.followUp !== "due") q.push("status=in.(nouveau,contacte,qualifie)")
+  if (f.assigned === "none") q.push("assigned_to=is.null")
+  else if (f.assigned === "me" && f.me && UUID_RE.test(f.me)) q.push(`assigned_to=eq.${f.me}`)
+  else if (f.assigned && UUID_RE.test(f.assigned)) q.push(`assigned_to=eq.${f.assigned}`)
   const term = (f.q || "").trim()
   if (term) {
     if (/^E2B-[A-Z0-9]{6}$/i.test(term)) q.push(`or=(ref.eq.${term.toUpperCase()},visitor_ref.eq.${term.toUpperCase()})`)
@@ -145,6 +152,12 @@ export async function getLeadByRef(ref: string): Promise<LeadRow | null> {
   if (!/^E2B-[A-Z0-9]{6}$/.test(ref)) return null
   const [lead] = await select<LeadRow>("landing_leads", `select=*&ref=eq.${ref}&limit=1`)
   return lead ?? null
+}
+
+/** Autres leads du même téléphone (doublons possibles). */
+export async function findDuplicates(lead: LeadRow): Promise<Pick<LeadRow, "id" | "ref" | "product" | "status" | "created_at" | "offer">[]> {
+  if (!lead.phone || !/^\d{8,15}$/.test(lead.phone)) return []
+  return select("landing_leads", `select=id,ref,product,status,created_at,offer&phone=eq.${lead.phone}&id=neq.${lead.id}&order=created_at.desc&limit=20`)
 }
 
 export async function getActivities(leadId: string): Promise<Activity[]> {

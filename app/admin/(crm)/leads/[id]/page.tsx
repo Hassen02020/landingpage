@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
-import { SOURCE_LABELS, STATUSES, STATUS_LABELS, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
-import { addNoteAction, assignAction, changeStatusAction, followUpAction, withdrawMarketingAction } from "../../../actions"
+import { SOURCE_LABELS, STATUSES, STATUS_LABELS, findDuplicates, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
+import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, withdrawMarketingAction } from "../../../actions"
+import { listTemplates, renderTemplate } from "@/lib/server/templates"
 import { STATUS_COLORS, formatDate } from "../../../format"
 import { blockLeadPhoneAction } from "../../../settings-actions"
 import { currentStaff } from "@/lib/server/auth"
@@ -26,7 +27,13 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 export default async function LeadPage({ params, searchParams }: { params: { id: string }; searchParams: { ok?: string; erreur?: string } }) {
   const lead = await getLead(params.id)
   if (!lead) notFound()
-  const [activities, staff, me] = await Promise.all([getActivities(lead.id), listStaff().catch(() => []), currentStaff()])
+  const [activities, staff, me, templates, duplicates] = await Promise.all([
+    getActivities(lead.id),
+    listStaff().catch(() => []),
+    currentStaff(),
+    listTemplates({ activeOnly: true, product: lead.product }).catch(() => []),
+    findDuplicates(lead).catch(() => []),
+  ])
   const locked = Boolean(lead.anonymized_at)
   const wa = lead.phone ? `https://wa.me/${lead.phone}?text=${encodeURIComponent(`Bonjour ${lead.first_name}, Easy2Book au sujet de votre demande ${lead.ref}.`)}` : null
 
@@ -42,6 +49,48 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
       {searchParams.ok && <div className="p-3 rounded-xl bg-green-50 text-green-800 text-sm">{searchParams.ok}</div>}
       {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
       {locked && <div className="p-3 rounded-xl bg-gray-100 text-gray-700 text-sm">Lead anonymisé le {formatDate(lead.anonymized_at)} : lecture seule.</div>}
+
+      {lead.phone && !locked && templates.length > 0 && (
+        <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
+          <h2 className="font-bold mb-2">Messages WhatsApp prêts</h2>
+          <div className="flex flex-wrap gap-2">
+            {templates.map((t) => (
+              <a
+                key={t.id}
+                href={`https://wa.me/${lead.phone}?text=${encodeURIComponent(renderTemplate(t.body, lead))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={renderTemplate(t.body, lead)}
+                className="border border-green-300 text-green-800 bg-green-50 hover:bg-green-100 rounded-xl px-3 py-1.5 font-semibold"
+              >
+                💬 {t.title}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {duplicates.length > 0 && (
+        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm">
+          <h2 className="font-bold mb-2">⚠️ Même numéro : {duplicates.length} autre(s) demande(s)</h2>
+          <ul className="space-y-1">
+            {duplicates.map((d) => (
+              <li key={d.id} className="flex flex-wrap items-center gap-2">
+                <Link href={`/admin/leads/${d.id}`} className="font-mono underline">{d.ref}</Link>
+                <span>{PRODUCTS[d.product]}{d.offer ? ` — ${d.offer}` : ""}</span>
+                <span className="text-gray-600">{STATUS_LABELS[d.status]} · {formatDate(d.created_at)}</span>
+                {!locked && lead.status !== "perdu" && (
+                  <form action={markDuplicateAction}>
+                    <input type="hidden" name="id" value={lead.id} />
+                    <input type="hidden" name="of" value={d.ref} />
+                    <button className="text-xs underline text-amber-800">Marquer cette fiche comme doublon de {d.ref}</button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">

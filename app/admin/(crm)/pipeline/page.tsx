@@ -1,0 +1,111 @@
+import Link from "next/link"
+import { PRODUCTS, type Product } from "@/lib/config"
+import { currentStaff } from "@/lib/server/auth"
+import { select } from "@/lib/server/db"
+import { STATUS_LABELS, UUID_RE, listStaff, type LeadRow, type Status } from "@/lib/server/crm"
+import { moveLeadAction } from "../../actions"
+
+export const dynamic = "force-dynamic"
+
+const COLUMNS: { status: Status; tone: string; next?: Status[] }[] = [
+  { status: "nouveau", tone: "border-blue-400", next: ["contacte", "perdu"] },
+  { status: "contacte", tone: "border-sky-400", next: ["qualifie", "perdu"] },
+  { status: "qualifie", tone: "border-amber-400", next: ["contacte", "perdu"] },
+  { status: "reserve", tone: "border-green-500" },
+  { status: "perdu", tone: "border-red-400", next: ["contacte"] },
+]
+
+const age = (iso: string) => {
+  const h = Math.floor((Date.now() - Date.parse(iso)) / 3_600_000)
+  return h < 24 ? `${h} h` : `${Math.floor(h / 24)} j`
+}
+
+type Card = Pick<LeadRow, "id" | "ref" | "first_name" | "last_name" | "product" | "offer" | "status" | "created_at" | "next_follow_up_at" | "assigned_to" | "booking_value">
+
+export default async function PipelinePage({ searchParams }: { searchParams: { product?: string; assigned?: string } }) {
+  const me = await currentStaff()
+  const filters = ["select=id,ref,first_name,last_name,product,offer,status,created_at,next_follow_up_at,assigned_to,booking_value", "anonymized_at=is.null", "order=created_at.desc", "limit=1000"]
+  if (searchParams.product && searchParams.product in PRODUCTS) filters.push(`product=eq.${searchParams.product}`)
+  if (searchParams.assigned === "me" && me) filters.push(`assigned_to=eq.${me.userId}`)
+  else if (searchParams.assigned === "none") filters.push("assigned_to=is.null")
+  else if (searchParams.assigned && UUID_RE.test(searchParams.assigned)) filters.push(`assigned_to=eq.${searchParams.assigned}`)
+  // dossiers conclus : 30 derniers jours seulement (le tableau reste lisible)
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
+  const [cards, staff] = await Promise.all([
+    select<Card>("landing_leads", `${filters.join("&")}&or=(status.in.(nouveau,contacte,qualifie),updated_at.gte.${since})`).catch(() => null),
+    listStaff().catch(() => []),
+  ])
+  const name = new Map(staff.map((s) => [s.user_id, s.full_name || s.email.split("@")[0]]))
+  const back = `/admin/pipeline${searchParams.product || searchParams.assigned ? `?${new URLSearchParams(Object.entries(searchParams).filter(([, v]) => v) as [string, string][])}` : ""}`
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-black">Pipeline</h1>
+        <form className="flex gap-2 text-sm">
+          <select name="product" defaultValue={searchParams.product ?? ""} className="border rounded-lg px-2 py-1.5">
+            <option value="">Tous produits</option>
+            {Object.entries(PRODUCTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <select name="assigned" defaultValue={searchParams.assigned ?? ""} className="border rounded-lg px-2 py-1.5">
+            <option value="">Toute l&apos;équipe</option>
+            <option value="me">Mes leads</option>
+            <option value="none">Non assignés</option>
+            {staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.full_name || s.email}</option>)}
+          </select>
+          <button className="bg-gray-900 text-white font-bold px-3 py-1.5 rounded-lg">Filtrer</button>
+        </form>
+      </div>
+      {!cards ? (
+        <p className="text-red-700">Lecture impossible.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3 items-start">
+          {COLUMNS.map((col) => {
+            const list = cards.filter((c) => c.status === col.status)
+            const total = list.reduce((a, c) => a + (Number(c.booking_value) || 0), 0)
+            return (
+              <section key={col.status} className={`bg-gray-100 rounded-2xl p-2 border-t-4 ${col.tone}`}>
+                <h2 className="font-black px-2 py-1 flex justify-between">
+                  <span>{STATUS_LABELS[col.status]}</span>
+                  <span className="text-gray-500">{list.length}</span>
+                </h2>
+                {col.status === "reserve" && total > 0 && <p className="px-2 text-xs text-green-700 font-bold">{new Intl.NumberFormat("fr-FR").format(total)} TND</p>}
+                {(col.status === "reserve" || col.status === "perdu") && <p className="px-2 text-xs text-gray-500">30 derniers jours</p>}
+                <div className="space-y-2 mt-2 max-h-[70vh] overflow-y-auto">
+                  {list.slice(0, 100).map((c) => {
+                    const late = c.next_follow_up_at && Date.parse(c.next_follow_up_at) <= Date.now() && ["nouveau", "contacte", "qualifie"].includes(c.status)
+                    return (
+                      <div key={c.id} className="bg-white rounded-xl p-3 shadow-sm text-sm">
+                        <Link href={`/admin/leads/${c.id}`} className="font-bold hover:underline">{c.first_name} {c.last_name ?? ""}</Link>
+                        <div className="text-xs text-gray-500">{c.ref} · {PRODUCTS[c.product as Product]} · il y a {age(c.created_at)}</div>
+                        {c.offer && <div className="text-xs text-gray-700 truncate">{c.offer}</div>}
+                        <div className="flex items-center justify-between mt-1 text-xs">
+                          <span className={c.assigned_to ? "text-gray-600" : "text-amber-600"}>{c.assigned_to ? name.get(c.assigned_to) ?? "—" : "non assigné"}</span>
+                          {late && <span className="text-red-600 font-bold">relance échue</span>}
+                        </div>
+                        {col.next && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {col.next.map((n) => (
+                              <form key={n} action={moveLeadAction}>
+                                <input type="hidden" name="id" value={c.id} />
+                                <input type="hidden" name="status" value={n} />
+                                <input type="hidden" name="back" value={back} />
+                                <button className="text-xs border rounded-lg px-2 py-0.5 hover:bg-gray-50">→ {STATUS_LABELS[n]}</button>
+                              </form>
+                            ))}
+                            {col.status === "qualifie" && <Link href={`/admin/leads/${c.id}`} className="text-xs border border-green-300 text-green-700 rounded-lg px-2 py-0.5">→ Réservé</Link>}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {list.length === 0 && <p className="text-xs text-gray-500 px-2 py-4 text-center">Aucun lead</p>}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
