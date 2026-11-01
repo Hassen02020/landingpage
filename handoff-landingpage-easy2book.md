@@ -101,8 +101,8 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | Base directe / pooler | `db.tdexdlukqciolslvjmhd.supabase.co:5432` ; `aws-1-eu-west-3.pooler.supabase.com:6543` (user `postgres.tdexdlukqciolslvjmhd`) — injoignables depuis la session, inutiles |
 | Connecteur Supabase de la session | ne voit que EasyV4 ; accès landing → « permission denied » |
 | `0001` | ✅ appliquée (31/10/2026) ; colonnes `ref`, `visitor_ref`, `lead_day`, `idempotency_key`, `tracking_consent` confirmées |
-| `0002` | ❌ non appliquée (`landing_staff` → `404 PGRST205` ; colonne `source` → `42703`) |
-| Auth | `disable_signup: false` (inscriptions publiques ouvertes) ; fournisseur actif : email |
+| `0002` | ✅ appliquée par l'utilisateur le 2026-11-01 (version `c5c4290`) — vérifié : `landing_staff`, `landing_lead_activities`, colonnes `source`, `last_activity_at`, `consent_text_version`… → `42501` (existent, clé publique refusée) |
+| Auth | `disable_signup: false` encore le 2026-11-01 alors que l'utilisateur déclare l'avoir désactivé — à revérifier |
 | Intégration GitHub Supabase | active (check « Supabase Preview » sur la PR, *skipped*) — réglages de migration auto non vérifiés |
 | Projets EasyV4 interdits | `crygnaichvlxavvbifqi` (EasyV4), `fxjhahtqrglktrmgqkvs` (EasyV4-preview) — refusés par `lib/server/db.ts` |
 
@@ -145,7 +145,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 |---|---|---|---|
 | Landing pages + tracking + consentement | fait | branche, `app/`, `lib/` | contenu (dates, images) à corriger |
 | `0001_landing_leads.sql` | appliquée en prod | `supabase/migrations/`, version `bfd90e5` | inchangée depuis |
-| `0002_landing_crm.sql` | prête, **6 corrections de sécurité intégrées**, non appliquée | `supabase/migrations/` | à appliquer par l'utilisateur après les prérequis (section 11) |
+| `0002_landing_crm.sql` | **appliquée** (2026-11-01, version `c5c4290`) | `supabase/migrations/` | ne plus modifier : toute évolution = nouvelle migration `0003` |
 | Mini-CRM `/admin` | fait (non testé en réel) | `app/admin/` | connexion Supabase Auth réelle non testée |
 | README / `.env.example` | à jour (droits service_role, règles métier en base, conservation depuis la dernière interaction, clé API déconseillée) | racine | — |
 | PR #2 | brouillon, description à jour (`2373022`) | lien section 8 | marquée NON PRÊTE |
@@ -160,7 +160,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 6. `0002` cohérente avec `0001` appliquée : ✅.
 
 ## 11. Next steps
-1. **Next action:** les 6 corrections de `0002` sont faites (service_role sans DELETE/TRUNCATE ; TRUNCATE historique interdit ; trigger `landing_leads_guard` : lead anonymisé figé, anonymisation réservée à la purge, `booked_at` définitif ; `last_activity_at` + purge depuis la dernière interaction ; README corrigé ; `LANDING_ADMIN_API_KEY` déconseillée). Prochaine action : attendre que l'utilisateur traite les prérequis du point 2, puis, sur GO, vérifier en lecture seule l'application de `0002` (`landing_staff` doit passer de `404 PGRST205` à `401 42501`, colonne `source` présente).
+1. **Next action:** les 6 corrections de `0002` sont faites (service_role sans DELETE/TRUNCATE ; TRUNCATE historique interdit ; trigger `landing_leads_guard` : lead anonymisé figé, anonymisation réservée à la purge, `booked_at` définitif ; `last_activity_at` + purge depuis la dernière interaction ; README corrigé ; `LANDING_ADMIN_API_KEY` déconseillée). `0002` appliquée et vérifiée (2026-11-01). Déclarés faits par l'utilisateur, non vérifiables par Claude : révocation de l'ancienne clé, désactivation du déploiement auto des migrations GitHub. Prochaine action : revérifier `disable_signup` (encore `false`), puis créer les comptes équipe et passer aux tests réels sur environnement de test.
 2. Côté utilisateur, avant toute fusion : confirmer la révocation de l'ancienne clé secrète ; vérifier/désactiver le déploiement automatique des migrations de l'intégration GitHub Supabase ; valider les durées ; fermer les inscriptions publiques ; appliquer `0002` (puis vérification en lecture seule par Claude sur GO) ; créer les comptes équipe ; projet Supabase de test pour la Preview et retrait des variables Meta en Preview ; contenu (dates, images, page de confidentialité, logo OG).
 3. Tests réels sur environnement de test, puis GO de fusion.
 
