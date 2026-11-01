@@ -73,6 +73,13 @@ export interface LeadCaptureFormProps {
   lang?: Lang
   accentColor?: string
   formId?: string
+  /** Champ « date souhaitée » (inutile quand les départs sont fixes, ex. Omra). Par défaut : affiché. */
+  showDate?: boolean
+  /** Offre contrôlée par la page (ex. bouton « احجز هذا الفوج » qui pré-remplit le formulaire). */
+  offerValue?: string
+  onOfferChange?: (offer: string) => void
+  /** Choix du nombre d'adultes (par défaut 1 à 10). */
+  adultOptions?: number[]
 }
 
 const PHONE_RE = /^(?:(?:\+|00)216)?[234579]\d{7}$|^(?:\+|00)\d{9,15}$/
@@ -92,6 +99,10 @@ export function LeadCaptureForm({
   lang = "fr",
   accentColor = "#25D366",
   formId = "lead-form",
+  showDate = true,
+  offerValue,
+  onOfferChange,
+  adultOptions = [1, 2, 3, 4, 5, 6, 8, 10],
 }: LeadCaptureFormProps) {
   const t = T[lang]
   const [selectedProduct, setSelectedProduct] = useState<Product>(product || "voyage")
@@ -182,6 +193,7 @@ export function LeadCaptureForm({
 
       setResult({ ref: json.ref, url: json.whatsappUrl })
       form.reset()
+      onOfferChange?.("")
       window.location.href = json.whatsappUrl
     } catch (err) {
       // le jeton du captcha est à usage unique : nouveau défi pour un nouvel essai
@@ -260,7 +272,15 @@ export function LeadCaptureForm({
       )}
 
       {offers && offers.length > 0 && (
-        <select name="offer" defaultValue={defaultOffer || ""} disabled={submitting} className={inputCls} aria-label={t.offer}>
+        <select
+          name="offer"
+          {...(offerValue !== undefined
+            ? { value: offerValue, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onOfferChange?.(e.target.value) }
+            : { defaultValue: defaultOffer || "" })}
+          disabled={submitting}
+          className={inputCls}
+          aria-label={t.offer}
+        >
           <option value="">
             {t.offer} — {t.anyOffer}
           </option>
@@ -292,16 +312,16 @@ export function LeadCaptureForm({
             </option>
           ))}
         </select>
-      ) : (
+      ) : showDate ? (
         <label className="block text-sm text-gray-600">
           {t.date}
           <input name="travel_date" type="date" disabled={submitting} className={`${inputCls} mt-1`} />
         </label>
-      )}
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3">
         <select name="adults" defaultValue="2" disabled={submitting} className={inputCls} aria-label={t.adults}>
-          {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
+          {adultOptions.map((n) => (
             <option key={n} value={n}>
               {n} {t.adults}
             </option>
