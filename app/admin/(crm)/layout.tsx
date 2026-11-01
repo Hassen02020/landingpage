@@ -13,12 +13,20 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
       <header className="bg-white border-b sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
           <Link href="/admin" className="font-black">Easy2Book · Leads</Link>
-          <nav className="flex gap-3 text-sm font-semibold text-gray-600">
+          <nav className="flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold text-gray-600">
             <Link href="/admin" className="hover:text-blue-800">Leads</Link>
             <Link href="/admin?followUp=due" className="hover:text-blue-800">Relances</Link>
             <Link href="/admin/leads/new" className="hover:text-blue-800">+ Nouveau lead</Link>
             <Link href="/admin/stats" className="hover:text-blue-800">Statistiques</Link>
-            {staff.role === "admin" && <a href="/admin/export" className="hover:text-blue-800">Export CSV</a>}
+            <Link href="/admin/calculateur" className="hover:text-blue-800">Calculateur</Link>
+            {staff.role === "admin" && (
+              <>
+                <Link href="/admin/promos" className="hover:text-blue-800">Codes promo</Link>
+                <Link href="/admin/protection" className="hover:text-blue-800">Protection</Link>
+                <Link href="/admin/integrations" className="hover:text-blue-800">Intégrations</Link>
+                <a href="/admin/export" className="hover:text-blue-800">Export CSV</a>
+              </>
+            )}
           </nav>
           <form action={logoutAction} className="ml-auto flex items-center gap-2 text-sm">
             <span className="text-gray-500">{staff.email}</span>

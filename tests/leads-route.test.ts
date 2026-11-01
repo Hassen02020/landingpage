@@ -40,7 +40,7 @@ describe("POST /api/leads", () => {
     expect(json.ref).not.toBe("E2B-ABC234") // la référence du lead est générée par le serveur
     expect(json.whatsappUrl).toContain(encodeURIComponent(`Réf: ${json.ref}`))
 
-    const [insert] = f.dbCalls()
+    const insert = f.dbCalls().find((c) => c.method === "POST" && c.url === `${DB_URL}/rest/v1/landing_leads`)!
     expect(insert.url).toBe(`${DB_URL}/rest/v1/landing_leads`)
     expect((insert.init.headers as Record<string, string>).Authorization).toBe("Bearer service-role-test")
     expect(insert.body).toMatchObject({

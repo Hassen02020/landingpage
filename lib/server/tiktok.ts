@@ -1,6 +1,7 @@
 // TikTok Events API (serveur) — https://business-api.tiktok.com/portal/docs?id=1771100865818625
 import { sha256 } from "./hash"
 import type { ServerEvent } from "./meta"
+import { resolveIntegration } from "./integrations"
 
 // Correspondance événements Meta → événements standard TikTok
 const EVENT_MAP: Record<string, string> = {
@@ -17,10 +18,13 @@ export function tiktokConfigured(): boolean {
 }
 
 export async function sendTikTokEvent(event: ServerEvent): Promise<{ ok: boolean; skipped?: boolean; error?: unknown }> {
-  const token = process.env.TIKTOK_ACCESS_TOKEN
-  const pixelId = process.env.TIKTOK_PIXEL_ID || process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID
   const ttEvent = EVENT_MAP[event.eventName]
-  if (!token || !pixelId || !ttEvent) return { ok: false, skipped: true }
+  if (!ttEvent) return { ok: false, skipped: true }
+  // réglage /admin/integrations, à défaut variables Vercel
+  const cfg = await resolveIntegration("tiktok")
+  const token = cfg.token
+  const pixelId = cfg.pixelId
+  if (!cfg.enabled || !token || !pixelId) return { ok: false, skipped: true }
 
   const { user, customData = {} } = event
   const userData: Record<string, unknown> = {}
@@ -58,7 +62,7 @@ export async function sendTikTokEvent(event: ServerEvent): Promise<{ ok: boolean
       },
     ],
   }
-  if (process.env.TIKTOK_TEST_EVENT_CODE) payload.test_event_code = process.env.TIKTOK_TEST_EVENT_CODE
+  if (cfg.testEventCode) payload.test_event_code = cfg.testEventCode
 
   try {
     const res = await fetch("https://business-api.tiktok.com/open_api/v1.3/event/track/", {

@@ -1,5 +1,6 @@
 // Meta Conversions API (serveur) — https://developers.facebook.com/docs/marketing-api/conversions-api
 import { sha256 } from "./hash"
+import { resolveIntegration } from "./integrations"
 
 const GRAPH_VERSION = "v21.0"
 
@@ -49,9 +50,11 @@ function metaUserData(user: ServerUser) {
 }
 
 export async function sendMetaEvent(event: ServerEvent): Promise<{ ok: boolean; skipped?: boolean; error?: unknown }> {
-  const token = process.env.META_ACCESS_TOKEN
-  const pixelId = process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "1674012850599992"
-  if (!token) return { ok: false, skipped: true }
+  // réglage /admin/integrations, à défaut variables Vercel
+  const cfg = await resolveIntegration("meta")
+  const token = cfg.token
+  const pixelId = cfg.pixelId
+  if (!cfg.enabled || !token || !pixelId) return { ok: false, skipped: true }
 
   const payload: Record<string, unknown> = {
     data: [
@@ -66,7 +69,7 @@ export async function sendMetaEvent(event: ServerEvent): Promise<{ ok: boolean; 
       },
     ],
   }
-  if (process.env.META_TEST_EVENT_CODE) payload.test_event_code = process.env.META_TEST_EVENT_CODE
+  if (cfg.testEventCode) payload.test_event_code = cfg.testEventCode
   // jeton dans le corps (et non dans l'URL) pour ne pas l'exposer dans les journaux
   payload.access_token = token
 

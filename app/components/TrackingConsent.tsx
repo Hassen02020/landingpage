@@ -14,6 +14,8 @@ import { META_PIXEL_ID, TIKTOK_PIXEL_ID } from "@/lib/config"
 export function TrackingConsent() {
   const [consent, setState] = useState<ConsentState | null>(null)
   const [ready, setReady] = useState(false)
+  // ID des pixels réglés dans /admin/integrations ; à défaut, valeurs de compilation
+  const [pixels, setPixels] = useState<{ meta: string | null; tiktok: string | null } | null>(null)
   const pathname = usePathname()
   const isArabic = pathname?.startsWith("/omra")
 
@@ -24,6 +26,25 @@ export function TrackingConsent() {
     window.addEventListener(CONSENT_EVENT, onChange)
     return () => window.removeEventListener(CONSENT_EVENT, onChange)
   }, [])
+
+  useEffect(() => {
+    if (consent !== "granted" || pixels) return
+    let cancelled = false
+    fetch("/api/pixels")
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((ids: { meta: string | null; tiktok: string | null }) => {
+        if (!cancelled) setPixels(ids)
+      })
+      .catch(() => {
+        if (!cancelled) setPixels({ meta: META_PIXEL_ID || null, tiktok: TIKTOK_PIXEL_ID || null })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [consent, pixels])
+
+  const metaId = pixels?.meta && /^\d{5,20}$/.test(pixels.meta) ? pixels.meta : null
+  const tiktokId = pixels?.tiktok && /^[A-Za-z0-9]{5,40}$/.test(pixels.tiktok) ? pixels.tiktok : null
 
   const choose = (state: ConsentState) => {
     setConsent(state)
@@ -41,8 +62,9 @@ export function TrackingConsent() {
 
   return (
     <>
-      {consent === "granted" && (
+      {consent === "granted" && pixels && (
         <>
+          {metaId && (
           <Script
             id="meta-pixel"
             strategy="afterInteractive"
@@ -56,12 +78,13 @@ export function TrackingConsent() {
                 t.src=v;s=b.getElementsByTagName(e)[0];
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '${META_PIXEL_ID}');
+                fbq('init', '${metaId}');
                 fbq('track', 'PageView');
               `,
             }}
           />
-          {TIKTOK_PIXEL_ID && (
+          )}
+          {tiktokId && (
             <Script
               id="tiktok-pixel"
               strategy="afterInteractive"
@@ -69,7 +92,7 @@ export function TrackingConsent() {
                 __html: `
                   !function (w, d, t) {
                     w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-                    ttq.load('${TIKTOK_PIXEL_ID}');
+                    ttq.load('${tiktokId}');
                     ttq.page();
                   }(window, document, 'ttq');
                 `,

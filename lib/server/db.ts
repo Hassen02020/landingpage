@@ -58,7 +58,9 @@ async function request<T>(path: string, init: RequestInit & { prefer?: string } 
     throw new DbError(res.status, detail.code, `Supabase ${res.status} ${detail.code ?? ""}`.trim())
   }
   if (res.status === 204) return undefined as T
-  return (await res.json()) as T
+  // PostgREST répond 201 avec un corps VIDE pour « return=minimal » : ne pas appeler res.json()
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 export async function insertOne<T>(table: string, row: Record<string, unknown>): Promise<T> {
@@ -68,6 +70,20 @@ export async function insertOne<T>(table: string, row: Record<string, unknown>):
 
 export async function insertQuiet(table: string, row: Record<string, unknown>): Promise<void> {
   await request<void>(table, { method: "POST", body: JSON.stringify(row), prefer: "return=minimal" })
+}
+
+// Insère ou met à jour (clé de conflit = onConflict). Nécessite les droits INSERT et UPDATE.
+export async function upsertQuiet(table: string, row: Record<string, unknown>, onConflict: string): Promise<void> {
+  await request<void>(`${table}?on_conflict=${encodeURIComponent(onConflict)}`, {
+    method: "POST",
+    body: JSON.stringify(row),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  })
+}
+
+// Appel d'une fonction SQL exposée (POST /rest/v1/rpc/<nom>).
+export async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  return request<T>(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) })
 }
 
 export async function select<T>(table: string, query: string): Promise<T[]> {

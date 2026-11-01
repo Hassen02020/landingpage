@@ -412,6 +412,7 @@ export default function OmraPage() {
               offerValue={offer}
               onOfferChange={setOffer}
               showDate={false}
+              showPromo
               adultOptions={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20]}
             />
           </div>
