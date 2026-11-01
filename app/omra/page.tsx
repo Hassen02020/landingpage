@@ -6,7 +6,6 @@ import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 
-const OMRA_PRICE = 4800
 
 function omraNiche(packageName: string): string {
   return packageName ? "omra-ramadan-2027" : "omra"
@@ -22,7 +21,7 @@ function trackWhatsAppClick(
     location,
     offer: packageName || undefined,
     niche: packageName ? omraNiche(packageName) : undefined,
-    value: OMRA_PRICE,
+    value: packageFor(packageName)?.price ?? OMRA_PRICE_FROM,
   })
 }
 
@@ -65,7 +64,8 @@ const PACKAGES = [
     name: "الفوج الأول",
     date: "27 جانفي 2027",
     dateLabel: "جانفي 2027",
-    price: 4800,
+    price: 5500,
+    duration: "14 jours",
     emoji: "🌙",
     badge: "Départ Janvier",
     badgeColor: "bg-emerald-500",
@@ -76,24 +76,33 @@ const PACKAGES = [
     name: "الفوج الثاني",
     date: "18 فيفري 2027",
     dateLabel: "فيفري 2027",
-    price: 4800,
+    price: 7800,
+    duration: "25 nuits",
     emoji: "⭐",
     badge: "Départ Février",
     badgeColor: "bg-amber-500",
-    features: PROGRAM_FEATURES,
+    features: PROGRAM_FEATURES.map((f) => (f.startsWith("🛏️") ? "🛏️ 20 ليلة بمكة + 5 ليالي بالمدينة" : f)),
   },
   {
     id: "foj3",
-    name: "الفوج الثالث",
+    name: "عمرة شوال",
     date: "5 مارس 2027",
     dateLabel: "مارس 2027",
     price: 4800,
+    duration: "14 jours",
     emoji: "🕌",
-    badge: "Départ Mars",
+    badge: "Omra Chawwal",
     badgeColor: "bg-purple-600",
     features: PROGRAM_FEATURES,
   },
 ]
+
+// Prix « à partir de » affiché dans le bandeau et utilisé si aucun forfait n'est précisé
+const OMRA_PRICE_FROM = Math.min(...PACKAGES.map((p) => p.price))
+
+function packageFor(packageName: string) {
+  return PACKAGES.find((p) => packageName.startsWith(p.name))
+}
 
 
 const ADVANTAGES = [
@@ -148,7 +157,7 @@ function CTAButton({
 }) {
   const message = encodeURIComponent(
     packageName
-      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (${OMRA_PRICE} TND / 14 jours) 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
+      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName}${packageFor(packageName) ? ` (${packageFor(packageName)!.price} TND / ${packageFor(packageName)!.duration})` : ""} 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
       : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Ramadan 2027 / Chawwal. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
   )
   return (
@@ -277,12 +286,13 @@ export default function OmraPage() {
           {/* Price badge */}
           <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur border border-white/20 rounded-2xl px-6 py-4 mb-8">
             <div className="text-center">
-              <div className="text-amber-400 font-black text-4xl" dir="ltr">4 800</div>
+              <div className="text-white/80 text-xs">ابتداءً من</div>
+              <div className="text-amber-400 font-black text-4xl" dir="ltr">{OMRA_PRICE_FROM.toLocaleString("fr-FR")}</div>
               <div className="text-white/80 text-sm">دينار تونسي / شخص</div>
             </div>
             <div className="h-12 w-px bg-white/20" />
             <div className="text-left">
-              <div className="text-white font-bold">14 يوم</div>
+              <div className="text-white font-bold">من 14 يوم</div>
               <div className="text-emerald-300 text-sm">vol inclus ✈️</div>
             </div>
           </div>
@@ -403,7 +413,7 @@ export default function OmraPage() {
                     <div className="text-4xl font-black text-emerald-700">
                       {pkg.price.toLocaleString()} <span className="text-xl">TND</span>
                     </div>
-                    <div className="text-gray-400 text-sm mt-1">par personne — 14 jours tout inclus</div>
+                    <div className="text-gray-400 text-sm mt-1">par personne — {pkg.duration} tout inclus</div>
                   </div>
                   <ul className="space-y-2 mb-6 flex-1">
                     {pkg.features.map((feature, i) => (
