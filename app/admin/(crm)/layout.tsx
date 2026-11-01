@@ -21,6 +21,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
             <Link href="/admin/calculateur" className="hover:text-blue-800">Calculateur</Link>
             {staff.role === "admin" && (
               <>
+                <Link href="/admin/catalogue" className="hover:text-blue-800">Catalogue</Link>
                 <Link href="/admin/promos" className="hover:text-blue-800">Codes promo</Link>
                 <Link href="/admin/protection" className="hover:text-blue-800">Protection</Link>
                 <Link href="/admin/integrations" className="hover:text-blue-800">Intégrations</Link>
