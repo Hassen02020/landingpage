@@ -142,6 +142,8 @@ export async function POST(request: NextRequest) {
     trip_type: str(body.trip_type, 64) || null,
     message: str(body.message, 1000) || null,
     ...(promo ? { promo_code: normalizeCode(promo.code) } : {}),
+    // offre du catalogue (colonne créée par 0004 ; envoyée seulement par les pages lues dans le catalogue)
+    ...(typeof body.offer_id === "string" && /^[0-9a-f-]{36}$/i.test(body.offer_id) ? { offer_id: body.offer_id } : {}),
     contact_consent: true,
     consent_text_version: CONSENT_TEXT_VERSION,
     marketing_consent: marketingConsent,
@@ -185,6 +187,12 @@ export async function POST(request: NextRequest) {
         leadId = saved?.id ?? null
         stored = true
       } catch (e) {
+        // offre du catalogue inconnue ou colonne absente : on enregistre le lead sans le lien (jamais perdu)
+        if (e instanceof DbError && "offer_id" in row && (e.code === "23503" || e.code === "PGRST204" || e.code === "42703")) {
+          delete row.offer_id
+          attempt--
+          continue
+        }
         if (!(e instanceof DbError && e.isUniqueViolation)) {
           // on ne bloque pas le prospect : il reste orienté vers WhatsApp
           console.error("[leads] enregistrement impossible", e instanceof Error ? e.message : "erreur")

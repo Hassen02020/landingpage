@@ -84,6 +84,8 @@ export interface LeadCaptureFormProps {
   adultOptions?: number[]
   /** Champ « code promo » (codes gérés dans /admin/promos). */
   showPromo?: boolean
+  /** Libellé d'offre → identifiant catalogue (lien lead → offre pour la marge et les places). */
+  offerIds?: Record<string, string>
 }
 
 const PHONE_RE = /^(?:(?:\+|00)216)?[234579]\d{7}$|^(?:\+|00)\d{9,15}$/
@@ -108,6 +110,7 @@ export function LeadCaptureForm({
   onOfferChange,
   adultOptions = [1, 2, 3, 4, 5, 6, 8, 10],
   showPromo = false,
+  offerIds,
 }: LeadCaptureFormProps) {
   const t = T[lang]
   const [selectedProduct, setSelectedProduct] = useState<Product>(product || "voyage")
@@ -146,6 +149,7 @@ export function LeadCaptureForm({
       phone,
       product: currentProduct,
       offer,
+      offer_id: (offer && offerIds?.[offer]) || undefined,
       niche: get("niche") || niche,
       destination: get("destination"),
       travel_date: get("travel_date"),
