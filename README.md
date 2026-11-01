@@ -82,10 +82,16 @@ Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sq
 
 Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to sign up » : seuls les comptes créés par un administrateur doivent exister.
 
-## Écrans d'administration (rôle « admin »)
+## Écrans d'administration
+
+Pour toute l'équipe : **accueil `/admin`** (cartes du jour : à traiter, reçus aujourd'hui, relances échues, mes dossiers, non assignés, réservés du mois ; filtres rapides ; **actions groupées** : assigner, contacté / qualifié / perdu), **`/admin/pipeline`** (colonnes par statut, déplacement en un clic, « réservé » via la fiche pour saisir le montant), **fiche lead** (messages WhatsApp prêts, doublons du même numéro avec « marquer comme doublon »), **`/admin/compte`** (changer son mot de passe).
+
+Rôle « admin » en plus :
 
 | Écran | Rôle |
 |---|---|
+| `/admin/equipe` | Ajouter un membre (compte créé avec un mot de passe provisoire affiché une seule fois), changer le rôle, désactiver / réactiver, nouveau mot de passe provisoire. Il reste toujours au moins un administrateur actif (règle en base). |
+| `/admin/modeles` | Modèles de messages WhatsApp avec variables `{prenom}` `{nom}` `{ref}` `{offre}` `{produit}`, par produit. |
 | `/admin/stats` | **Marketing** (leads, statuts, CA par campagne / groupe d'annonces / annonce, sur une période), **Équipe** (actions, contactés, réservés, taux de conclusion par membre), **Offres**, **Niches**. |
 | `/admin/calculateur` | Simulation de rentabilité : coût par lead, taux de contact et de réservation, marge par personne → profit, ROAS, coût par lead maximal. Propose les taux réels des 90 derniers jours. |
 | `/admin/integrations` | Pixel Meta + jeton API Conversions, pixel TikTok + jeton Events API, code de test, activation, bouton « Tester ». Un champ vide reprend la variable Vercel. Paramètres d'URL à coller dans les publicités. |
@@ -100,6 +106,7 @@ Les jetons Meta / TikTok sont **chiffrés** (AES-256-GCM) par le serveur avant d
 1. Projet Supabase des landing pages : **`tdexdlukqciolslvjmhd`** (région eu-west-3), distinct d'EasyV4 et d'EasyV4-preview.
 2. Dans ce projet, ouvrir **SQL Editor** et exécuter, dans l'ordre, `supabase/migrations/0001_landing_leads.sql` (**appliquée le 31/10/2026**), puis `supabase/migrations/0002_landing_crm.sql`. Chaque script s'arrête de lui-même sur une base EasyV4, si le précédent manque, ou s'il a déjà été appliqué.
    **Ordre de déploiement** : appliquer `0002` **avant** de déployer ce code. Le formulaire enregistre `consent_text_version`, une colonne créée par `0002`.
+   Puis `supabase/migrations/0005_landing_team_templates.sql` (équipe, modèles, journal) après 0004.
    Puis `supabase/migrations/0004_landing_catalog.sql` (catalogue, catégories, médias) : peut être appliquée après le déploiement ; sans elle, `/omra` affiche les offres intégrées.
    Puis `supabase/migrations/0003_landing_admin.sql` (intégrations, protection, codes promo), **avant** de déployer la version qui contient ces écrans : sans elle, le site fonctionne (variables Vercel, aucune règle de protection) mais un code promo saisi est refusé.
 3. Saisir dans Vercel, **en Production uniquement** pour que les déploiements de test n'écrivent jamais dans la base réelle : `LANDING_SUPABASE_URL` et `LANDING_SUPABASE_PUBLISHABLE_KEY` (créées le 31/10/2026), `LANDING_SUPABASE_SERVICE_ROLE_KEY` (secrète, à saisir par vous), et, en option, les variables de notification et de captcha (voir `.env.example`). `LANDING_ADMIN_API_KEY` est déconseillée (voir « API d'administration »).

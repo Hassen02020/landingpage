@@ -41,6 +41,11 @@ function safeNext(next: string): string {
   return /^\/admin(\/[A-Za-z0-9\-/]*)?$/.test(next) ? next : "/admin"
 }
 
+// retour vers une liste filtrée (chemin /admin… + paramètres simples uniquement)
+function safeBack(back: string): string {
+  return /^\/admin(\/[A-Za-z0-9\-/]*)?(\?[A-Za-z0-9=&%._+-]{0,300})?$/.test(back) ? back.replace(/([?&])ok=[^&]*&?/, "$1").replace(/[?&]$/, "") : "/admin"
+}
+
 export async function loginAction(_prev: { error?: string } | undefined, fd: FormData): Promise<{ error?: string }> {
   const email = field(fd, "email").toLowerCase()
   const password = String(fd.get("password") ?? "")
@@ -140,4 +145,60 @@ export async function createLeadAction(fd: FormData): Promise<void> {
   )
   if (!result.ok) redirect(`/admin/leads/new?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${result.id}?ok=Lead+cr%C3%A9%C3%A9`)
+}
+
+// ---------------------------------------------------------------- actions groupées et pipeline
+const QUICK_STATUSES = ["nouveau", "contacte", "qualifie", "perdu"] as const
+
+/** Liste : assigner / changer le statut de plusieurs leads (100 max). « Réservé » se fait sur la fiche (montant requis). */
+export async function bulkAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const ids = fd.getAll("ids").map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 100)
+  const action = field(fd, "bulk")
+  const back = safeBack(field(fd, "back") || "/admin")
+  if (!ids.length || !action) redirect(back)
+  let done = 0
+  let failed = 0
+  for (const id of ids) {
+    const lead = await getLead(id).catch(() => null)
+    if (!lead) {
+      failed++
+      continue
+    }
+    let ok = false
+    if (action.startsWith("status:")) {
+      const st = action.slice(7)
+      if ((QUICK_STATUSES as readonly string[]).includes(st) && lead.status !== st) ok = (await changeStatus(lead, st as (typeof QUICK_STATUSES)[number], actorOf(staff))).ok
+      else ok = lead.status === st
+    } else if (action === "assign:none") ok = (await assignLead(lead, null, actorOf(staff))).ok
+    else if (action === "assign:me") ok = (await assignLead(lead, staff.userId, actorOf(staff))).ok
+    else if (action.startsWith("assign:")) ok = (await assignLead(lead, action.slice(7), actorOf(staff))).ok
+    if (ok) done++
+    else failed++
+  }
+  revalidatePath("/admin")
+  const sep = back.includes("?") ? "&" : "?"
+  redirect(`${back}${sep}ok=${encodeURIComponent(`${done} lead(s) mis à jour${failed ? `, ${failed} échec(s)` : ""}`)}`)
+}
+
+/** Pipeline : déplacer un lead d'une colonne (hors « réservé », qui demande le montant sur la fiche). */
+export async function moveLeadAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadOr404(fd)
+  const status = field(fd, "status")
+  if ((QUICK_STATUSES as readonly string[]).includes(status)) await changeStatus(lead, status as (typeof QUICK_STATUSES)[number], actorOf(staff)).catch(() => undefined)
+  revalidatePath("/admin/pipeline")
+  redirect(safeBack(field(fd, "back") || "/admin/pipeline"))
+}
+
+/** Fiche : marquer comme doublon d'un autre lead (statut « perdu » + note traçable). */
+export async function markDuplicateAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadOr404(fd)
+  const of = field(fd, "of").toUpperCase()
+  if (!/^E2B-[A-Z0-9]{6}$/.test(of)) redirect(`/admin/leads/${lead.id}?erreur=R%C3%A9f%C3%A9rence+invalide`)
+  const res = await changeStatus(lead, "perdu", actorOf(staff), { notes: `Doublon de ${of}` })
+  if (res.ok) await addNote(lead, `Doublon de ${of}`, actorOf(staff)).catch(() => undefined)
+  revalidatePath(`/admin/leads/${lead.id}`)
+  redirect(`/admin/leads/${lead.id}?${res.ok ? `ok=${encodeURIComponent(`Marqué comme doublon de ${of}`)}` : `erreur=${encodeURIComponent(res.error)}`}`)
 }
