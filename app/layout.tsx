@@ -1,23 +1,26 @@
 import type { Metadata } from "next"
-import Script from "next/script"
 import "./globals.css"
+import { AttributionTracker } from "./components/AttributionTracker"
+import { TrackingConsent } from "./components/TrackingConsent"
+import { SITE_URL } from "@/lib/config"
 
 export const metadata: Metadata = {
-  title: "Summer Vibes Tunisia 2026 — Easy2Book",
+  metadataBase: new URL(SITE_URL),
+  title: "Easy2Book — Voyages organisés, Omra & Promos hôtels",
   description:
-    "Réservez votre hôtel à Hammamet, Sousse ou Djerba au meilleur prix garanti. Enfant gratuit, Early Booking, Aquapark, Voyage de Noces — Easy2Book, votre centrale de réservation.",
+    "Easy2Book, votre agence de voyage en Tunisie : voyages organisés (Turquie, Égypte, Bali…), Omra et promos hôtels en Tunisie. Réservation rapide sur WhatsApp.",
   openGraph: {
-    title: "Summer Vibes Tunisia 2026 — Easy2Book",
-    description: "Les meilleures offres hôtelières en Tunisie pour l'été 2026.",
+    title: "Easy2Book — Voyages organisés, Omra & Promos hôtels",
+    description: "Voyages organisés, Omra et meilleures offres hôtelières en Tunisie. Réservez sur WhatsApp.",
     type: "website",
-    url: "https://landingpage-easy2book.vercel.app",
+    url: SITE_URL,
     siteName: "Easy2Book",
     images: [
       {
-        url: "https://landingpage-easy2book.vercel.app/logo.png",
+        url: "/logo.png",
         width: 1200,
         height: 630,
-        alt: "Easy2Book Summer Vibes 2026",
+        alt: "Easy2Book",
       },
     ],
   },
@@ -34,35 +37,9 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className="antialiased">
-        {/* Meta Pixel */}
-        <Script
-          id="meta-pixel"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              !function(f,b,e,v,n,t,s)
-              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-              n.queue=[];t=b.createElement(e);t.async=!0;
-              t.src=v;s=b.getElementsByTagName(e)[0];
-              s.parentNode.insertBefore(t,s)}(window, document,'script',
-              'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init', '1674012850599992');
-              fbq('track', 'PageView');
-            `,
-          }}
-        />
-        <noscript>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1674012850599992&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
+        {/* Pixels Meta / TikTok : chargés uniquement après consentement */}
+        <TrackingConsent />
+        <AttributionTracker />
         {children}
       </body>
     </html>

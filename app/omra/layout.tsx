@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "عمرة العطلة الصيفية 2026 — Easy2Book 🕋",
+  title: "عمرة رمضان 2027 + عمرة شوال — Easy2Book 🕋",
   description:
-    "رحلة عمرة 14 يوم بسعر 4100 د.ت فقط — فندق أرائك غزة ⭐⭐⭐ — تأشيرة + تأمين + طيران — فوج جوان وجويلية 2026. احجز مكانك الآن مع Easy2Book!",
+    "رحلة عمرة ابتداءً من 4800 د.ت — فندق أرائك غزة ⭐⭐⭐ — تأشيرة + تأمين + طيران — أفواج 27 جانفي و18 فيفري و15 مارس 2027. احجز مكانك الآن مع Easy2Book!",
   openGraph: {
-    title: "عمرة الصيف 2026 — 4100 د.ت 🕋 Easy2Book",
+    title: "عمرة رمضان 2027 + شوال — ابتداءً من 4800 د.ت 🕋 Easy2Book",
     description:
-      "✅ فندق قريب من الحرم ✅ تأشيرة + تأمين ✅ طيران ✅ مرافقة نسائية ✅ هدايا للمعتمرين — الفوج الأول 28 جوان | الفوج الثاني 28 جويلية",
+      "✅ فندق قريب من الحرم ✅ تأشيرة + تأمين ✅ طيران ✅ مرافقة نسائية ✅ هدايا للمعتمرين — الأفواج: 27 جانفي | 18 فيفري | 15 مارس 2027",
     type: "website",
     url: "https://landingpage-easy2book.vercel.app/omra",
     siteName: "Easy2Book",
@@ -16,15 +16,15 @@ export const metadata: Metadata = {
         url: "https://landingpage-easy2book.vercel.app/logo.png",
         width: 1200,
         height: 630,
-        alt: "Easy2Book عمرة الصيف 2026",
+        alt: "Easy2Book عمرة رمضان 2027",
       },
     ],
     locale: "ar_TN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "عمرة الصيف 2026 — 4100 د.ت 🕋",
-    description: "احجز رحلة عمرتك الصيفية مع Easy2Book — 14 يوم بسعر 4100 د.ت فقط",
+    title: "عمرة رمضان 2027 + شوال — ابتداءً من 4800 د.ت 🕋",
+    description: "احجز رحلة عمرتك في رمضان 2027 مع Easy2Book — ابتداءً من 4800 د.ت",
     images: ["https://landingpage-easy2book.vercel.app/logo.png"],
   },
   other: {

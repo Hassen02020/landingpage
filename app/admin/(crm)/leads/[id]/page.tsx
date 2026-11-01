@@ -1,0 +1,132 @@
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
+import { SOURCE_LABELS, STATUSES, STATUS_LABELS, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
+import { addNoteAction, assignAction, changeStatusAction, followUpAction, withdrawMarketingAction } from "../../../actions"
+import { STATUS_COLORS, formatDate } from "../../../format"
+
+export const dynamic = "force-dynamic"
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  created: "Création", status_change: "Statut", note: "Note", assignment: "Assignation",
+  follow_up: "Relance", marketing_withdrawn: "Consentement", anonymized: "Anonymisation",
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4 py-1 border-b last:border-0">
+      <span className="text-gray-500">{label}</span>
+      <span className="text-right font-medium break-all">{value ?? "—"}</span>
+    </div>
+  )
+}
+
+export default async function LeadPage({ params, searchParams }: { params: { id: string }; searchParams: { ok?: string; erreur?: string } }) {
+  const lead = await getLead(params.id)
+  if (!lead) notFound()
+  const [activities, staff] = await Promise.all([getActivities(lead.id), listStaff().catch(() => [])])
+  const locked = Boolean(lead.anonymized_at)
+  const wa = lead.phone ? `https://wa.me/${lead.phone}?text=${encodeURIComponent(`Bonjour ${lead.first_name}, Easy2Book au sujet de votre demande ${lead.ref}.`)}` : null
+
+  return (
+    <div className="space-y-4">
+      <Link href="/admin" className="text-sm underline">← Leads</Link>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-black">{lead.first_name} {lead.last_name ?? ""}</h1>
+        <span className="font-mono text-gray-500">{lead.ref}</span>
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>
+        {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="ml-auto bg-green-500 text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>}
+      </div>
+      {searchParams.ok && <div className="p-3 rounded-xl bg-green-50 text-green-800 text-sm">{searchParams.ok}</div>}
+      {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
+      {locked && <div className="p-3 rounded-xl bg-gray-100 text-gray-700 text-sm">Lead anonymisé le {formatDate(lead.anonymized_at)} : lecture seule.</div>}
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
+          <h2 className="font-bold mb-2">Demande</h2>
+          <Row label="Téléphone" value={lead.phone ? `+${lead.phone}` : null} />
+          <Row label="Produit" value={PRODUCTS[lead.product]} />
+          <Row label="Offre" value={lead.offer} />
+          <Row label="Niche" value={lead.niche} />
+          <Row label="Destination" value={lead.destination} />
+          <Row label="Date / période" value={lead.travel_date || lead.travel_period} />
+          <Row label="Voyageurs" value={`${lead.adults} adulte(s), ${lead.children} enfant(s)`} />
+          <Row label="Budget" value={lead.budget} />
+          <Row label="Message" value={lead.message} />
+          <Row label="Source" value={lead.source ? SOURCE_LABELS[lead.source as Source] : null} />
+          <Row label="Reçu le" value={formatDate(lead.created_at)} />
+          <Row label="Montant réservé" value={lead.booking_value !== null ? `${lead.booking_value} TND` : null} />
+        </section>
+        <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
+          <h2 className="font-bold mb-2">Attribution et consentements</h2>
+          <Row label="Canal" value={lead.channel} />
+          <Row label="Campagne" value={lead.utm_campaign} />
+          <Row label="Annonce" value={lead.utm_content || lead.ad_id} />
+          <Row label="Page d'arrivée" value={lead.landing_page} />
+          <Row label="Code visiteur" value={lead.visitor_ref} />
+          <Row label="Traceurs acceptés" value={lead.tracking_consent ? "Oui" : "Non"} />
+          <Row label="Marketing" value={lead.marketing_withdrawn_at ? `Retiré le ${formatDate(lead.marketing_withdrawn_at)}` : lead.marketing_consent ? "Accepté" : "Non"} />
+          {!locked && lead.marketing_consent && (
+            <form action={withdrawMarketingAction} className="mt-2">
+              <input type="hidden" name="id" value={lead.id} />
+              <button className="text-xs underline text-red-700">Enregistrer un retrait du consentement marketing</button>
+            </form>
+          )}
+        </section>
+      </div>
+
+      {!locked && (
+        <div className="grid md:grid-cols-3 gap-4">
+          <form action={changeStatusAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
+            <h2 className="font-bold">Changer le statut</h2>
+            <input type="hidden" name="id" value={lead.id} />
+            <select name="status" defaultValue={lead.status} className="w-full px-3 py-2 rounded-lg border">
+              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+            </select>
+            <input name="booking_value" inputMode="decimal" placeholder="Montant TND (obligatoire si réservé)" defaultValue={lead.booking_value ?? ""} className="w-full px-3 py-2 rounded-lg border" />
+            <input name="notes" placeholder="Commentaire (facultatif)" className="w-full px-3 py-2 rounded-lg border" />
+            <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Enregistrer</button>
+          </form>
+          <form action={followUpAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
+            <h2 className="font-bold">Relance</h2>
+            <input type="hidden" name="id" value={lead.id} />
+            <p className="text-gray-500">Actuelle : {formatDate(lead.next_follow_up_at)}</p>
+            <input type="datetime-local" name="follow_up" className="w-full px-3 py-2 rounded-lg border" />
+            <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Planifier (vide = supprimer)</button>
+          </form>
+          <form action={assignAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
+            <h2 className="font-bold">Responsable</h2>
+            <input type="hidden" name="id" value={lead.id} />
+            <select name="assigned_to" defaultValue={lead.assigned_to ?? ""} className="w-full px-3 py-2 rounded-lg border">
+              <option value="">Non assigné</option>
+              {staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.full_name || s.email}</option>)}
+            </select>
+            <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Assigner</button>
+          </form>
+        </div>
+      )}
+
+      <section className="bg-white rounded-2xl shadow-sm p-4 text-sm space-y-3">
+        <h2 className="font-bold">Historique</h2>
+        {!locked && (
+          <form action={addNoteAction} className="flex gap-2">
+            <input type="hidden" name="id" value={lead.id} />
+            <input name="body" required maxLength={2000} placeholder="Ajouter une note (appel, échange WhatsApp…)" className="flex-1 px-3 py-2 rounded-lg border" />
+            <button className="px-4 py-2 rounded-lg bg-gray-900 text-white font-bold">Ajouter</button>
+          </form>
+        )}
+        <ul className="divide-y">
+          {activities.length === 0 && <li className="py-2 text-gray-500">Aucune activité.</li>}
+          {activities.map((a) => (
+            <li key={a.id} className="py-2">
+              <span className="text-gray-500">{formatDate(a.created_at)} · {a.actor_label} · </span>
+              <strong>{ACTIVITY_LABELS[a.type] ?? a.type}</strong>
+              {a.from_status && a.to_status && <span> : {STATUS_LABELS[a.from_status]} → {STATUS_LABELS[a.to_status]}</span>}
+              {a.body && <div className="whitespace-pre-wrap">{a.body}</div>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  )
+}

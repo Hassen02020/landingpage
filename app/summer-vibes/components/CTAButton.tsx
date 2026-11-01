@@ -1,6 +1,8 @@
 "use client"
 
-const WHATSAPP_NUMBER = "21698140514"
+import { WHATSAPP_NUMBER } from "@/lib/config"
+import { handleWhatsAppClick } from "@/lib/tracking"
+
 const WHATSAPP_MESSAGE = encodeURIComponent(
   "Bonjour Easy2Book, je souhaite avoir le tarif pour Summer Vibes 2026 ! 🏖️\n\nMerci de me préciser :\n📅 Date du congés\n👥 Nombre d'adultes\n👶 Âges des enfants\n📍 Zone : Hammamet / Monastir / Sousse / Tabarka / Mahdia / Djerba"
 )
@@ -11,20 +13,15 @@ interface CTAButtonProps {
   className?: string
   style?: React.CSSProperties
   location?: string
-  onCtaClick?: (location: string) => void
 }
 
-export function CTAButton({ label, className, style, location, onCtaClick }: CTAButtonProps) {
-  const handleClick = () => {
-    onCtaClick?.(location || "general")
-  }
-
+export function CTAButton({ label, className, style, location }: CTAButtonProps) {
   return (
     <a
       href={WHATSAPP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={handleClick}
+      onClick={(e) => handleWhatsAppClick(e, { product: "hotel", location: location || "general" })}
       className={className}
       style={style}
     >

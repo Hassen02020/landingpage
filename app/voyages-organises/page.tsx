@@ -2,47 +2,17 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import { LeadCaptureForm } from "../components/LeadCaptureForm"
+import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
+import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 
-declare global {
-  interface Window {
-    fbq?: (...args: unknown[]) => void
-  }
-}
-
-const WHATSAPP_NUMBER = "21698140514"
-const PHONE_NUMBER = "98140514"
-
-function generateEventId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
-}
-
-async function sendEvent(eventName: string, customData: Record<string, unknown>): Promise<void> {
-  const eventId = generateEventId()
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    if (eventName === "Contact") {
-      window.fbq("track", eventName, { ...customData, eventID: eventId })
-    } else {
-      window.fbq("trackCustom", eventName, { ...customData, eventID: eventId })
-    }
-  }
-  try {
-    await fetch("/api/meta-capi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventName, customData, eventId }),
-    })
-  } catch (e) {
-    console.error("CAPI error:", e)
-  }
-}
-
-function trackWhatsAppClick(location: string, tripName: string = "") {
-  sendEvent("Contact", {
-    content_category: "Voyages Organises 2026",
-    content_name: location,
-    content_ids: tripName,
-    value: 1,
-    currency: "TND",
+function trackWhatsAppClick(event: { currentTarget: HTMLAnchorElement }, location: string, tripName: string = "") {
+  const voyage = VOYAGES.find((v) => v.title === tripName)
+  handleWhatsAppClick(event, {
+    product: "voyage",
+    location,
+    offer: tripName || undefined,
+    niche: voyage ? voyage.destination : undefined,
   })
 }
 
@@ -201,7 +171,7 @@ function CTAButton({
       href={`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackWhatsAppClick(location, tripName)}
+      onClick={(e) => trackWhatsAppClick(e, location, tripName)}
       className={className}
     >
       {label}
@@ -261,7 +231,10 @@ function VoyageCard({ voyage }: { voyage: typeof VOYAGES[0] }) {
           </div>
           {voyage.departures.length > 3 && (
             <button
-              onClick={() => setExpanded(!expanded)}
+              onClick={() => {
+                if (!expanded) sendEvent("ViewContent", { product: "voyage", niche: voyage.destination, content_name: voyage.title, content_ids: voyage.id, content_category: "voyage" })
+                setExpanded(!expanded)
+              }}
               className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
             >
               {expanded ? "▲ Voir moins" : `▼ +${voyage.departures.length - 3} autres départs`}
@@ -463,6 +436,23 @@ export default function VoyagesOrganisesPage() {
         </div>
       </section>
 
+      {/* LEAD FORM */}
+      <section id="reservation" className="py-16 bg-gray-50">
+        <div className="max-w-xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-black text-gray-900 mb-2">📝 Demandez votre devis</h2>
+            <p className="text-gray-600">Laissez vos coordonnées, un conseiller vous recontacte pour confirmer places et tarifs.</p>
+          </div>
+          <div className="bg-white rounded-3xl shadow-xl p-6">
+            <LeadCaptureForm
+              product="voyage"
+              formId="voyage-lead-form"
+              offers={VOYAGES.map((v) => v.title)}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* CONTACT BOTTOM CTA */}
       <section className="py-16 bg-gradient-to-r from-blue-900 to-blue-700 text-white text-center">
         <div className="max-w-2xl mx-auto px-4">
@@ -502,11 +492,17 @@ export default function VoyagesOrganisesPage() {
             <span className="text-gray-600">— Agence de Voyage</span>
           </div>
           <div className="flex gap-4 justify-center flex-wrap mb-4">
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClick("footer")} className="text-green-400 hover:text-green-300 font-semibold">
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" onClick={(e) => trackWhatsAppClick(e, "footer")} className="text-green-400 hover:text-green-300 font-semibold">
               💬 WhatsApp
             </a>
             <a href="https://www.facebook.com/Easy2Bookplateforme" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 font-semibold">
               Facebook
+            </a>
+            <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:text-pink-300 font-semibold">
+              Instagram
+            </a>
+            <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white font-semibold">
+              TikTok
             </a>
           </div>
           <p className="text-xs text-gray-600">© 2026 Easy2Book. Tous droits réservés.</p>

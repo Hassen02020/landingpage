@@ -2,53 +2,33 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import { LeadCaptureForm } from "../components/LeadCaptureForm"
+import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
+import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 
-declare global {
-  interface Window {
-    fbq?: (...args: unknown[]) => void
-  }
+
+function omraNiche(packageName: string): string {
+  return packageName ? "omra-ramadan-2027" : "omra"
 }
 
-const WHATSAPP_NUMBER = "21698140514"
-const PHONE_NUMBER = "98140514"
-
-function generateEventId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
-}
-
-async function sendEvent(eventName: string, customData: Record<string, unknown>): Promise<void> {
-  const eventId = generateEventId()
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    if (eventName === "Contact") {
-      window.fbq("track", eventName, { ...customData, eventID: eventId })
-    } else {
-      window.fbq("trackCustom", eventName, { ...customData, eventID: eventId })
-    }
-  }
-  try {
-    await fetch("/api/meta-capi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventName, customData, eventId }),
-    })
-  } catch (error) {
-    console.error("CAPI send failed:", error)
-  }
-}
-
-function trackWhatsAppClick(location: string = "general", packageName: string = ""): void {
-  sendEvent("Contact", {
-    content_category: "Omra Ete 2026",
-    content_name: location,
-    content_ids: packageName,
-    value: 4800,
-    currency: "TND",
-    user_segment: "omra_visitor",
+function trackWhatsAppClick(
+  event: { currentTarget: HTMLAnchorElement },
+  location: string = "general",
+  packageName: string = ""
+): void {
+  handleWhatsAppClick(event, {
+    product: "omra",
+    location,
+    offer: packageName || undefined,
+    niche: packageName ? omraNiche(packageName) : undefined,
+    value: packageFor(packageName)?.price ?? OMRA_PRICE_FROM,
   })
 }
 
 function trackPackageClick(packageName: string, price: number, month: string): void {
   sendEvent("ViewContent", {
+    product: "omra",
+    niche: omraNiche(packageName),
     content_name: packageName,
     content_category: "Omra Package",
     content_ids: packageName,
@@ -82,47 +62,48 @@ const PACKAGES = [
   {
     id: "foj1",
     name: "الفوج الأول",
-    date: "15 جويلية 2026",
-    dateLabel: "جويلية 2026",
-    price: 4800,
+    date: "27 جانفي 2027",
+    dateLabel: "جانفي 2027",
+    price: 5500,
+    duration: "14 nuits",
     emoji: "🌙",
-    badge: "Départ Juillet",
+    badge: "Départ Janvier",
     badgeColor: "bg-emerald-500",
     features: PROGRAM_FEATURES,
   },
   {
     id: "foj2",
     name: "الفوج الثاني",
-    date: "28 جويلية 2026",
-    dateLabel: "جويلية 2026",
-    price: 4800,
+    date: "18 فيفري 2027",
+    dateLabel: "فيفري 2027",
+    price: 7800,
+    duration: "25 nuits",
     emoji: "⭐",
-    badge: "Départ Juillet",
+    badge: "Départ Février",
     badgeColor: "bg-amber-500",
-    features: PROGRAM_FEATURES,
+    features: PROGRAM_FEATURES.map((f) => (f.startsWith("🛏️") ? "🛏️ 20 ليلة بمكة + 5 ليالي بالمدينة" : f)),
   },
   {
     id: "foj3",
-    name: "عمرة المولد النبوي الشريف",
-    date: "20 أوت 2026",
-    dateLabel: "أوت 2026",
+    name: "عمرة شوال",
+    date: "15 مارس 2027",
+    dateLabel: "مارس 2027",
     price: 4800,
+    duration: "14 nuits",
     emoji: "🕌",
-    badge: "عمرة المولد",
+    badge: "Omra Chawwal",
     badgeColor: "bg-purple-600",
-    features: [
-      "🪪 تأشيرة العمرة والتأمين الصحي",
-      "✈️ تذكرة الطائرة ذهاباً وإياباً",
-      "🏨 فندق ⭐⭐⭐ قريب من الحرم — فندق أرائك غزة",
-      "🛏️ 10 ليالي بمكة + 4 ليالي بالمدينة",
-      "🚌 نقل بحافلات سياحية مريحة",
-      "🕋 زيارة المزارات التاريخية في مكة والمدينة",
-      "🚪 دخول مباشر لمكة للعمرة",
-      "👤 مرافقون ذوو خبرة مع مرافقة نسائية",
-      "🎁 هدايا خاصة لمولد النبوي",
-    ],
+    features: PROGRAM_FEATURES,
   },
 ]
+
+// Prix « à partir de » affiché dans le bandeau et utilisé si aucun forfait n'est précisé
+const OMRA_PRICE_FROM = Math.min(...PACKAGES.map((p) => p.price))
+
+function packageFor(packageName: string) {
+  return PACKAGES.find((p) => packageName.startsWith(p.name))
+}
+
 
 const ADVANTAGES = [
   {
@@ -176,15 +157,15 @@ function CTAButton({
 }) {
   const message = encodeURIComponent(
     packageName
-      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (4800 TND / 14 jours) 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
-      : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Été 2026. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
+      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName}${packageFor(packageName) ? ` (${packageFor(packageName)!.price} TND / ${packageFor(packageName)!.duration})` : ""} 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
+      : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Ramadan 2027 / Chawwal. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
   )
   return (
     <a
       href={`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackWhatsAppClick(location, packageName)}
+      onClick={(e) => trackWhatsAppClick(e, location, packageName)}
       className={className}
     >
       {label}
@@ -239,7 +220,7 @@ export default function OmraPage() {
             <Image src="/logo.png" alt="Easy2Book" width={40} height={40} className="rounded-full" />
             <div>
               <div className="font-bold text-gray-900 text-sm">Easy2Book</div>
-              <div className="text-xs text-emerald-600">عمرة الصيف + المولد النبوي 2026</div>
+              <div className="text-xs text-emerald-600">عمرة رمضان 2027 + عمرة شوال</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -285,13 +266,12 @@ export default function OmraPage() {
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center py-16">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-            � فتح باب التسجيل — عمرة الصيف 2026 + المولد النبوي
+            🕋 فتح باب التسجيل — عمرة رمضان 2027 + عمرة شوال
           </div>
 
           {/* Title */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-4 leading-tight">
-            صيفك هالسنة{" "}
-            <span className="text-amber-400">غير عادي</span>
+            <span className="text-amber-400">عروض مميزة</span>
             <br />
             <span className="text-2xl sm:text-3xl font-bold text-emerald-300">
               رحلة العمر في رحاب الحرمين الشريفين
@@ -299,19 +279,20 @@ export default function OmraPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            🗓️ 15 جويلية — 28 جويلية — 20 أوت<br/>
+            🗓️ 27 جانفي — 18 فيفري — 15 مارس<br/>
             برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة
           </p>
 
           {/* Price badge */}
           <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur border border-white/20 rounded-2xl px-6 py-4 mb-8">
             <div className="text-center">
-              <div className="text-amber-400 font-black text-4xl">4 800</div>
+              <div className="text-white/80 text-xs">ابتداءً من</div>
+              <div className="text-amber-400 font-black text-4xl" dir="ltr">{OMRA_PRICE_FROM.toLocaleString("fr-FR")}</div>
               <div className="text-white/80 text-sm">دينار تونسي / شخص</div>
             </div>
             <div className="h-12 w-px bg-white/20" />
             <div className="text-left">
-              <div className="text-white font-bold">14 يوم</div>
+              <div className="text-white font-bold">من 14 ليلة</div>
               <div className="text-emerald-300 text-sm">vol inclus ✈️</div>
             </div>
           </div>
@@ -321,14 +302,16 @@ export default function OmraPage() {
             <div className="text-white font-bold mb-3 text-center">📅 اختر موعدك</div>
             <div className="flex gap-2 flex-wrap justify-center">
               {[
-                { label: "15 جويلية", id: "foj1" },
-                { label: "28 جويلية", id: "foj2" },
-                { label: "20 أوت", id: "foj3" },
+                { label: "27 جانفي", id: "foj1" },
+                { label: "18 فيفري", id: "foj2" },
+                { label: "15 مارس", id: "foj3" },
               ].map((item) => (
                 <button
                   key={item.id}
                   onClick={() => {
                     setActiveTab(item.id)
+                    const pkg = PACKAGES.find((p) => p.id === item.id)
+                    if (pkg) trackPackageClick(pkg.name, pkg.price, pkg.dateLabel)
                     const element = document.getElementById("packages-section")
                     if (element) element.scrollIntoView({ behavior: "smooth" })
                   }}
@@ -430,7 +413,7 @@ export default function OmraPage() {
                     <div className="text-4xl font-black text-emerald-700">
                       {pkg.price.toLocaleString()} <span className="text-xl">TND</span>
                     </div>
-                    <div className="text-gray-400 text-sm mt-1">par personne — 14 jours tout inclus</div>
+                    <div className="text-gray-400 text-sm mt-1">par personne — {pkg.duration} tout inclus</div>
                   </div>
                   <ul className="space-y-2 mb-6 flex-1">
                     {pkg.features.map((feature, i) => (
@@ -524,6 +507,24 @@ export default function OmraPage() {
         </div>
       </section>
 
+      {/* LEAD FORM */}
+      <section id="reservation" className="py-16 bg-emerald-50">
+        <div className="max-w-xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-black text-gray-900 mb-2">📝 احجز مكانك الآن</h2>
+            <p className="text-gray-600">اترك معلوماتك وسيتصل بك مستشارنا لتأكيد الحجز</p>
+          </div>
+          <div className="bg-white rounded-3xl shadow-xl p-6">
+            <LeadCaptureForm
+              product="omra"
+              lang="ar"
+              formId="omra-lead-form"
+              offers={PACKAGES.map((p) => `${p.name} — ${p.date}`)}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* BOTTOM CTA */}
       <section className="py-16 bg-gray-900 text-white text-center">
         <div className="max-w-2xl mx-auto px-4">
@@ -563,7 +564,7 @@ export default function OmraPage() {
               href={`https://wa.me/${WHATSAPP_NUMBER}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClick("footer")}
+              onClick={(e) => trackWhatsAppClick(e, "footer")}
               className="text-green-400 hover:text-green-300 font-semibold"
             >
               💬 WhatsApp
@@ -575,6 +576,12 @@ export default function OmraPage() {
               className="text-blue-400 hover:text-blue-300 font-semibold"
             >
               📘 Facebook
+            </a>
+            <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:text-pink-300 font-semibold">
+              📸 Instagram
+            </a>
+            <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white font-semibold">
+              🎵 TikTok
             </a>
             <a href="/summer-vibes" className="text-amber-400 hover:text-amber-300 font-semibold">
               ☀️ Summer Vibes
