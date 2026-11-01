@@ -124,7 +124,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Produits : `omra`, `voyage`, `hotel`, `autre`. Statuts : `nouveau`, `contacte`, `qualifie`, `reserve`, `perdu`. Sources : `form`, `whatsapp`, `phone`, `manual`. Rôles : `admin`, `agent`.
 - Référence : `E2B-XXXXXX` (alphabet `23456789ABCDEFGHJKLMNPQRSTUVWXYZ`).
 - Version du consentement : `2026-11-v1`.
-- Omra : 4800 TND, 14 jours ; départs 15/07, 28/07, 20/08/2026 (dépassés).
+- Omra (page mise à jour le 2026-11-01) : « عمرة رمضان 2027 + عمرة شوال », titre « عروض مميزة » ; départs 27 جانفي, 18 فيفري, 5 مارس 2027 ; prix affiché 4800 TND / 14 jours **non confirmé par l'utilisateur** ; niche `omra-ramadan-2027`.
 - Voyages : 19 départs du 06/07 au 15/09/2026 (dépassés). Hôtels : 12 offres « avant le 30 Juin » ; compte à rebours 31/07/2026 (dépassés).
 - Images : 22 images Unsplash distinctes non vérifiées. `public/logo.png` 3750×3750 (Open Graph annonce 1200×630).
 - Durées de conservation **proposées, non validées** : identifiants pub/techniques 90 jours ; `landing_events` 13 mois ; leads non réservés anonymisés 24 mois ; réservés 36 mois.

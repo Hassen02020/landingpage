@@ -9,7 +9,7 @@ import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 const OMRA_PRICE = 4800
 
 function omraNiche(packageName: string): string {
-  return packageName.includes("المولد") ? "omra-mawlid" : "omra-ete"
+  return packageName ? "omra-ramadan-2027" : "omra"
 }
 
 function trackWhatsAppClick(
@@ -63,47 +63,38 @@ const PACKAGES = [
   {
     id: "foj1",
     name: "الفوج الأول",
-    date: "15 جويلية 2026",
-    dateLabel: "جويلية 2026",
+    date: "27 جانفي 2027",
+    dateLabel: "جانفي 2027",
     price: 4800,
     emoji: "🌙",
-    badge: "Départ Juillet",
+    badge: "Départ Janvier",
     badgeColor: "bg-emerald-500",
     features: PROGRAM_FEATURES,
   },
   {
     id: "foj2",
     name: "الفوج الثاني",
-    date: "28 جويلية 2026",
-    dateLabel: "جويلية 2026",
+    date: "18 فيفري 2027",
+    dateLabel: "فيفري 2027",
     price: 4800,
     emoji: "⭐",
-    badge: "Départ Juillet",
+    badge: "Départ Février",
     badgeColor: "bg-amber-500",
     features: PROGRAM_FEATURES,
   },
   {
     id: "foj3",
-    name: "عمرة المولد النبوي الشريف",
-    date: "20 أوت 2026",
-    dateLabel: "أوت 2026",
+    name: "الفوج الثالث",
+    date: "5 مارس 2027",
+    dateLabel: "مارس 2027",
     price: 4800,
     emoji: "🕌",
-    badge: "عمرة المولد",
+    badge: "Départ Mars",
     badgeColor: "bg-purple-600",
-    features: [
-      "🪪 تأشيرة العمرة والتأمين الصحي",
-      "✈️ تذكرة الطائرة ذهاباً وإياباً",
-      "🏨 فندق ⭐⭐⭐ قريب من الحرم — فندق أرائك غزة",
-      "🛏️ 10 ليالي بمكة + 4 ليالي بالمدينة",
-      "🚌 نقل بحافلات سياحية مريحة",
-      "🕋 زيارة المزارات التاريخية في مكة والمدينة",
-      "🚪 دخول مباشر لمكة للعمرة",
-      "👤 مرافقون ذوو خبرة مع مرافقة نسائية",
-      "🎁 هدايا خاصة لمولد النبوي",
-    ],
+    features: PROGRAM_FEATURES,
   },
 ]
+
 
 const ADVANTAGES = [
   {
@@ -158,7 +149,7 @@ function CTAButton({
   const message = encodeURIComponent(
     packageName
       ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName} (${OMRA_PRICE} TND / 14 jours) 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
-      : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Été 2026. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
+      : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Ramadan 2027 / Chawwal. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
   )
   return (
     <a
@@ -220,7 +211,7 @@ export default function OmraPage() {
             <Image src="/logo.png" alt="Easy2Book" width={40} height={40} className="rounded-full" />
             <div>
               <div className="font-bold text-gray-900 text-sm">Easy2Book</div>
-              <div className="text-xs text-emerald-600">عمرة الصيف + المولد النبوي 2026</div>
+              <div className="text-xs text-emerald-600">عمرة رمضان 2027 + عمرة شوال</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -266,13 +257,12 @@ export default function OmraPage() {
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center py-16">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-            🕋 فتح باب التسجيل — عمرة الصيف 2026 + المولد النبوي
+            🕋 فتح باب التسجيل — عمرة رمضان 2027 + عمرة شوال
           </div>
 
           {/* Title */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-4 leading-tight">
-            صيفك هالسنة{" "}
-            <span className="text-amber-400">غير عادي</span>
+            <span className="text-amber-400">عروض مميزة</span>
             <br />
             <span className="text-2xl sm:text-3xl font-bold text-emerald-300">
               رحلة العمر في رحاب الحرمين الشريفين
@@ -280,14 +270,14 @@ export default function OmraPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            🗓️ 15 جويلية — 28 جويلية — 20 أوت<br/>
+            🗓️ 27 جانفي — 18 فيفري — 5 مارس<br/>
             برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة
           </p>
 
           {/* Price badge */}
           <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur border border-white/20 rounded-2xl px-6 py-4 mb-8">
             <div className="text-center">
-              <div className="text-amber-400 font-black text-4xl">4 800</div>
+              <div className="text-amber-400 font-black text-4xl" dir="ltr">4 800</div>
               <div className="text-white/80 text-sm">دينار تونسي / شخص</div>
             </div>
             <div className="h-12 w-px bg-white/20" />
@@ -302,9 +292,9 @@ export default function OmraPage() {
             <div className="text-white font-bold mb-3 text-center">📅 اختر موعدك</div>
             <div className="flex gap-2 flex-wrap justify-center">
               {[
-                { label: "15 جويلية", id: "foj1" },
-                { label: "28 جويلية", id: "foj2" },
-                { label: "20 أوت", id: "foj3" },
+                { label: "27 جانفي", id: "foj1" },
+                { label: "18 فيفري", id: "foj2" },
+                { label: "5 مارس", id: "foj3" },
               ].map((item) => (
                 <button
                   key={item.id}
