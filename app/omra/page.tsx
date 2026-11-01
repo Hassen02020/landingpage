@@ -1,603 +1,493 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
-import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
+import { PHONE_NUMBER, SOCIAL_LINKS, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 
+// ---------------------------------------------------------------------------
+// Données métier (source unique : cartes, formulaire, messages WhatsApp, suivi)
+// ---------------------------------------------------------------------------
 
-function omraNiche(packageName: string): string {
-  return packageName ? "omra-ramadan-2027" : "omra"
+interface OmraPackage {
+  id: string
+  name: string
+  date: string
+  monthLabel: string
+  price: number
+  nights: number
+  makkah: number
+  madinah: number
+  tag: string
+  accent: string
 }
 
-function trackWhatsAppClick(
-  event: { currentTarget: HTMLAnchorElement },
-  location: string = "general",
-  packageName: string = ""
-): void {
-  handleWhatsAppClick(event, {
-    product: "omra",
-    location,
-    offer: packageName || undefined,
-    niche: packageName ? omraNiche(packageName) : undefined,
-    value: packageFor(packageName)?.price ?? OMRA_PRICE_FROM,
-  })
-}
-
-function trackPackageClick(packageName: string, price: number, month: string): void {
-  sendEvent("ViewContent", {
-    product: "omra",
-    niche: omraNiche(packageName),
-    content_name: packageName,
-    content_category: "Omra Package",
-    content_ids: packageName,
-    value: price,
-    currency: "TND",
-    month: month,
-  })
-}
-
-function trackScrollDepth(depth: string): void {
-  sendEvent("ScrollDepth", {
-    depth,
-    page: "omra",
-    engagement_level: depth === "75%" || depth === "100%" ? "high" : "medium",
-  })
-}
-
-const PROGRAM_FEATURES = [
-  "🪪 تأشيرة العمرة والتأمين الصحي",
-  "✈️ تذكرة الطائرة ذهاباً وإياباً",
-  "🏨 فندق ⭐⭐⭐ قريب من الحرم — فندق أرائك غزة",
-  "🛏️ 10 ليالي بمكة + 4 ليالي بالمدينة",
-  "🚌 نقل بحافلات سياحية مريحة",
-  "🕋 زيارة المزارات التاريخية في مكة والمدينة",
-  "🚪 دخول مباشر لمكة للعمرة",
-  "👤 مرافقون ذوو خبرة مع مرافقة نسائية",
-  "🎁 هدايا للمعتمرين",
+const PACKAGES: OmraPackage[] = [
+  { id: "foj1", name: "الفوج الأول", date: "27 جانفي 2027", monthLabel: "جانفي 2027", price: 5500, nights: 14, makkah: 10, madinah: 4, tag: "✈️ أول فوج", accent: "emerald" },
+  { id: "foj2", name: "الفوج الثاني", date: "18 فيفري 2027", monthLabel: "فيفري 2027", price: 7800, nights: 25, makkah: 20, madinah: 5, tag: "⭐ الإقامة الأطول", accent: "amber" },
+  { id: "foj3", name: "عمرة شوال", date: "15 مارس 2027", monthLabel: "مارس 2027", price: 4800, nights: 14, makkah: 10, madinah: 4, tag: "🕌 السعر الأقل", accent: "violet" },
 ]
 
-const PACKAGES = [
-  {
-    id: "foj1",
-    name: "الفوج الأول",
-    date: "27 جانفي 2027",
-    dateLabel: "جانفي 2027",
-    price: 5500,
-    duration: "14 nuits",
-    emoji: "🌙",
-    badge: "Départ Janvier",
-    badgeColor: "bg-emerald-500",
-    features: PROGRAM_FEATURES,
-  },
-  {
-    id: "foj2",
-    name: "الفوج الثاني",
-    date: "18 فيفري 2027",
-    dateLabel: "فيفري 2027",
-    price: 7800,
-    duration: "25 nuits",
-    emoji: "⭐",
-    badge: "Départ Février",
-    badgeColor: "bg-amber-500",
-    features: PROGRAM_FEATURES.map((f) => (f.startsWith("🛏️") ? "🛏️ 20 ليلة بمكة + 5 ليالي بالمدينة" : f)),
-  },
-  {
-    id: "foj3",
-    name: "عمرة شوال",
-    date: "15 مارس 2027",
-    dateLabel: "مارس 2027",
-    price: 4800,
-    duration: "14 nuits",
-    emoji: "🕌",
-    badge: "Omra Chawwal",
-    badgeColor: "bg-purple-600",
-    features: PROGRAM_FEATURES,
-  },
-]
+// Libellé enregistré dans le CRM (champ « offre ») et proposé dans le formulaire
+const offerLabel = (p: OmraPackage) => `${p.name} — ${p.date}`
 
-// Prix « à partir de » affiché dans le bandeau et utilisé si aucun forfait n'est précisé
 const OMRA_PRICE_FROM = Math.min(...PACKAGES.map((p) => p.price))
 
-function packageFor(packageName: string) {
-  return PACKAGES.find((p) => packageName.startsWith(p.name))
+// Format fixe (identique serveur / navigateur : pas de toLocaleString → pas d'erreur d'hydratation)
+const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+
+function Price({ value, className = "" }: { value: number; className?: string }) {
+  return (
+    <span className={className}>
+      <span dir="ltr">{fmt(value)}</span> د.ت
+    </span>
+  )
 }
 
+const INCLUDED = [
+  { icon: "✈️", text: "تذكرة الطائرة ذهاباً وإياباً" },
+  { icon: "🪪", text: "تأشيرة العمرة + التأمين الصحي" },
+  { icon: "🏨", text: "فندق أرائك غزة ⭐⭐⭐ قريب من الحرم" },
+  { icon: "🚪", text: "دخول مباشر لمكة لأداء العمرة" },
+  { icon: "🚌", text: "التنقلات بحافلات سياحية مريحة" },
+  { icon: "🕋", text: "زيارة المزارات في مكة والمدينة" },
+  { icon: "👩", text: "مرافقون ذوو خبرة + مرافقة نسائية" },
+  { icon: "🎁", text: "هدايا للمعتمرين" },
+]
 
-const ADVANTAGES = [
+const STEPS = [
+  { n: "1", title: "اختر الفوج", text: "عبّي الاستمارة في أقل من دقيقة: الاسم، الهاتف، الفوج وعدد الأشخاص." },
+  { n: "2", title: "مستشارنا يتصل بيك", text: "نأكدولك الأماكن المتوفرة، البرنامج والوثائق المطلوبة على الهاتف أو واتساب." },
+  { n: "3", title: "تأكيد الحجز", text: "تحجز مكانك وتتابع معانا كل التحضيرات حتى نهار السفر." },
+]
+
+const FAQ = [
   {
-    icon: "🏨",
-    title: "فندق أرائك غزة ⭐⭐⭐",
-    subtitle: "فندق 3 نجوم قريب من الحرم",
-    description: "10 ليالٍ في مكة المكرمة + 4 ليالٍ في المدينة المنورة في فندق 3 نجوم مختار بعناية، على مقربة من الحرمين الشريفين.",
+    q: "شنوة يشمل السعر؟",
+    a: "الطيران ذهاباً وإياباً، تأشيرة العمرة والتأمين الصحي، الإقامة في فندق أرائك غزة ⭐⭐⭐ قريب من الحرم، التنقلات بالحافلات، زيارة المزارات، المرافقة (منها مرافقة نسائية) وهدايا للمعتمرين.",
   },
   {
-    icon: "🪪",
-    title: "تأشيرة وتأمين صحي",
-    subtitle: "التأشيرة والتأمين مشمولان في السعر",
-    description: "نتولى جميع الإجراءات الإدارية نيابةً عنكم: تأشيرة العمرة والتأمين الصحي الشامل مشمولان في سعر الرحلة.",
+    q: "شنوة الفرق بين الأفواج؟",
+    a: "نفس الخدمات في الأفواج الثلاثة. الفرق في تاريخ السفر ومدة الإقامة: 14 ليلة (10 بمكة + 4 بالمدينة) للفوج الأول وعمرة شوال، و25 ليلة (20 بمكة + 5 بالمدينة) للفوج الثاني.",
   },
   {
-    icon: "🕋",
-    title: "زيارة المزارات التاريخية",
-    subtitle: "جولات مرشدة في مكة والمدينة",
-    description: "برنامج روحي وتاريخي ثري يشمل زيارة أبرز المواقع التاريخية والمقدسة في مكة المكرمة والمدينة المنورة برفقة مرشدين متخصصين.",
+    q: "كيفاش نستفيد من عرض المجموعات؟",
+    a: "لكل 10 أشخاص عمرة مجانية، وأسعار خاصة للعائلات والمجموعات. اختر عدد الأشخاص في الاستمارة أو احكي معانا على واتساب.",
   },
   {
-    icon: "🎁",
-    title: "هدايا للمعتمرين + عمرة مجانية",
-    subtitle: "هدايا + عمرة مجانية لكل 10 أشخاص",
-    description: "كل معتمر يحصل على هدايا مميزة. ولكل مجموعة من 10 أشخاص، عمرة كاملة مجانية تماماً!",
-  },
-  {
-    icon: "👩",
-    title: "مرافقة نسائية متخصصة",
-    subtitle: "مرافقة نسائية مخصصة لراحتكم",
-    description: "مرافقة نسائية ذات خبرة + مرشدون متخصصون لضمان تجربة هادئة وآمنة ومثرية روحياً طوال فترة الرحلة.",
-  },
-  {
-    icon: "🚪",
-    title: "دخول مباشر لمكة",
-    subtitle: "دخول فوري لأداء العمرة",
-    description: "فور الوصول، دخول مباشر إلى مكة المكرمة لأداء مناسك العمرة دون تأخير. تنقل مريح بحافلات سياحية مكيفة طوال الرحلة.",
+    q: "فما مرافقة للنساء؟",
+    a: "نعم، المجموعة ترافقها مرافقة نسائية ذات خبرة إلى جانب المرافقين والمرشدين.",
   },
 ]
 
-function CTAButton({
-  label,
+// ---------------------------------------------------------------------------
+// Suivi
+// ---------------------------------------------------------------------------
+
+const NICHE = "omra-ramadan-2027"
+
+function packageByOffer(offer: string) {
+  return PACKAGES.find((p) => offer.startsWith(p.name))
+}
+
+function trackPackageChoice(pkg: OmraPackage, location: string) {
+  sendEvent("ViewContent", {
+    product: "omra",
+    niche: NICHE,
+    content_name: offerLabel(pkg),
+    content_category: "Omra Package",
+    content_ids: pkg.id,
+    content_location: location,
+    value: pkg.price,
+    currency: "TND",
+  })
+}
+
+function waMessage(pkg?: OmraPackage, group = false) {
+  if (group) return "السلام عليكم Easy2Book، نحب نستفسر على عرض المجموعات للعمرة (عمرة مجانية لكل 10 أشخاص). 🕋\nعدد الأشخاص: "
+  if (pkg)
+    return `السلام عليكم Easy2Book، نحب نحجز ${offerLabel(pkg)} (${pkg.nights} ليلة — ${pkg.price} د.ت). 🕋\nعدد الأشخاص: `
+  return "السلام عليكم Easy2Book، نحب نستفسر على عروض العمرة رمضان / شوال 2027. 🕋\nعدد الأشخاص: "
+}
+
+function WhatsAppLink({
+  children,
   className,
   location,
-  packageName = "",
+  pkg,
+  group = false,
 }: {
-  label: string
+  children: React.ReactNode
   className?: string
   location: string
-  packageName?: string
+  pkg?: OmraPackage
+  group?: boolean
 }) {
-  const message = encodeURIComponent(
-    packageName
-      ? `Bonjour Easy2Book, je souhaite réserver le package Omra ${packageName}${packageFor(packageName) ? ` (${packageFor(packageName)!.price} TND / ${packageFor(packageName)!.duration})` : ""} 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone`
-      : "Bonjour Easy2Book, je souhaite me renseigner sur les packages Omra Ramadan 2027 / Chawwal. 🕋\n\nMerci de me préciser :\n📅 Nombre de personnes\n👤 Âges des participants\n📞 Numéro de téléphone"
-  )
   return (
     <a
-      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`}
+      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waMessage(pkg, group))}`}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={(e) => trackWhatsAppClick(e, location, packageName)}
+      onClick={(e) =>
+        handleWhatsAppClick(e, {
+          product: "omra",
+          location,
+          offer: group ? "عرض المجموعات" : pkg ? offerLabel(pkg) : undefined,
+          niche: NICHE,
+          value: pkg?.price ?? OMRA_PRICE_FROM,
+        })
+      }
       className={className}
     >
-      {label}
+      {children}
     </a>
   )
 }
 
+const accentCls: Record<string, { ring: string; chip: string; btn: string }> = {
+  emerald: { ring: "ring-emerald-500", chip: "bg-emerald-100 text-emerald-800", btn: "bg-emerald-600 hover:bg-emerald-700" },
+  amber: { ring: "ring-amber-500", chip: "bg-amber-100 text-amber-800", btn: "bg-amber-500 hover:bg-amber-600" },
+  violet: { ring: "ring-violet-500", chip: "bg-violet-100 text-violet-800", btn: "bg-violet-600 hover:bg-violet-700" },
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default function OmraPage() {
-  const [activeTab, setActiveTab] = useState("foj1")
+  const [offer, setOffer] = useState("")
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const selected = packageByOffer(offer)
 
+  // Profondeur de défilement (25 / 50 / 75 %) — une fois par palier
   useEffect(() => {
-    let trackedDepths = new Set<string>()
-    let timeOnPage = 0
-    let engagementInterval: number
-
-    const handleScroll = () => {
-      const scrollPercent = Math.round(
-        (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
-      )
-      const depth =
-        scrollPercent >= 75 ? "75%" : scrollPercent >= 50 ? "50%" : scrollPercent >= 25 ? "25%" : null
-      if (depth && !trackedDepths.has(depth)) {
-        trackedDepths.add(depth)
-        trackScrollDepth(depth)
+    const seen = new Set<string>()
+    const onScroll = () => {
+      const max = document.body.scrollHeight - window.innerHeight
+      if (max <= 0) return
+      const pct = (window.scrollY / max) * 100
+      const depth = pct >= 75 ? "75%" : pct >= 50 ? "50%" : pct >= 25 ? "25%" : null
+      if (depth && !seen.has(depth)) {
+        seen.add(depth)
+        sendEvent("ScrollDepth", { depth, page: "omra" })
       }
     }
-
-    engagementInterval = window.setInterval(() => {
-      timeOnPage += 30
-      sendEvent("PageEngagement", {
-        time_on_page: timeOnPage,
-        page: "omra",
-        user_intent: timeOnPage >= 60 ? "ready_to_book" : "considering",
-      })
-    }, 30000)
-
-    window.addEventListener("scroll", handleScroll)
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-      window.clearInterval(engagementInterval)
-    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
-  const activePackage = PACKAGES.find((p) => p.id === activeTab) || PACKAGES[0]
+  // « احجز هذا الفوج » : pré-remplit le formulaire et y amène le visiteur (le lead arrive dans le CRM)
+  const choosePackage = (pkg: OmraPackage, location: string) => {
+    setOffer(offerLabel(pkg))
+    trackPackageChoice(pkg, location)
+    goToForm()
+  }
+
+  const goToForm = () => {
+    document.getElementById("reservation")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   return (
-    <div className="min-h-screen bg-white font-sans" dir="rtl">
-      {/* HEADER */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Easy2Book" width={40} height={40} className="rounded-full" />
-            <div>
-              <div className="font-bold text-gray-900 text-sm">Easy2Book</div>
-              <div className="text-xs text-emerald-600">عمرة رمضان 2027 + عمرة شوال</div>
+    <div className="min-h-screen bg-stone-50 font-sans text-gray-900 pb-20 sm:pb-0" dir="rtl">
+      {/* EN-TÊTE */}
+      <header className="fixed inset-x-0 top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          <a href="#top" className="flex items-center gap-2 min-w-0">
+            <Image src="/logo.png" alt="Easy2Book" width={36} height={36} className="rounded-full shrink-0" />
+            <div className="min-w-0">
+              <div className="font-extrabold text-sm leading-tight">Easy2Book</div>
+              <div className="text-[11px] text-emerald-700 truncate">عمرة رمضان وشوال 2027</div>
             </div>
-          </div>
+          </a>
           <div className="flex items-center gap-2">
             <a
               href={`tel:+216${PHONE_NUMBER}`}
-              className="hidden sm:flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:text-emerald-900"
+              className="hidden sm:inline-flex items-center gap-1 text-sm font-bold text-emerald-800 px-3 py-2"
+              aria-label="اتصل بنا"
             >
-              📞 {PHONE_NUMBER}
+              📞 <span dir="ltr">98 140 514</span>
             </a>
-            <CTAButton
-              label="💬 Réserver WhatsApp"
-              location="header"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-3 py-2 rounded-full transition-all shadow"
-            />
+            <button
+              type="button"
+              onClick={goToForm}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold px-4 py-2 rounded-full"
+            >
+              احجز مكانك
+            </button>
           </div>
         </div>
       </header>
 
-      {/* HERO */}
-      <section
-        className="relative min-h-screen flex items-center justify-center pt-16"
-        style={{
-          background: "linear-gradient(135deg, #064e3b 0%, #065f46 30%, #1a1a2e 70%, #0f172a 100%)",
-        }}
-      >
-        {/* Stars background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(40)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full bg-white"
-              style={{
-                width: Math.random() * 3 + 1 + "px",
-                height: Math.random() * 3 + 1 + "px",
-                top: Math.random() * 100 + "%",
-                left: Math.random() * 100 + "%",
-                opacity: Math.random() * 0.7 + 0.3,
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center py-16">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-            🕋 فتح باب التسجيل — عمرة رمضان 2027 + عمرة شوال
+      {/* HERO — image réelle issue de la vidéo Easy2Book */}
+      <section id="top" className="relative pt-14 overflow-hidden">
+        <Image src="/omra-hero.jpg" alt="معتمرون مع Easy2Book في الحرم" fill priority sizes="100vw" className="object-cover object-center" />
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/75 via-emerald-950/65 to-emerald-950/90" />
+        <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-12 sm:pt-16 sm:pb-16 text-center text-white">
+          <div className="inline-flex items-center gap-2 bg-amber-400/15 border border-amber-300/40 text-amber-200 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full mb-5">
+            🕋 فتح باب التسجيل — الأماكن محدودة
           </div>
-
-          {/* Title */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-4 leading-tight">
-            <span className="text-amber-400">عروض مميزة</span>
-            <br />
-            <span className="text-2xl sm:text-3xl font-bold text-emerald-300">
-              رحلة العمر في رحاب الحرمين الشريفين
-            </span>
+          <h1 className="text-3xl sm:text-5xl font-black leading-tight mb-3">
+            عمرة رمضان وشوال <span className="text-amber-300">2027</span>
           </h1>
-
-          <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            🗓️ 27 جانفي — 18 فيفري — 15 مارس<br/>
-            برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة
+          <p className="text-base sm:text-lg text-emerald-50/90 mb-6 leading-relaxed">
+            3 أفواج: <strong>27 جانفي</strong> · <strong>18 فيفري</strong> · <strong>15 مارس</strong>
+            <br />
+            طيران + تأشيرة + فندق قريب من الحرم + مرافقة نسائية
           </p>
 
-          {/* Price badge */}
-          <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur border border-white/20 rounded-2xl px-6 py-4 mb-8">
-            <div className="text-center">
-              <div className="text-white/80 text-xs">ابتداءً من</div>
-              <div className="text-amber-400 font-black text-4xl" dir="ltr">{OMRA_PRICE_FROM.toLocaleString("fr-FR")}</div>
-              <div className="text-white/80 text-sm">دينار تونسي / شخص</div>
-            </div>
-            <div className="h-12 w-px bg-white/20" />
-            <div className="text-left">
-              <div className="text-white font-bold">من 14 ليلة</div>
-              <div className="text-emerald-300 text-sm">vol inclus ✈️</div>
-            </div>
+          <div className="inline-flex items-end gap-2 bg-white/10 border border-white/20 rounded-2xl px-5 py-3 mb-7">
+            <span className="text-sm text-emerald-50/80 pb-1">ابتداءً من</span>
+            <Price value={OMRA_PRICE_FROM} className="text-4xl sm:text-5xl font-black text-amber-300" />
+            <span className="text-sm text-emerald-50/80 pb-1">/ للشخص</span>
           </div>
 
-          {/* Filtre par date */}
-          <div className="bg-white/15 backdrop-blur border border-white/20 rounded-2xl p-4 mb-8 max-w-xl mx-auto">
-            <div className="text-white font-bold mb-3 text-center">📅 اختر موعدك</div>
-            <div className="flex gap-2 flex-wrap justify-center">
-              {[
-                { label: "27 جانفي", id: "foj1" },
-                { label: "18 فيفري", id: "foj2" },
-                { label: "15 مارس", id: "foj3" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id)
-                    const pkg = PACKAGES.find((p) => p.id === item.id)
-                    if (pkg) trackPackageClick(pkg.name, pkg.price, pkg.dateLabel)
-                    const element = document.getElementById("packages-section")
-                    if (element) element.scrollIntoView({ behavior: "smooth" })
-                  }}
-                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                    activeTab === item.id
-                      ? "bg-amber-400 text-black"
-                      : "bg-white/20 hover:bg-white/30 border border-white/30 text-white"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
-            <CTAButton
-              label="💬 احجز مكانك على WhatsApp"
-              location="hero"
-              className="bg-green-500 hover:bg-green-400 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-2xl transition-all transform hover:scale-105"
-            />
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href={`tel:+216${PHONE_NUMBER}`}
-              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all"
+              href="#aflaj"
+              className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-lg px-8 py-4 rounded-2xl shadow-xl"
             >
-              📞 اتصل بنا: {PHONE_NUMBER}
+              اختر فوجك ←
             </a>
+            <WhatsAppLink
+              location="hero"
+              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold text-lg px-8 py-4 rounded-2xl"
+            >
+              💬 استفسر على واتساب
+            </WhatsAppLink>
           </div>
 
-          {/* USPs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
-            {[
-              { icon: "🏨", text: "فندق أرائك غزة ⭐⭐⭐" },
-              { icon: "🪪", text: "تأشيرة + تأمين صحي" },
-              { icon: "👩", text: "مرافقة نسائية" },
-              { icon: "🎁", text: "هدايا + عمرة مجانية" },
-            ].map((usp, i) => (
-              <div key={i} className="bg-white/10 backdrop-blur border border-white/20 rounded-xl p-3 text-center">
-                <div className="text-2xl mb-1">{usp.icon}</div>
-                <div className="text-white text-xs font-semibold">{usp.text}</div>
-              </div>
+          <ul className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs sm:text-sm">
+            {["✈️ طيران مشمول", "🪪 تأشيرة + تأمين", "🏨 قريب من الحرم", "🎁 عمرة مجانية لكل 10"].map((t) => (
+              <li key={t} className="bg-white/10 border border-white/15 rounded-xl py-2 px-2 font-semibold">
+                {t}
+              </li>
             ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* LES 3 DÉPARTS */}
+      <section id="aflaj" className="scroll-mt-16 py-12 sm:py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-4xl font-black mb-2">اختر الفوج المناسب ليك</h2>
+            <p className="text-gray-600">نفس الخدمات في كل الأفواج — الفرق في التاريخ ومدة الإقامة</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {PACKAGES.map((pkg) => {
+              const a = accentCls[pkg.accent]
+              const isSelected = selected?.id === pkg.id
+              return (
+                <article
+                  key={pkg.id}
+                  className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col ${isSelected ? `ring-2 ${a.ring}` : ""}`}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-black">{pkg.name}</h3>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${a.chip}`}>{pkg.tag}</span>
+                  </div>
+
+                  <div className="text-gray-700 font-bold mb-1">🗓️ السفر: {pkg.date}</div>
+                  <div className="text-gray-600 text-sm mb-4">
+                    🛏️ {pkg.nights} ليلة — {pkg.makkah} بمكة + {pkg.madinah} بالمدينة
+                  </div>
+
+                  <div className="mb-5">
+                    <Price value={pkg.price} className="text-4xl font-black text-emerald-800" />
+                    <div className="text-xs text-gray-500 mt-1">للشخص — كل شيء مشمول</div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => choosePackage(pkg, `package-${pkg.id}`)}
+                    className={`mt-auto w-full text-white font-black py-3.5 rounded-2xl ${a.btn}`}
+                  >
+                    احجز هذا الفوج
+                  </button>
+                  <WhatsAppLink
+                    location={`package-${pkg.id}`}
+                    pkg={pkg}
+                    className="mt-2 block text-center text-sm font-bold text-emerald-700 hover:text-emerald-900 py-2"
+                  >
+                    💬 أو اسأل على واتساب
+                  </WhatsAppLink>
+                </article>
+              )
+            })}
+          </div>
+
+          {/* Inclus — affiché une seule fois au lieu de 3 listes identiques */}
+          <div className="mt-8 bg-white rounded-3xl border border-gray-100 p-6">
+            <h3 className="font-black text-lg mb-4 text-center">✅ كل الأفواج تشمل</h3>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {INCLUDED.map((i) => (
+                <li key={i.text} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="text-lg leading-5">{i.icon}</span>
+                  <span>{i.text}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* VIDEO SECTION */}
-      <section className="py-14 bg-gray-900">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-            🎬 شاهد برنامجنا
+      {/* OFFRE GROUPES — reprise du message de la vidéo Easy2Book */}
+      <section className="bg-amber-400">
+        <div className="max-w-5xl mx-auto px-4 py-10 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-right">
+          <div className="text-5xl">🎁</div>
+          <div className="flex-1">
+            <h2 className="text-2xl sm:text-3xl font-black text-emerald-950">عمرة مجانية لكل 10 أشخاص</h2>
+            <p className="text-emerald-950/80 font-semibold mt-1">أسعار خاصة للعائلات والمجموعات — لمّ عايلتك وأحبابك</p>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white mb-8">
-            اكتشف تفاصيل رحلة العمر
-          </h2>
-          <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-            <video
-              className="w-full max-h-[500px] object-cover"
-              controls
-              playsInline
-              poster="/omra-ramadan-2027-poster.jpg"
-              preload="metadata"
-            >
+          <WhatsAppLink
+            location="group-offer"
+            group
+            className="bg-emerald-950 hover:bg-emerald-900 text-white font-black px-6 py-3.5 rounded-2xl whitespace-nowrap"
+          >
+            💬 احسب عرض مجموعتك
+          </WhatsAppLink>
+        </div>
+      </section>
+
+      {/* VIDÉO */}
+      <section className="py-12 sm:py-16 bg-emerald-950 text-white">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-2xl sm:text-3xl font-black mb-2">خدمة المعتمرين شرف لنا</h2>
+          <p className="text-emerald-100/80 mb-6">شاهد الفيديو واكتشف أجواء الرحلة مع Easy2Book</p>
+          <div className="rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-black aspect-video">
+            <video className="w-full h-full object-cover" controls playsInline poster="/omra-ramadan-2027-poster.jpg" preload="none">
               <source src="/omra-ramadan-2027.mp4" type="video/mp4" />
-              متصفحك لا يدعم تشغيل الفيديو.
             </video>
           </div>
-          <div className="mt-6">
-            <CTAButton
-              label="💬 احجز مكانك بعد المشاهدة"
-              location="video-cta"
-              className="inline-block bg-green-500 hover:bg-green-400 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition-all hover:scale-105"
-            />
-          </div>
         </div>
       </section>
 
-      {/* PACKAGES SECTION */}
-      <section id="packages-section" className="py-16 bg-gray-50">
+      {/* COMMENT RÉSERVER */}
+      <section className="py-12 sm:py-16">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
-              🗓️ اختر موعدك
-            </h2>
-            <p className="text-gray-600 text-lg">3 أفواج متاحة — نفس الخدمة المميزة</p>
-          </div>
-
-          {/* 3 Cards côte à côte */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {PACKAGES.map((pkg) => (
-              <div key={pkg.id} className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col hover:shadow-2xl transition-all">
-                <div className={`${pkg.badgeColor} text-white text-center py-3 font-bold text-base`}>
-                  {pkg.emoji} {pkg.name}
-                </div>
-                <div className="p-6 flex flex-col flex-1">
-                  <div className="text-center mb-4">
-                    <div className="text-lg font-bold text-gray-500 mb-1">🗓️ {pkg.date}</div>
-                    <div className="text-4xl font-black text-emerald-700">
-                      {pkg.price.toLocaleString()} <span className="text-xl">TND</span>
-                    </div>
-                    <div className="text-gray-400 text-sm mt-1">par personne — {pkg.duration} tout inclus</div>
-                  </div>
-                  <ul className="space-y-2 mb-6 flex-1">
-                    {pkg.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2 text-gray-700 text-sm">
-                        <span>{feature.split(" ")[0]}</span>
-                        <span>{feature.split(" ").slice(1).join(" ")}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <CTAButton
-                    label={`💬 احجز — ${pkg.dateLabel}`}
-                    location={`package-${pkg.id}`}
-                    packageName={`${pkg.name} — ${pkg.dateLabel}`}
-                    className="block w-full bg-green-500 hover:bg-green-600 text-white font-black text-base py-3 rounded-2xl text-center transition-all shadow-lg"
-                  />
-                  <p className="text-center text-gray-400 text-xs mt-2">الأماكن محدودة 🔥</p>
-                </div>
-              </div>
+          <h2 className="text-2xl sm:text-3xl font-black text-center mb-8">كيفاش تحجز؟</h2>
+          <ol className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {STEPS.map((s) => (
+              <li key={s.n} className="bg-white rounded-3xl border border-gray-100 p-6">
+                <div className="w-10 h-10 rounded-full bg-emerald-700 text-white font-black flex items-center justify-center mb-3">{s.n}</div>
+                <h3 className="font-black text-lg mb-1">{s.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{s.text}</p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
-      {/* GROUP OFFER */}
-      <section className="py-12 bg-gradient-to-r from-amber-400 to-amber-500">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="text-5xl mb-4">🎁</div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
-            عرض المجموعات الذهبي
-          </h2>
-          <p className="text-amber-900 text-lg font-semibold mb-2">
-            لكل 10 أشخاص ← عمرة مجانية!
-          </p>
-          <p className="text-amber-800 mb-6">
-            لمّ شلّتك أو عايلتك واستفيدوا من هذا العرض الاستثنائي. خصومات فورية من 3 أشخاص فأكثر.
-          </p>
-          <CTAButton
-            label="💬 استفسر عن عرض المجموعات"
-            location="group-offer"
-            packageName="عرض المجموعات"
-            className="inline-block bg-white text-amber-700 font-black text-lg px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
-          />
-        </div>
-      </section>
-
-      {/* ADVANTAGES */}
-      <section className="py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
-              لماذا تختار Easy2Book؟
-            </h2>
-            <p className="text-gray-600 text-lg">نرافقكم في كل خطوة لرحلة العمر ✈️🌙</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ADVANTAGES.map((adv, i) => (
-              <div key={i} className="bg-gray-50 rounded-2xl p-6 hover:shadow-md transition-all border border-gray-100">
-                <div className="text-4xl mb-3">{adv.icon}</div>
-                <div className="font-bold text-gray-900 text-lg mb-1 text-right">{adv.title}</div>
-                <div className="text-emerald-600 font-semibold text-sm mb-2">{adv.subtitle}</div>
-                <p className="text-gray-600 text-sm leading-relaxed">{adv.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* DATES SECTION */}
-      <section className="py-12 bg-emerald-900 text-white">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-2xl sm:text-3xl font-black mb-8">📅 المواعيد المتاحة</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {PACKAGES.map((pkg) => (
-              <div key={pkg.id} className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6">
-                <div className="text-4xl mb-3">{pkg.emoji}</div>
-                <div className="text-xl font-black mb-1">{pkg.name}</div>
-                <div className="text-emerald-300 font-bold text-lg mb-3">📍 {pkg.date}</div>
-                <div className="text-2xl font-black text-amber-400 mb-4">
-                  {pkg.price.toLocaleString()} TND
-                </div>
-                <CTAButton
-                  label={`💬 احجز ${pkg.dateLabel}`}
-                  location={`dates-${pkg.id}`}
-                  packageName={`${pkg.name} — ${pkg.dateLabel}`}
-                  className="block w-full bg-green-500 hover:bg-green-400 text-white font-bold py-3 rounded-xl text-center transition-all"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* LEAD FORM */}
-      <section id="reservation" className="py-16 bg-emerald-50">
+      {/* FORMULAIRE — le lead est enregistré dans le CRM puis le visiteur continue sur WhatsApp */}
+      <section id="reservation" className="scroll-mt-16 py-12 sm:py-16 bg-emerald-50">
         <div className="max-w-xl mx-auto px-4">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-black text-gray-900 mb-2">📝 احجز مكانك الآن</h2>
-            <p className="text-gray-600">اترك معلوماتك وسيتصل بك مستشارنا لتأكيد الحجز</p>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl sm:text-3xl font-black mb-2">احجز مكانك الآن</h2>
+            <p className="text-gray-600">أقل من دقيقة — مستشارنا يتصل بيك لتأكيد الأماكن</p>
           </div>
-          <div className="bg-white rounded-3xl shadow-xl p-6">
+
+          {selected && (
+            <div className="mb-4 bg-white border border-emerald-200 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-sm">
+              <div>
+                <div className="font-black text-emerald-900">{selected.name} — {selected.date}</div>
+                <div className="text-gray-600">
+                  {selected.nights} ليلة · <Price value={selected.price} /> للشخص
+                </div>
+              </div>
+              <button type="button" onClick={() => setOffer("")} className="text-gray-500 hover:text-gray-800 underline shrink-0">
+                تغيير
+              </button>
+            </div>
+          )}
+
+          <div className="bg-white rounded-3xl shadow-xl p-5 sm:p-6">
             <LeadCaptureForm
               product="omra"
               lang="ar"
               formId="omra-lead-form"
-              offers={PACKAGES.map((p) => `${p.name} — ${p.date}`)}
+              niche={NICHE}
+              offers={PACKAGES.map(offerLabel)}
+              offerValue={offer}
+              onOfferChange={setOffer}
+              showDate={false}
+              adultOptions={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20]}
             />
           </div>
-        </div>
-      </section>
-
-      {/* BOTTOM CTA */}
-      <section className="py-16 bg-gray-900 text-white text-center">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="text-5xl mb-4">🕋</div>
-          <h2 className="text-3xl sm:text-4xl font-black mb-4">
-            لا تضيع الفرصة
-          </h2>
-          <p className="text-gray-400 text-lg mb-8">
-            الأماكن محدودة — تواصل معانا الآن وضمن مكانك في رحلة العمر
+          <p className="text-center text-xs text-gray-500 mt-3">
+            تفضّل الهاتف؟ اتصل بنا على{" "}
+            <a href={`tel:+216${PHONE_NUMBER}`} className="font-bold text-emerald-800" dir="ltr">
+              98 140 514
+            </a>
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <CTAButton
-              label="💬 احجز على WhatsApp الآن"
-              location="bottom-cta"
-              className="bg-green-500 hover:bg-green-400 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition-all hover:scale-105"
-            />
-            <a
-              href={`tel:+216${PHONE_NUMBER}`}
-              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all"
-            >
-              📞 {PHONE_NUMBER}
-            </a>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-12 sm:py-16">
+        <div className="max-w-3xl mx-auto px-4">
+          <h2 className="text-2xl sm:text-3xl font-black text-center mb-6">أسئلة متكررة</h2>
+          <div className="space-y-3">
+            {FAQ.map((f, i) => (
+              <div key={f.q} className="bg-white rounded-2xl border border-gray-100">
+                <button
+                  type="button"
+                  aria-expanded={openFaq === i}
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between gap-3 px-5 py-4 text-right font-bold"
+                >
+                  <span>{f.q}</span>
+                  <span className="text-emerald-700 text-xl leading-none">{openFaq === i ? "−" : "+"}</span>
+                </button>
+                {openFaq === i && <p className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{f.a}</p>}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-black text-gray-500 py-8 text-center text-sm">
+      {/* PIED DE PAGE */}
+      <footer className="bg-emerald-950 text-emerald-100/70 py-10 text-center text-sm">
         <div className="max-w-4xl mx-auto px-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="flex items-center justify-center gap-2 mb-2">
             <Image src="/logo.png" alt="Easy2Book" width={32} height={32} className="rounded-full" />
-            <span className="text-white font-bold">Easy2Book</span>
+            <span className="text-white font-extrabold">Easy2Book</span>
           </div>
-          <p className="mb-3">نرافقكم في كل خطوة لرحلة العمر ✈️🌙</p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => trackWhatsAppClick(e, "footer")}
-              className="text-green-400 hover:text-green-300 font-semibold"
-            >
-              💬 WhatsApp
+          <p className="mb-4">خدمة المعتمرين شرف لنا 🕋</p>
+          <div className="flex gap-5 justify-center flex-wrap font-semibold">
+            <a href={`tel:+216${PHONE_NUMBER}`} className="text-white" dir="ltr">
+              📞 98 140 514
             </a>
-            <a
-              href="https://www.facebook.com/Easy2Bookplateforme"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 font-semibold"
-            >
-              📘 Facebook
+            <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              Facebook
             </a>
-            <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:text-pink-300 font-semibold">
-              📸 Instagram
+            <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              Instagram
             </a>
-            <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white font-semibold">
-              🎵 TikTok
-            </a>
-            <a href="/summer-vibes" className="text-amber-400 hover:text-amber-300 font-semibold">
-              ☀️ Summer Vibes
+            <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              TikTok
             </a>
           </div>
-          <p className="mt-4 text-xs text-gray-600">© 2026 Easy2Book. Tous droits réservés.</p>
+          <p className="mt-5 text-xs text-emerald-100/40">© 2026 Easy2Book</p>
         </div>
       </footer>
 
-      {/* FLOATING WHATSAPP */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <CTAButton
-          label="💬"
-          location="floating"
-          className="bg-green-500 hover:bg-green-400 text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 block text-center leading-[4rem]"
-        />
+      {/* BARRE D'ACTION MOBILE */}
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
+        <button
+          type="button"
+          onClick={goToForm}
+          className="bg-emerald-700 text-white font-black rounded-xl py-3"
+        >
+          احجز مكانك
+        </button>
+        <WhatsAppLink location="sticky" className="bg-[#25D366] text-white font-bold rounded-xl px-4 py-3" pkg={selected}>
+          واتساب
+        </WhatsAppLink>
+        <a href={`tel:+216${PHONE_NUMBER}`} aria-label="اتصل بنا" className="border border-gray-300 rounded-xl px-4 py-3 font-bold">
+          📞
+        </a>
       </div>
     </div>
   )

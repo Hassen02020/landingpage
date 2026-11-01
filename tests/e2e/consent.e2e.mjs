@@ -26,7 +26,7 @@ check("aucun cookie _fbc posé avant consentement", !(await ctx.cookies()).some(
 check("attribution gardée en session uniquement", (await page.evaluate(() => [localStorage.getItem("e2b_lt"), sessionStorage.getItem("e2b_lt")])).every((v, i) => (i === 0 ? v === null : Boolean(v?.includes('"utm_campaign":"e2e"')))))
 
 // clic WhatsApp sans consentement
-const [p1] = await Promise.all([ctx.waitForEvent("page"), page.click('header a[href*="wa.me"]')])
+const [p1] = await Promise.all([ctx.waitForEvent("page"), page.click('section#top a[href*="wa.me"]')])
 await p1.waitForURL(/wa\.me/)
 check("message WhatsApp avec référence même sans consentement", new URL(p1.url()).searchParams.get("text").includes("Réf: E2B-"))
 await p1.close()
@@ -39,7 +39,7 @@ await page.waitForTimeout(800)
 check("script Meta chargé après acceptation", thirdParty.some((u) => u.includes("connect.facebook.net")))
 check("cookie _fbc créé depuis fbclid après acceptation", (await ctx.cookies()).some((c) => c.name === "_fbc" && c.value.endsWith("FB_E2E")))
 
-const [p2] = await Promise.all([ctx.waitForEvent("page"), page.click('header a[href*="wa.me"]')])
+const [p2] = await Promise.all([ctx.waitForEvent("page"), page.click('section#top a[href*="wa.me"]')])
 await p2.close()
 await page.waitForTimeout(500)
 const track = api.find((a) => a.url === "/api/track" && a.body.includes('"Contact"'))
