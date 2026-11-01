@@ -373,10 +373,10 @@ export default function OmraPage() {
               className="w-full max-h-[500px] object-cover"
               controls
               playsInline
-              poster="/logo.png"
+              poster="/omra-ramadan-2027-poster.jpg"
               preload="metadata"
             >
-              <source src="/omra-video.mp4" type="video/mp4" />
+              <source src="/omra-ramadan-2027.mp4" type="video/mp4" />
               متصفحك لا يدعم تشغيل الفيديو.
             </video>
           </div>
