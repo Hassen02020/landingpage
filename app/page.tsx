@@ -36,7 +36,7 @@ const OFFERS: {
     href: "/omra",
     emoji: "🕋",
     title: "Omra Ramadan 2027",
-    subtitle: "14 jours · Makkah & Médine",
+    subtitle: "14 nuits · Makkah & Médine",
     price: "À partir de 4 800 TND",
     points: ["Visa + assurance + vol inclus", "Hôtel 3★ proche du Haram", "Accompagnatrice femme"],
     color: "from-emerald-700 to-emerald-900",

@@ -65,7 +65,7 @@ const PACKAGES = [
     date: "27 جانفي 2027",
     dateLabel: "جانفي 2027",
     price: 5500,
-    duration: "14 jours",
+    duration: "14 nuits",
     emoji: "🌙",
     badge: "Départ Janvier",
     badgeColor: "bg-emerald-500",
@@ -89,7 +89,7 @@ const PACKAGES = [
     date: "15 مارس 2027",
     dateLabel: "مارس 2027",
     price: 4800,
-    duration: "14 jours",
+    duration: "14 nuits",
     emoji: "🕌",
     badge: "Omra Chawwal",
     badgeColor: "bg-purple-600",
@@ -292,7 +292,7 @@ export default function OmraPage() {
             </div>
             <div className="h-12 w-px bg-white/20" />
             <div className="text-left">
-              <div className="text-white font-bold">من 14 يوم</div>
+              <div className="text-white font-bold">من 14 ليلة</div>
               <div className="text-emerald-300 text-sm">vol inclus ✈️</div>
             </div>
           </div>
