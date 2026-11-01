@@ -124,7 +124,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Produits : `omra`, `voyage`, `hotel`, `autre`. Statuts : `nouveau`, `contacte`, `qualifie`, `reserve`, `perdu`. Sources : `form`, `whatsapp`, `phone`, `manual`. Rôles : `admin`, `agent`.
 - Référence : `E2B-XXXXXX` (alphabet `23456789ABCDEFGHJKLMNPQRSTUVWXYZ`).
 - Version du consentement : `2026-11-v1`.
-- Omra (page mise à jour le 2026-11-01) : « عمرة رمضان 2027 + عمرة شوال », titre « عروض مميزة ». Forfaits confirmés par l'utilisateur : الفوج الأول 27 جانفي 2027, 5500 TND, 10 ليالي مكة + 4 المدينة ; الفوج الثاني 18 فيفري 2027, 7800 TND, 20 ليلة مكة + 5 المدينة ; عمرة شوال 5 مارس 2027, 4800 TND, 10 + 4. « هدايا خاصة لمولد النبوي » supprimé (demande utilisateur). Bandeau : « ابتداءً من 4 800 ».
+- Omra (page mise à jour le 2026-11-01) : « عمرة رمضان 2027 + عمرة شوال », titre « عروض مميزة ». Forfaits confirmés par l'utilisateur : الفوج الأول 27 جانفي 2027, 5500 TND, 10 ليالي مكة + 4 المدينة ; الفوج الثاني 18 فيفري 2027, 7800 TND, 20 ليلة مكة + 5 المدينة ; عمرة شوال 15 مارس 2027, 4800 TND, 10 + 4. « هدايا خاصة لمولد النبوي » supprimé (demande utilisateur). Bandeau : « ابتداءً من 4 800 ».
 - Voyages : 19 départs du 06/07 au 15/09/2026 (dépassés). Hôtels : 12 offres « avant le 30 Juin » ; compte à rebours 31/07/2026 (dépassés).
 - Images : 22 images Unsplash distinctes non vérifiées. `public/logo.png` 3750×3750 (Open Graph annonce 1200×630).
 - Durées de conservation **proposées, non validées** : identifiants pub/techniques 90 jours ; `landing_events` 13 mois ; leads non réservés anonymisés 24 mois ; réservés 36 mois.

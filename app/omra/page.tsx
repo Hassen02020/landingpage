@@ -86,7 +86,7 @@ const PACKAGES = [
   {
     id: "foj3",
     name: "عمرة شوال",
-    date: "5 مارس 2027",
+    date: "15 مارس 2027",
     dateLabel: "مارس 2027",
     price: 4800,
     duration: "14 jours",
@@ -279,7 +279,7 @@ export default function OmraPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            🗓️ 27 جانفي — 18 فيفري — 5 مارس<br/>
+            🗓️ 27 جانفي — 18 فيفري — 15 مارس<br/>
             برنامج مدروس بدقة — سكن قريب من الحرم — مرافقة خبيرة
           </p>
 
@@ -304,7 +304,7 @@ export default function OmraPage() {
               {[
                 { label: "27 جانفي", id: "foj1" },
                 { label: "18 فيفري", id: "foj2" },
-                { label: "5 مارس", id: "foj3" },
+                { label: "15 مارس", id: "foj3" },
               ].map((item) => (
                 <button
                   key={item.id}
