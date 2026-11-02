@@ -21,7 +21,7 @@ export function CategoryForm({ category }: { category: Category | null }) {
   return (
     <form action={action} className="space-y-5">
       {category && <input type="hidden" name="id" value={category.id} />}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl border p-4 sticky top-16 z-20">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl border p-4 sticky top-16 z-20 lg:top-2">
         <label className="flex items-center gap-2 font-bold">
           <input type="checkbox" name="visible" defaultChecked={category?.visible ?? false} className="w-4 h-4" /> Affichée (page publique en ligne)
         </label>

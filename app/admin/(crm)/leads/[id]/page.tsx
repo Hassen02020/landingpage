@@ -146,14 +146,14 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
             </select>
             <input name="booking_value" inputMode="decimal" placeholder="Montant TND (obligatoire si réservé)" defaultValue={lead.booking_value ?? ""} className="w-full px-3 py-2 rounded-lg border" />
             <input name="notes" placeholder="Commentaire (facultatif)" className="w-full px-3 py-2 rounded-lg border" />
-            <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Enregistrer</button>
+            <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Enregistrer</button>
           </form>
           <form action={followUpAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
             <h2 className="font-bold">Relance</h2>
             <input type="hidden" name="id" value={lead.id} />
             <p className="text-gray-500">Actuelle : {formatDate(lead.next_follow_up_at)}</p>
             <input type="datetime-local" name="follow_up" className="w-full px-3 py-2 rounded-lg border" />
-            <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Planifier (vide = supprimer)</button>
+            <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Planifier (vide = supprimer)</button>
           </form>
           <form action={assignAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
             <h2 className="font-bold">Responsable</h2>
@@ -162,7 +162,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
               <option value="">Non assigné</option>
               {staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.full_name || s.email}</option>)}
             </select>
-            <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Assigner</button>
+            <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Assigner</button>
           </form>
         </div>
       )}

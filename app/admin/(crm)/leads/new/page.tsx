@@ -22,7 +22,7 @@ export default function NewLeadPage({ searchParams }: { searchParams: { erreur?:
         <input name="destination" placeholder="Destination (facultatif)" className={input} />
         <textarea name="message" rows={3} placeholder="Détails de la demande (facultatif)" className={input} />
         <p className="text-xs text-gray-500">Le prospect nous a contactés lui-même : le recontact au sujet de sa demande est autorisé. Aucun consentement marketing n'est enregistré.</p>
-        <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Créer le lead</button>
+        <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Créer le lead</button>
       </form>
     </div>
   )

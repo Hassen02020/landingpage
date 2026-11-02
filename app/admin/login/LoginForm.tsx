@@ -6,7 +6,7 @@ import { loginAction } from "../actions"
 function Submit() {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" disabled={pending} className="w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 rounded-xl disabled:opacity-50">
+    <button type="submit" disabled={pending} className="w-full bg-violet-700 hover:bg-violet-800 text-white font-bold py-3 rounded-xl disabled:opacity-50">
       {pending ? "Connexion…" : "Se connecter"}
     </button>
   )

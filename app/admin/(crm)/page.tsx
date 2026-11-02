@@ -67,7 +67,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <h1 className="text-2xl font-black">{title}</h1>
         <div className="flex flex-wrap gap-2">
           {chip("/admin", "Tous", !params.length)}
@@ -102,7 +102,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
         </select>
         {searchParams.followUp && <input type="hidden" name="followUp" value={searchParams.followUp} />}
         {searchParams.open && <input type="hidden" name="open" value={searchParams.open} />}
-        <button className="px-4 py-2 rounded-lg bg-blue-800 text-white font-bold">Filtrer</button>
+        <button className="px-4 py-2 rounded-lg bg-violet-700 text-white font-bold">Filtrer</button>
       </form>
 
       {failed ? (
@@ -146,7 +146,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
                     <tr key={l.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="p-3"><input type="checkbox" name="ids" value={l.id} aria-label={`Sélectionner ${l.ref}`} /></td>
                       <td className="p-3 whitespace-nowrap">{formatDate(l.created_at)}</td>
-                      <td className="p-3 font-mono"><Link href={`/admin/leads/${l.id}`} className="text-blue-800 underline">{l.ref}</Link></td>
+                      <td className="p-3 font-mono whitespace-nowrap"><Link href={`/admin/leads/${l.id}`} className="text-violet-700 underline">{l.ref}</Link></td>
                       <td className="p-3">{l.first_name} {l.last_name ?? ""}<div className="text-gray-500">{l.phone ? `+${l.phone}` : "—"}</div></td>
                       <td className="p-3">{PRODUCTS[l.product]}<div className="text-gray-500 truncate max-w-[200px]">{l.offer ?? ""}</div></td>
                       <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[l.status]}`}>{STATUS_LABELS[l.status]}</span></td>
