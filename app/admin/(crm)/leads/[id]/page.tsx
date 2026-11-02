@@ -2,7 +2,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
 import { SOURCE_LABELS, STATUSES, STATUS_LABELS, findDuplicates, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
-import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, withdrawMarketingAction } from "../../../actions"
+import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, qualifyAction, withdrawMarketingAction } from "../../../actions"
+import { CONTACT_CHANNEL_LABELS, CONTACT_CHANNELS, REGIONS } from "@/lib/regions"
 import { listTemplates, renderTemplate } from "@/lib/server/templates"
 import { STATUS_COLORS, formatDate } from "../../../format"
 import { blockLeadPhoneAction } from "../../../settings-actions"
@@ -101,8 +102,11 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <Row label="Niche" value={lead.niche} />
           <Row label="Destination" value={lead.destination} />
           <Row label="Date / période" value={lead.travel_date || lead.travel_period} />
-          <Row label="Voyageurs" value={`${lead.adults} adulte(s), ${lead.children} enfant(s)`} />
-          <Row label="Budget" value={lead.budget} />
+          <Row label="Voyageurs" value={lead.adults === null || lead.adults === undefined ? null : `${lead.adults} adulte(s), ${lead.children ?? 0} enfant(s)`} />
+          <Row label="Région" value={lead.region} />
+          <Row label="E-mail" value={lead.email} />
+          <Row label="Canal préféré" value={lead.contact_channel ? CONTACT_CHANNEL_LABELS[lead.contact_channel] : null} />
+          <Row label="Budget déclaré" value={lead.budget} />
           <Row label="Message" value={lead.message} />
           <Row label="Code promo" value={lead.promo_code ?? null} />
           <Row label="Source" value={lead.source ? SOURCE_LABELS[lead.source as Source] : null} />
@@ -135,6 +139,45 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           )}
         </section>
       </div>
+
+      {!locked && (
+        <form action={qualifyAction} className="bg-white rounded-2xl shadow-sm p-4 text-sm space-y-3">
+          <input type="hidden" name="id" value={lead.id} />
+          <div>
+            <h2 className="font-bold">Qualification</h2>
+            <p className="text-gray-500">À compléter pendant l&apos;échange avec le prospect. Le budget est une déclaration, pas une dépense réelle.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <label className="block"><span className="font-semibold">Région</span>
+              <select name="region" defaultValue={lead.region ?? ""} className="mt-1 w-full px-3 py-2 rounded-lg border">
+                <option value="">Non renseignée</option>
+                {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </label>
+            <label className="block"><span className="font-semibold">E-mail</span>
+              <input name="email" type="email" defaultValue={lead.email ?? ""} placeholder="facultatif" className="mt-1 w-full px-3 py-2 rounded-lg border" dir="ltr" />
+            </label>
+            <label className="block"><span className="font-semibold">Budget déclaré</span>
+              <input name="budget" defaultValue={lead.budget ?? ""} placeholder="ex. 5 000 TND / pers." maxLength={64} className="mt-1 w-full px-3 py-2 rounded-lg border" />
+            </label>
+            <label className="block"><span className="font-semibold">Canal préféré</span>
+              <select name="contact_channel" defaultValue={lead.contact_channel ?? "whatsapp"} className="mt-1 w-full px-3 py-2 rounded-lg border">
+                {CONTACT_CHANNELS.map((c) => <option key={c} value={c}>{CONTACT_CHANNEL_LABELS[c]}</option>)}
+              </select>
+            </label>
+            <label className="block"><span className="font-semibold">Adultes</span>
+              <input name="adults" inputMode="numeric" defaultValue={lead.adults ?? ""} placeholder="non précisé" className="mt-1 w-full px-3 py-2 rounded-lg border" />
+            </label>
+            <label className="block"><span className="font-semibold">Enfants</span>
+              <input name="children" inputMode="numeric" defaultValue={lead.children ?? ""} placeholder="non précisé" className="mt-1 w-full px-3 py-2 rounded-lg border" />
+            </label>
+            <label className="block sm:col-span-2"><span className="font-semibold">Période souhaitée</span>
+              <input name="travel_period" defaultValue={lead.travel_period ?? ""} placeholder="ex. février 2027" maxLength={64} className="mt-1 w-full px-3 py-2 rounded-lg border" />
+            </label>
+          </div>
+          <div className="flex justify-end"><button className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-2 rounded-lg">Enregistrer la qualification</button></div>
+        </form>
+      )}
 
       {!locked && (
         <div className="grid md:grid-cols-3 gap-4">

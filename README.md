@@ -82,6 +82,18 @@ Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sq
 
 Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to sign up » : seuls les comptes créés par un administrateur doivent exister.
 
+## Collecte : premier contact court, qualification ensuite
+
+Décisions du propriétaire appliquées au code :
+
+| Moment | Données |
+|---|---|
+| **Premier contact** (formulaire public) | prénom (ou nom), téléphone, produit, offre / destination selon la page, consentements. WhatsApp est le canal de réponse. |
+| **Qualification** (fiche CRM, pendant l'échange) | région (gouvernorat), e-mail (facultatif), budget **déclaré** (jamais une dépense), voyageurs, période souhaitée, canal préféré |
+| **Jamais demandé** | âge ; budget, région, voyageurs, dates, type de séjour au premier contact |
+
+Rien n'est inventé : sans réponse, voyageurs = « non précisé » (NULL), pas « 1 adulte ». Un e-mail invalide n'empêche jamais l'envoi. Garde-fous : `tests/collecte.test.ts` (API + contenu du formulaire) et `tests/e2e/collect.e2e.mjs` (navigateur, 4 pages, mobile et bureau).
+
 ## Écrans d'administration
 
 Pour toute l'équipe : **accueil `/admin`** (cartes du jour : à traiter, reçus aujourd'hui, relances échues, mes dossiers, non assignés, réservés du mois ; filtres rapides ; **actions groupées** : assigner, contacté / qualifié / perdu), **`/admin/pipeline`** (colonnes par statut, déplacement en un clic, « réservé » via la fiche pour saisir le montant), **fiche lead** (messages WhatsApp prêts, doublons du même numéro avec « marquer comme doublon »), **`/admin/compte`** (changer son mot de passe).
@@ -106,6 +118,7 @@ Les jetons Meta / TikTok sont **chiffrés** (AES-256-GCM) par le serveur avant d
 1. Projet Supabase des landing pages : **`tdexdlukqciolslvjmhd`** (région eu-west-3), distinct d'EasyV4 et d'EasyV4-preview.
 2. Dans ce projet, ouvrir **SQL Editor** et exécuter, dans l'ordre, `supabase/migrations/0001_landing_leads.sql` (**appliquée le 31/10/2026**), puis `supabase/migrations/0002_landing_crm.sql`. Chaque script s'arrête de lui-même sur une base EasyV4, si le précédent manque, ou s'il a déjà été appliqué.
    **Ordre de déploiement** : appliquer `0002` **avant** de déployer ce code. Le formulaire enregistre `consent_text_version`, une colonne créée par `0002`.
+   Puis `supabase/migrations/0006_landing_qualification.sql` (e-mail, région, canal de contact, voyageurs facultatifs) après 0005. **À appliquer AVANT le déploiement qui l'accompagne** ; sans elle, le site continue d'enregistrer les leads (repli sur l'ancien schéma) mais sans e-mail ni canal, et avec les voyageurs historiques.
    Puis `supabase/migrations/0005_landing_team_templates.sql` (équipe, modèles, journal) après 0004.
    Puis `supabase/migrations/0004_landing_catalog.sql` (catalogue, catégories, médias) : peut être appliquée après le déploiement ; sans elle, `/omra` affiche les offres intégrées.
    Puis `supabase/migrations/0003_landing_admin.sql` (intégrations, protection, codes promo), **avant** de déployer la version qui contient ces écrans : sans elle, le site fonctionne (variables Vercel, aucune règle de protection) mais un code promo saisi est refusé.

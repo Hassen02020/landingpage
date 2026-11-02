@@ -17,20 +17,20 @@ export default async function CataloguePage({ searchParams }: { searchParams: Re
 
   let offers: Offer[] = []
   let categories: Category[] = []
-  let crm: { offer_id: string; adults: number; children: number }[] = []
+  let crm: { offer_id: string; adults: number | null; children: number | null }[] = []
   let ready = true
   try {
     ;[offers, categories, crm] = await Promise.all([
       listOffers({ archived: tab === "archivees", categoryId: searchParams.cat, q: searchParams.q }),
       listCategories(),
-      select<{ offer_id: string; adults: number; children: number }>("landing_leads", "select=offer_id,adults,children&status=eq.reserve&offer_id=not.is.null&limit=10000"),
+      select<{ offer_id: string; adults: number | null; children: number | null }>("landing_leads", "select=offer_id,adults,children&status=eq.reserve&offer_id=not.is.null&limit=10000"),
     ])
   } catch {
     ready = false
   }
   const catName = new Map(categories.map((c) => [c.id, c.name]))
   const crmPeople = new Map<string, number>()
-  crm.forEach((l) => crmPeople.set(l.offer_id, (crmPeople.get(l.offer_id) ?? 0) + l.adults + l.children))
+  crm.forEach((l) => crmPeople.set(l.offer_id, (crmPeople.get(l.offer_id) ?? 0) + (l.adults ?? 1) + (l.children ?? 0)))
 
   const active = offers.filter((o) => !o.archived_at)
   const seatsTotal = active.reduce((a, o) => a + (o.seats_total ?? 0), 0)

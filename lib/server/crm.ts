@@ -1,6 +1,8 @@
 // Logique du mini-CRM (serveur) : lecture des leads, statuts, historique, saisie manuelle.
 // Toutes les écritures passent ici et laissent une trace dans landing_lead_activities.
 import { insertOne, insertQuiet, select, update } from "./db"
+import { CONTACT_CHANNELS, isRegion, type ContactChannel } from "@/lib/regions"
+import { cleanEmail } from "@/lib/validation"
 import { normalizePhone, randomRef } from "./hash"
 import { sendMetaEvent } from "./meta"
 import { sendTikTokEvent } from "./tiktok"
@@ -47,8 +49,11 @@ export interface LeadRow {
   destination: string | null
   travel_date: string | null
   travel_period: string | null
-  adults: number
-  children: number
+  adults: number | null // null = non précisé (migration 0006)
+  children: number | null
+  email?: string | null
+  region?: string | null
+  contact_channel?: ContactChannel
   budget: string | null
   message: string | null
   status: Status
@@ -243,6 +248,66 @@ export async function setFollowUp(lead: LeadRow, isoDate: string | null, actor: 
   const when = isoDate && !Number.isNaN(Date.parse(isoDate)) ? new Date(isoDate).toISOString() : null
   await update("landing_leads", `id=eq.${lead.id}`, { next_follow_up_at: when })
   await logActivity(lead.id, actor, "follow_up", { body: when ? `Relance prévue le ${when.slice(0, 16).replace("T", " ")} (UTC)` : "Relance supprimée" })
+  return { ok: true }
+}
+
+export interface QualificationInput {
+  region?: string
+  email?: string
+  budget?: string
+  adults?: string
+  children?: string
+  travel_period?: string
+  contact_channel?: string
+}
+
+/**
+ * Qualification commerciale : données demandées PENDANT le suivi (pas au premier contact).
+ * Le budget est une déclaration du prospect, jamais une dépense réelle. Champ vide = effacé.
+ */
+export async function qualifyLead(lead: LeadRow, input: QualificationInput, actor: Actor): Promise<EditResult> {
+  if (lead.anonymized_at) return LOCKED
+  const patch: Record<string, unknown> = {}
+  const changes: string[] = []
+  const set = (col: keyof LeadRow & string, next: unknown, label: string, secret = false) => {
+    const prev = (lead as unknown as Record<string, unknown>)[col] ?? null
+    if (prev === next) return
+    patch[col] = next
+    changes.push(secret ? `${label} ${next === null ? "effacé" : "renseigné"}` : `${label} : ${next === null ? "—" : String(next)}`)
+  }
+  if (input.region !== undefined) {
+    const r = input.region.trim()
+    if (r && !isRegion(r)) return { ok: false, error: "Région inconnue" }
+    set("region", r || null, "Région")
+  }
+  if (input.email !== undefined) {
+    const raw = input.email.trim()
+    const e = raw ? cleanEmail(raw) : null
+    if (raw && !e) return { ok: false, error: "Adresse e-mail invalide" }
+    set("email", e, "E-mail", true)
+  }
+  if (input.budget !== undefined) {
+    const b = input.budget.trim().slice(0, 64)
+    set("budget", b || null, "Budget déclaré")
+  }
+  if (input.travel_period !== undefined) set("travel_period", input.travel_period.trim().slice(0, 64) || null, "Période souhaitée")
+  for (const [col, label, min, max] of [["adults", "Adultes", 1, 50], ["children", "Enfants", 0, 20]] as const) {
+    const raw = input[col]
+    if (raw === undefined) continue
+    if (raw.trim() === "") set(col, null, label)
+    else {
+      const n = parseInt(raw, 10)
+      if (!Number.isInteger(n) || n < min || n > max) return { ok: false, error: `${label} : nombre entre ${min} et ${max}` }
+      set(col, n, label)
+    }
+  }
+  if (input.contact_channel !== undefined) {
+    if (!(CONTACT_CHANNELS as readonly string[]).includes(input.contact_channel)) return { ok: false, error: "Canal de contact inconnu" }
+    set("contact_channel", input.contact_channel as ContactChannel, "Canal préféré")
+  }
+  if (!changes.length) return { ok: true }
+  await update("landing_leads", `id=eq.${lead.id}`, patch)
+  await logActivity(lead.id, actor, "note", { body: `Qualification — ${changes.join(" ; ")}` })
   return { ok: true }
 }
 

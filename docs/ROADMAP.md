@@ -17,11 +17,11 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | Priorité | Écart | Bloc |
 |---|---|---|
 | P0 | Aucun écart de sécurité critique trouvé dans le code lors de cette passe (droits SQL, jetons chiffrés, rôles testés). Audit approfondi en Bloc 1. | 1 |
-| P1 | **Aucune CI** : une régression peut être fusionnée sans contrôle | 1 |
-| P1 | Formulaire de la page Hôtels demande le **budget** dès le premier contact (contraire à la décision) ; voyageurs, type de séjour aussi | 2 |
-| P1 | **Aucun champ e-mail ni région** dans le modèle : impossible de qualifier comme décidé | 2 |
-| P1 | `adults = 1 / children = 0` **inventés** quand rien n'est saisi (qualité de données) | 2 |
-| P2 | En-têtes de sécurité HTTP absents (nosniff, frame, referrer, no-store sur /admin) | 1 |
+| P1 | ~~Aucune CI~~ → **corrigé** : `.github/workflows/ci.yml` (typecheck, tests, build) — *s'exécutera à l'ouverture de la PR* | 1 |
+| P1 | ~~Budget, voyageurs, type de séjour, dates demandés au premier contact~~ → **corrigé** (formulaire court) | 2 |
+| P1 | ~~Aucun champ e-mail ni région~~ → **corrigé** : migration 0006 + carte « Qualification » sur la fiche | 2 |
+| P1 | ~~`adults = 1 / children = 0` inventés~~ → **corrigé** : NULL = non précisé | 2 |
+| P2 | ~~En-têtes de sécurité HTTP absents~~ → **corrigé** et vérifié sur le serveur réel | 1 |
 | P2 | Limites de débit en mémoire (par instance serverless) : protection partielle | 1 |
 | P2 | Pipeline à 5 statuts (cible : 9) | 5 |
 | P2 | WhatsApp : clic ≠ message reçu ; pas d'API / webhook (accès propriétaire requis) | 4 |
@@ -36,8 +36,8 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | Bloc | Objectif | État | Preuves / notes |
 |---|---|---|---|
 | 0 | Baseline et cartographie | **VALIDÉ PAR TESTS** | `docs/CARTOGRAPHIE.md` ; tsc, Vitest 176/176, build, e2e 11/11 + 9/9 + 67/67 |
-| 1 | Fiabilité des fondations | EN COURS | voir journal ci-dessous |
-| 2 | Formulaires et collecte | À CORRIGER | écarts P1 ci-dessus |
+| 1 | Fiabilité des fondations | **TESTÉ** (partiel : limites de débit en mémoire et lint restent à traiter) | CI, en-têtes HTTP (`security-headers.test`, vérifiés par `curl`), repli d'insertion, export tolérant |
+| 2 | Formulaires et collecte | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* (migration 0006 à appliquer par le propriétaire) | `collecte.test` 11, `migration-0006.test` 6 (PostgreSQL/PGlite), `collect.e2e` (4 pages × mobile/bureau), `omra-journey` 9, `admin-flow` 70 |
 | 3 | Réseaux → landing pages | À AUDITER | |
 | 4 | WhatsApp | À AUDITER | API officielle : arbitrage et accès propriétaire |
 | 5 | CRM et équipe | PARTIEL (pipeline à 5 statuts) | |
@@ -50,3 +50,13 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 ## Journal
 
 - 02/11/2026 — Bloc 0 : état réel vérifié (main `04de912`, 3 branches, PR #1 ouverte hors sujet, 0 workflow CI).
+- 02/11/2026 — Interface admin refondue (menu latéral groupé, tiroir mobile) ; faux Supabase en mémoire pour tester l'admin de bout en bout (`tests/e2e/fake-supabase.mjs`).
+- 02/11/2026 — Bloc 1 : CI GitHub Actions, en-têtes de sécurité, repli d'insertion pour base non migrée, export tolérant.
+- 02/11/2026 — Bloc 2 : formulaire public court ; migration `0006_landing_qualification.sql` ; qualification CRM (région, e-mail, budget déclaré, voyageurs, période, canal) tracée dans l'historique ; e-mail et région effacés à l'anonymisation.
+
+## Limites des preuves (à lire)
+
+- Les tests « admin » utilisent un **faux Supabase en mémoire** : ils prouvent le comportement du code, pas celui de la base réelle. Le schéma SQL, lui, est vérifié sur un vrai PostgreSQL (PGlite).
+- Les formulaires publics sont testés dans un vrai navigateur, mais l'envoi à `/api/leads` y est intercepté. L'API est testée séparément avec une base simulée.
+- Aucune intégration externe (Meta, TikTok, WhatsApp Business) n'a été exercée : jeton Meta de production invalide, aucune API WhatsApp connectée.
+- La CI GitHub n'a pas encore tourné (elle démarre à l'ouverture de la PR).

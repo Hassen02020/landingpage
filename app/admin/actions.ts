@@ -23,6 +23,7 @@ import {
   createManualLead,
   getLead,
   isStatus,
+  qualifyLead,
   setFollowUp,
   withdrawMarketing,
   type Actor,
@@ -118,6 +119,19 @@ export async function assignAction(fd: FormData): Promise<void> {
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=Assignation+enregistr%C3%A9e`)
+}
+
+export async function qualifyAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadOr404(fd)
+  const input: Record<string, string> = {}
+  for (const k of ["region", "email", "budget", "adults", "children", "travel_period", "contact_channel"]) {
+    if (fd.has(k)) input[k] = field(fd, k)
+  }
+  const result = await qualifyLead(lead, input, actorOf(staff))
+  revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
+  redirect(`/admin/leads/${lead.id}?ok=Qualification+enregistr%C3%A9e`)
 }
 
 export async function withdrawMarketingAction(fd: FormData): Promise<void> {

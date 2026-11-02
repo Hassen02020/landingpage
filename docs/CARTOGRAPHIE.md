@@ -40,6 +40,7 @@
 | 0003 | intégrations, protection, codes promo | appliquée (01/11) |
 | 0004 | catalogue, catégories, stockage médias | appliquée (02/11) |
 | 0005 | équipe gérée, modèles WhatsApp, journal admin | appliquée (02/11) |
+| 0006 | e-mail, région, canal de contact, voyageurs facultatifs, effacement à l'anonymisation | **à appliquer par le propriétaire** (préparée dans cette PR) |
 
 Règles transverses vérifiées sous PGlite : `anon`/`authenticated` sans accès aux tables sensibles ; `service_role` sans DELETE ni TRUNCATE ; historique en ajout seul ; il reste toujours un administrateur actif.
 
@@ -54,4 +55,4 @@ Règles transverses vérifiées sous PGlite : `anon`/`authenticated` sans accès
 | e2e parcours Omra | 9/9 (aussi sur la production) |
 | e2e admin (faux Supabase en mémoire) | 67/67 — **simulation de la base, pas la vraie** |
 | Lint | **non configuré** (`next lint` demande une configuration) |
-| CI GitHub Actions | **aucun workflow** |
+| CI GitHub Actions | workflow ajouté dans cette PR (pas encore exécuté) |

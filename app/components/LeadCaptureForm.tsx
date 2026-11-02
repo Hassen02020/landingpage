@@ -24,6 +24,9 @@ const T = {
     budget: "Budget approximatif",
     message: "Précisions (facultatif)",
     promo: "Code promo (facultatif)",
+    email: "E-mail (facultatif)",
+    more: "Code promo ou précision (facultatif)",
+    hint: "Nous vous répondons sur WhatsApp.",
     consent: "J'accepte qu'Easy2Book me recontacte par téléphone / WhatsApp au sujet de ma demande. (obligatoire)",
     marketing: "J'accepte de recevoir les offres et promotions Easy2Book par WhatsApp / téléphone (facultatif).",
     submit: "🟢 Envoyer et continuer sur WhatsApp",
@@ -49,6 +52,9 @@ const T = {
     budget: "الميزانية التقريبية",
     message: "ملاحظات (اختياري)",
     promo: "كود التخفيض (اختياري)",
+    email: "البريد الإلكتروني (اختياري)",
+    more: "كود تخفيض أو ملاحظة (اختياري)",
+    hint: "نجاوبوك على واتساب.",
     consent: "أوافق على أن تتصل بي Easy2Book عبر الهاتف / واتساب بخصوص طلبي. (إجباري)",
     marketing: "أوافق على تلقي عروض Easy2Book عبر واتساب / الهاتف (اختياري).",
     submit: "🟢 أرسل وواصل على واتساب",
@@ -69,13 +75,11 @@ export interface LeadCaptureFormProps {
   defaultOffer?: string
   destinations?: string[]
   periods?: string[]
-  budgets?: string[]
-  tripTypes?: string[]
   niche?: string
   lang?: Lang
   accentColor?: string
   formId?: string
-  /** Champ « date souhaitée » (inutile quand les départs sont fixes, ex. Omra). Par défaut : affiché. */
+  /** Champ « date souhaitée » : non par défaut (demandée pendant la qualification). */
   showDate?: boolean
   /** Offre contrôlée par la page (ex. bouton « احجز هذا الفوج » qui pré-remplit le formulaire). */
   offerValue?: string
@@ -84,6 +88,10 @@ export interface LeadCaptureFormProps {
   adultOptions?: number[]
   /** Champ « code promo » (codes gérés dans /admin/promos). */
   showPromo?: boolean
+  /** Demander le nombre de voyageurs dès le premier contact (non par défaut : le formulaire reste court). */
+  askTravelers?: boolean
+  /** Champ e-mail facultatif (non par défaut : l'e-mail est complété pendant le suivi). */
+  askEmail?: boolean
   /** Libellé d'offre → identifiant catalogue (lien lead → offre pour la marge et les places). */
   offerIds?: Record<string, string>
 }
@@ -99,17 +107,17 @@ export function LeadCaptureForm({
   defaultOffer,
   destinations,
   periods,
-  budgets,
-  tripTypes,
   niche,
   lang = "fr",
   accentColor = "#25D366",
   formId = "lead-form",
-  showDate = true,
+  showDate = false, // la date / période souhaitée relève de la qualification (pas du premier contact)
   offerValue,
   onOfferChange,
   adultOptions = [1, 2, 3, 4, 5, 6, 8, 10],
   showPromo = false,
+  askTravelers = false,
+  askEmail = false,
   offerIds,
 }: LeadCaptureFormProps) {
   const t = T[lang]
@@ -151,13 +159,13 @@ export function LeadCaptureForm({
       offer,
       offer_id: (offer && offerIds?.[offer]) || undefined,
       niche: get("niche") || niche,
-      destination: get("destination"),
-      travel_date: get("travel_date"),
-      travel_period: get("travel_period"),
-      adults: get("adults") || "1",
-      children: get("children") || "0",
-      budget: get("budget"),
-      trip_type: get("trip_type"),
+      destination: get("destination") || undefined,
+      travel_date: get("travel_date") || undefined,
+      travel_period: get("travel_period") || undefined,
+      // décision propriétaire : budget, région, voyageurs, type de séjour = PLUS TARD (qualification CRM)
+      adults: askTravelers ? get("adults") || undefined : undefined,
+      children: askTravelers ? get("children") || undefined : undefined,
+      email: askEmail ? get("email") || undefined : undefined,
       message: get("message"),
       promo_code: get("promo_code") || undefined,
       contactConsent: true,
@@ -329,59 +337,39 @@ export function LeadCaptureForm({
         </label>
       ) : null}
 
+      {askTravelers && (
       <div className="grid grid-cols-2 gap-3">
-        <select name="adults" defaultValue="2" disabled={submitting} className={inputCls} aria-label={t.adults}>
-          {adultOptions.map((n) => (
-            <option key={n} value={n}>
-              {n} {t.adults}
-            </option>
-          ))}
-        </select>
-        <select name="children" defaultValue="0" disabled={submitting} className={inputCls} aria-label={t.children}>
-          {[0, 1, 2, 3, 4].map((n) => (
-            <option key={n} value={n}>
-              {n} {t.children}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {tripTypes && tripTypes.length > 0 && (
-        <select name="trip_type" defaultValue="" disabled={submitting} className={inputCls}>
-          <option value="">Type de séjour</option>
-          {tripTypes.map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </select>
+          <select name="adults" defaultValue="2" disabled={submitting} className={inputCls} aria-label={t.adults}>
+            {adultOptions.map((n) => (
+              <option key={n} value={n}>
+                {n} {t.adults}
+              </option>
+            ))}
+          </select>
+          <select name="children" defaultValue="0" disabled={submitting} className={inputCls} aria-label={t.children}>
+            {[0, 1, 2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n} {t.children}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
-      {budgets && budgets.length > 0 && (
-        <select name="budget" defaultValue="" disabled={submitting} className={inputCls} aria-label={t.budget}>
-          <option value="">{t.budget}</option>
-          {budgets.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
+      {askEmail && (
+        <input name="email" type="email" inputMode="email" placeholder={t.email} autoComplete="email" disabled={submitting} className={inputCls} dir="ltr" />
       )}
 
-      {showPromo && (
-        <input
-          name="promo_code"
-          type="text"
-          placeholder={t.promo}
-          autoComplete="off"
-          maxLength={32}
-          disabled={submitting}
-          className={`${inputCls} uppercase`}
-          dir="ltr"
-        />
-      )}
-
-      <textarea name="message" rows={2} placeholder={t.message} disabled={submitting} className={inputCls} maxLength={1000} />
+      {/* Facultatif et replié : le formulaire reste court (prénom, téléphone, offre) */}
+      <details className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600">
+        <summary className="cursor-pointer font-semibold select-none">{t.more}</summary>
+        <div className="mt-3 space-y-3">
+          {showPromo && (
+            <input name="promo_code" type="text" placeholder={t.promo} autoComplete="off" maxLength={32} disabled={submitting} className={`${inputCls} uppercase`} dir="ltr" />
+          )}
+          <textarea name="message" rows={2} placeholder={t.message} disabled={submitting} className={inputCls} maxLength={1000} />
+        </div>
+      </details>
 
       <label className="flex items-start gap-2 text-xs text-gray-600">
         <input type="checkbox" name="consent" value="1" className="mt-0.5" disabled={submitting} />
@@ -408,6 +396,7 @@ export function LeadCaptureForm({
       >
         {submitting ? t.sending : t.submit}
       </button>
+      <p className="text-center text-xs text-gray-500">{t.hint}</p>
     </form>
   )
 }
