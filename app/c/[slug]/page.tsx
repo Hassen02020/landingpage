@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { dbConfigured } from "@/lib/server/db"
 import { publicCategory } from "@/lib/server/catalog"
 import { SITE_URL } from "@/lib/config"
@@ -35,7 +35,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default async function CategoryPage({ params }: { params: { slug: string } }) {
+export default async function CategoryPage({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | string[] | undefined> }) {
+  // une seule adresse officielle par contenu : omra-2027 est servie par /omra (les paramètres de campagne sont conservés)
+  if (params.slug === "omra-2027") {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(searchParams)) for (const x of Array.isArray(v) ? v : v === undefined ? [] : [v]) qs.append(k, x)
+    redirect(`/omra${qs.toString() ? `?${qs}` : ""}`)
+  }
   const data = await load(params.slug)
   if (!data) notFound()
   return <CategoryView category={data.category} offers={data.offers} />

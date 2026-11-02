@@ -54,6 +54,7 @@ export interface LeadRow {
   email?: string | null
   region?: string | null
   contact_channel?: ContactChannel
+  form_page?: string | null
   budget: string | null
   message: string | null
   status: Status
@@ -69,6 +70,7 @@ export interface LeadRow {
   anonymized_at?: string | null
   channel: string | null
   utm_source: string | null
+  utm_medium?: string | null
   utm_campaign: string | null
   utm_content: string | null
   utm_term?: string | null

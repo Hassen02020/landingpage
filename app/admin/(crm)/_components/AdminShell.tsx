@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { logoutAction } from "../../actions"
 
-type IconName = "leads" | "pipeline" | "clock" | "plus" | "chart" | "calc" | "box" | "ticket" | "shield" | "plug" | "team" | "chat" | "download" | "user"
+type IconName = "leads" | "pipeline" | "clock" | "plus" | "chart" | "calc" | "box" | "ticket" | "shield" | "plug" | "link" | "team" | "chat" | "download" | "user"
 
 const ICONS: Record<IconName, React.ReactNode> = {
   leads: (<><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><path d="M16 5.5a3 3 0 0 1 0 5.6M18 14.4c1.8.8 3 2.6 3 5.6" /></>),
@@ -19,6 +19,7 @@ const ICONS: Record<IconName, React.ReactNode> = {
   box: (<><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z" /><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" /></>),
   ticket: (<><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-1a2 2 0 0 1 0-4v0a2 2 0 0 0 0-4V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" /><path d="M14 6v12" strokeDasharray="2 2" /></>),
   shield: (<><path d="M12 3 4.5 6v5.5c0 4.5 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5 7.5-9.5V6z" /><path d="m9 12 2.2 2.2L15.5 10" /></>),
+  link: (<><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>),
   plug: (<><path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0zM12 17v4" /></>),
   team: (<><circle cx="8" cy="8" r="3" /><circle cx="17" cy="9" r="2.4" /><path d="M2.5 20c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2M15 14.9c3 0 6.5 1.2 6.5 4.6" /></>),
   chat: (<><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" /><path d="M8 10h8M8 13h5" /></>),
@@ -61,6 +62,7 @@ const GROUPS: Group[] = [
     title: "Analyse",
     items: [
       { href: "/admin/stats", label: "Statistiques", icon: "chart" },
+      { href: "/admin/liens", label: "Liens de campagne", icon: "link" },
       { href: "/admin/calculateur", label: "Calculateur", icon: "calc" },
     ],
   },

@@ -9,6 +9,7 @@
 |---|---|---|---|---|---|
 | B — Landing pages | `/` (hub), `/omra`, `/voyages-organises`, `/summer-vibes`, `/c/[slug]` | lecture catalogue (ISR 60 s) | `landing_categories`, `landing_offers` | public (sans coût) | `omra-journey.e2e` 9/9, `catalog.test` |
 | D — Collecte CRM | `LeadCaptureForm` (6 pages) | `POST /api/leads` | `landing_leads` | public + origine + débit + captcha + anti-doublon + protection | `leads-route.test`, `consent.e2e` 11/11 |
+| A / I — Liens et attribution | `/admin/liens` (générateur, liens de bio des 3 comptes, règles de nommage) ; `/c/omra-2027` → `/omra` | `lib/links.ts`, `lib/channel.ts` (client + serveur) | `landing_leads` (`channel`, `utm_*`, `landing_page`, `form_page`) | équipe | `channel-links.test`, `social.e2e` |
 | I — Tracking | bandeau de consentement, pixels après accord | `POST /api/track`, `/api/pixels`, `/api/meta-capi` (ancien alias) | `landing_events` | public (consentement requis pour tout envoi) | `track-route.test`, `meta-tiktok.test`, `consent.e2e` |
 | I — Conversions serveur | — | Meta CAPI v21, TikTok Events v1.3 (`lib/server/meta.ts`, `tiktok.ts`) | — | serveur | `meta-tiktok.test` (simulés) ; **jeton Meta invalide en production (code 190)** |
 | C — WhatsApp | liens `wa.me` + message prérempli + `Réf: E2B-…` | `handleWhatsAppClick` → `Contact` | `landing_events` | public | `tracking-client.test` ; **aucune API WhatsApp Business ni webhook** |
@@ -40,7 +41,7 @@
 | 0003 | intégrations, protection, codes promo | appliquée (01/11) |
 | 0004 | catalogue, catégories, stockage médias | appliquée (02/11) |
 | 0005 | équipe gérée, modèles WhatsApp, journal admin | appliquée (02/11) |
-| 0006 | e-mail, région, canal de contact, voyageurs facultatifs, effacement à l'anonymisation | **à appliquer par le propriétaire** (préparée dans cette PR) |
+| 0006 | e-mail, région, canal de contact, page du formulaire, voyageurs facultatifs, effacement à l'anonymisation | **à appliquer par le propriétaire** (préparée dans cette PR) |
 
 Règles transverses vérifiées sous PGlite : `anon`/`authenticated` sans accès aux tables sensibles ; `service_role` sans DELETE ni TRUNCATE ; historique en ajout seul ; il reste toujours un administrateur actif.
 

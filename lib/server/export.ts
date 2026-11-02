@@ -6,9 +6,9 @@ const COLUMNS = [
   "created_at", "ref", "visitor_ref", "status", "first_name", "last_name", "phone", "product", "offer", "niche",
   "destination", "travel_date", "travel_period", "adults", "children", "region", "email", "contact_channel", "budget", "message",
   "marketing_consent", "channel", "utm_source", "utm_medium", "utm_campaign", "utm_content", "ad_id",
-  "landing_page", "source", "next_follow_up_at", "marketing_withdrawn_at", "booking_value", "booked_at",
+  "landing_page", "form_page", "source", "next_follow_up_at", "marketing_withdrawn_at", "booking_value", "booked_at",
 ]
-const NEW_COLUMNS = ["region", "email", "contact_channel"] // migration 0006
+const NEW_COLUMNS = ["region", "email", "contact_channel", "form_page"] // migration 0006
 const FILTERS: Record<string, RegExp> = {
   product: /^(omra|voyage|hotel|autre)$/,
   status: /^(nouveau|contacte|qualifie|reserve|perdu)$/,

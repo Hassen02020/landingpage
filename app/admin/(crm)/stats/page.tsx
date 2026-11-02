@@ -91,6 +91,7 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
           <thead className="border-b bg-gray-50">
             <tr>
               <th className={th}>Canal</th>
+              <th className={th}>Source</th>
               <th className={th}>Campagne</th>
               {level !== "campaign" && <th className={th}>Groupe d&apos;annonces</th>}
               {level === "ad" && <th className={th}>Annonce</th>}
@@ -103,13 +104,14 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
           </thead>
           <tbody>
             {groups.length === 0 && (
-              <tr><td colSpan={9} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>
+              <tr><td colSpan={10} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>
             )}
             {groups.map((g) => {
               const gr = rates(g)
               return (
                 <tr key={g.key} className="border-b last:border-0">
                   <td className={td}>{g.channel}</td>
+                  <td className={td}>{g.source}</td>
                   <td className={td}>{g.campaign}</td>
                   {level !== "campaign" && <td className={td}>{g.adset}</td>}
                   {level === "ad" && <td className={td}>{g.ad}</td>}

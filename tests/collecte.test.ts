@@ -92,6 +92,44 @@ describe("collecte : premier contact court (décisions du propriétaire)", () =>
   })
 })
 
+describe("traçabilité : page d'arrivée, page du formulaire, campagne", () => {
+  const attribution = (consentTouch = {}) => ({
+    visitor_id: "vid-123456789",
+    ref: "E2B-ABC234",
+    page_url: "https://landing.test/omra?utm_source=instagram&utm_campaign=bio#haut",
+    first_touch: { channel: "meta", utm_source: "instagram", utm_medium: "bio", utm_campaign: "bio", landing_page: "/", fbclid: "FB1", at: "2026-11-02T10:00:00Z" },
+    last_touch: { channel: "meta", utm_source: "instagram", utm_medium: "bio", utm_campaign: "bio", landing_page: "/", fbclid: "FB1", ...consentTouch, at: "2026-11-02T10:00:00Z" },
+  })
+  let n = 100
+  const mk = (o: Record<string, unknown> = {}) => ({ name: "Sami Test", phone: `9712${String(1000 + ++n).slice(-4)}`, product: "omra", contactConsent: true, ...o })
+
+  it("enregistre la page d'arrivée, la page du formulaire (sans paramètres ni ancre) et la campagne", async () => {
+    configureAll()
+    const f = installFetchMock()
+    await leadsPOST(post("/api/leads", mk({ attribution: attribution(), trackingConsent: true })))
+    expect(f.db.landing_leads[0]).toMatchObject({ channel: "meta", utm_source: "instagram", utm_medium: "bio", utm_campaign: "bio", landing_page: "/", form_page: "/omra" })
+  })
+
+  it("sans consentement : campagne gardée, identifiants publicitaires et personnels jamais enregistrés", async () => {
+    configureAll()
+    const f = installFetchMock()
+    await leadsPOST(post("/api/leads", mk({ attribution: attribution(), trackingConsent: false })))
+    const row = f.db.landing_leads[0]
+    expect(row).toMatchObject({ channel: "meta", utm_campaign: "bio", tracking_consent: false })
+    for (const k of ["fbclid", "ttclid", "visitor_id", "ip", "user_agent", "fbp", "fbc", "ttp"]) expect(row[k]).toBeUndefined()
+  })
+
+  it("adresse de page falsifiée ou invalide : ignorée, le lead est enregistré quand même", async () => {
+    configureAll()
+    const f = installFetchMock()
+    for (const page_url of ["pas une url", "javascript:alert(1)", "https://landing.test/<script>"]) {
+      await leadsPOST(post("/api/leads", mk({ attribution: { ...attribution(), page_url } })))
+    }
+    expect(f.db.landing_leads).toHaveLength(3)
+    expect(f.db.landing_leads.every((l) => l.form_page === null)).toBe(true)
+  })
+})
+
 describe("qualification CRM (pendant le suivi)", () => {
   const lead = (o: Partial<LeadRow> = {}) => ({ id: "33333333-3333-4333-8333-333333333333", ref: "E2B-ABC234", first_name: "Ahmed", adults: null, children: null, region: null, email: null, budget: null, travel_period: null, contact_channel: "whatsapp", anonymized_at: null, ...o }) as LeadRow
 

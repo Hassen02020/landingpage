@@ -82,6 +82,12 @@ Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sq
 
 Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to sign up » : seuls les comptes créés par un administrateur doivent exister.
 
+## Liens de campagne et attribution
+
+`/admin/liens` fabrique les liens à coller dans les bios, publications et publicités : réseau (Facebook, Instagram, TikTok, WhatsApp) × support (publicité, publication, bio, story, message) × page de destination × campagne. Noms normalisés (minuscules, sans accent), destination validée, option « paramètres dynamiques » pour les publicités payantes. Les liens de bio des comptes officiels y sont prêts à copier. **Aucune publicité n'est lancée et aucun compte n'est modifié par le code.**
+
+Chaque lead conserve : canal, source (`utm_source` · `utm_medium`), campagne / groupe / annonce, page d'**arrivée**, page du **formulaire**. Le canal est détecté sur des **mots entiers** (`lib/channel.ts`) ; un navigateur intégré (Instagram, Facebook, TikTok) sans paramètre est reconnu par son User-Agent, sans inventer d'UTM. Sans consentement aux traceurs : la campagne est gardée, mais ni fbclid / ttclid, ni identifiant visiteur, ni IP, ni navigateur. Preuve : `tests/e2e/social.e2e.mjs` (`bash tests/e2e/run-fake.sh tests/e2e/social.e2e.mjs`).
+
 ## Collecte : premier contact court, qualification ensuite
 
 Décisions du propriétaire appliquées au code :

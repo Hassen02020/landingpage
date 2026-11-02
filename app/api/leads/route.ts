@@ -27,11 +27,22 @@ const optInt = (v: unknown, min: number, max: number): number | null => {
 
 const cut = (v: string | undefined, max: number) => (v ? v.slice(0, max) : undefined)
 
+// Chemin (sans paramètres) de la page du formulaire, d'après l'URL envoyée par le navigateur.
+function formPage(pageUrl: string | undefined): string | null {
+  if (!pageUrl) return null
+  try {
+    const path = new URL(pageUrl).pathname
+    return /^\/[A-Za-z0-9\-_/.]*$/.test(path) ? path.slice(0, 255) : null
+  } catch {
+    return null
+  }
+}
+
 // Retire les colonnes récentes d'une ligne que la base refuse. Retourne true si la ligne a changé.
 function degradeRow(row: Record<string, unknown>, code: string | undefined): boolean {
   let changed = false
   if (code === "23503" || code === "PGRST204" || code === "42703") {
-    for (const col of ["offer_id", "email", "contact_channel"]) {
+    for (const col of ["offer_id", "email", "contact_channel", "form_page"]) {
       if (col in row) {
         delete row[col]
         changed = true
@@ -188,7 +199,8 @@ export async function POST(request: NextRequest) {
     first_channel: attr.first_channel ?? null,
     first_utm_source: attr.first_utm_source ?? null,
     first_utm_campaign: attr.first_utm_campaign ?? null,
-    landing_page: attr.landing_page ?? null,
+    landing_page: attr.landing_page ?? null, // page d'ARRIVÉE de la visite
+    form_page: formPage(attr.page_url), // page où le formulaire a été ENVOYÉ (colonne ajoutée par 0006)
     // identifiants publicitaires : uniquement avec consentement (contrainte en base)
     ...(trackingConsent
       ? {

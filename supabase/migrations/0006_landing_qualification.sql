@@ -28,10 +28,12 @@ END $$;
 ALTER TABLE public.landing_leads
   ADD COLUMN email           TEXT CHECK (char_length(email) <= 254 AND email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'),
   ADD COLUMN region          TEXT CHECK (region IN ('Tunis', 'Ariana', 'Ben Arous', 'Manouba', 'Nabeul', 'Zaghouan', 'Bizerte', 'Béja', 'Jendouba', 'Le Kef', 'Siliana', 'Sousse', 'Monastir', 'Mahdia', 'Sfax', 'Kairouan', 'Kasserine', 'Sidi Bouzid', 'Gabès', 'Médenine', 'Tataouine', 'Gafsa', 'Tozeur', 'Kébili', 'Étranger')),
-  ADD COLUMN contact_channel TEXT NOT NULL DEFAULT 'whatsapp' CHECK (contact_channel IN ('whatsapp', 'phone', 'email'));
+  ADD COLUMN contact_channel TEXT NOT NULL DEFAULT 'whatsapp' CHECK (contact_channel IN ('whatsapp', 'phone', 'email')),
+  ADD COLUMN form_page       TEXT CHECK (char_length(form_page) <= 255);
 
 COMMENT ON COLUMN public.landing_leads.email IS 'Facultatif. Donnée personnelle : effacée à l''anonymisation.';
 COMMENT ON COLUMN public.landing_leads.region IS 'Gouvernorat déclaré, demandé pendant la qualification (jamais au premier contact).';
+COMMENT ON COLUMN public.landing_leads.form_page IS 'Page (chemin, sans paramètres) où le formulaire a été envoyé ; landing_page = page d''arrivée de la visite.';
 COMMENT ON COLUMN public.landing_leads.budget IS 'Budget DÉCLARÉ par le prospect (déclaration commerciale, jamais une dépense réelle).';
 
 -- ---------- 2. Plus de valeurs inventées ----------

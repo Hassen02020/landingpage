@@ -35,6 +35,8 @@ export interface LeadStatRow {
   channel: string | null
   utm_campaign: string | null
   utm_term: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
   utm_content: string | null
   campaign_id: string | null
   adset_id: string | null
@@ -85,6 +87,7 @@ export function totals(rows: LeadStatRow[]): Counts {
 export interface GroupRow extends Counts {
   key: string
   channel: string
+  source: string // utm_source · utm_medium (ex. instagram · bio) : distingue Facebook / Instagram dans le canal « meta »
   campaign: string
   adset: string
   ad: string
@@ -96,13 +99,14 @@ export function groupBy(rows: LeadStatRow[], level: Level): GroupRow[] {
   const map = new Map<string, GroupRow>()
   for (const r of rows) {
     const channel = r.channel || "direct"
+    const source = [r.utm_source, r.utm_medium].filter(Boolean).join(" · ") || "—"
     const campaign = label(r.utm_campaign, r.campaign_id)
     const adset = level === "campaign" ? "" : label(r.utm_term, r.adset_id)
     const ad = level === "ad" ? label(r.utm_content, r.ad_id) : ""
-    const key = [channel, campaign, adset, ad].join("\u0000")
+    const key = [channel, source, campaign, adset, ad].join("\u0000")
     let g = map.get(key)
     if (!g) {
-      g = { key, channel, campaign, adset, ad, ...empty() }
+      g = { key, channel, source, campaign, adset, ad, ...empty() }
       map.set(key, g)
     }
     add(g, r)
@@ -136,7 +140,7 @@ export function groupByOffer(rows: LeadStatRow[]): OfferRow[] {
 export async function loadLeadStats(p: Period): Promise<LeadStatRow[]> {
   return select<LeadStatRow>(
     "landing_leads",
-    `select=status,booking_value,channel,utm_campaign,utm_term,utm_content,campaign_id,adset_id,ad_id,assigned_to,product,offer&${periodFilter("created_at", p)}&limit=10000`
+    `select=status,booking_value,channel,utm_source,utm_medium,utm_campaign,utm_term,utm_content,campaign_id,adset_id,ad_id,assigned_to,product,offer&${periodFilter("created_at", p)}&limit=10000`
   )
 }
 

@@ -127,7 +127,9 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <Row label="Campagne" value={lead.utm_campaign} />
           <Row label="Groupe d'annonces" value={lead.utm_term || lead.adset_id} />
           <Row label="Annonce" value={lead.utm_content || lead.ad_id} />
+          <Row label="Source" value={[lead.utm_source, lead.utm_medium].filter(Boolean).join(" · ") || null} />
           <Row label="Page d'arrivée" value={lead.landing_page} />
+          <Row label="Page du formulaire" value={lead.form_page} />
           <Row label="Code visiteur" value={lead.visitor_ref} />
           <Row label="Traceurs acceptés" value={lead.tracking_consent ? "Oui" : "Non"} />
           <Row label="Marketing" value={lead.marketing_withdrawn_at ? `Retiré le ${formatDate(lead.marketing_withdrawn_at)}` : lead.marketing_consent ? "Accepté" : "Non"} />

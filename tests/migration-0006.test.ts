@@ -56,6 +56,12 @@ describe("migration 0006_landing_qualification.sql", () => {
       expect(r).toEqual({ adults: null, children: null, email: null, region: null, contact_channel: "whatsapp" })
     })
 
+    it("form_page : chemin de la page du formulaire (255 caractères max), vide par défaut", async () => {
+      await lead({ form_page: "/omra" })
+      await expect(lead({ ref: "E2B-LONG23", idempotency_key: "evt-00000020", phone: "21622000020", form_page: "/" + "a".repeat(260) })).rejects.toThrow(/check/i)
+      expect((await db.query<{ form_page: string | null }>("SELECT form_page FROM landing_leads")).rows[0].form_page).toBe("/omra")
+    })
+
     it("valide l'e-mail (facultatif), la région, le canal et les bornes de voyageurs", async () => {
       await lead({ email: "client@example.tn", region: "Sousse", adults: 2, children: 1, contact_channel: "phone" })
       await expect(lead({ ref: "E2B-BAD234", idempotency_key: "evt-00000002", phone: "21622000001", email: "pas un email" })).rejects.toThrow(/check/i)
