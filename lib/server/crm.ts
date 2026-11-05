@@ -3,6 +3,7 @@
 import { insertOne, insertQuiet, select, update } from "./db"
 import { CONTACT_CHANNELS, isRegion, type ContactChannel } from "@/lib/regions"
 import { cleanEmail } from "@/lib/validation"
+import { describeAttachment, lookupConversation, parseWaRef } from "./whatsapp"
 import { normalizePhone, randomRef } from "./hash"
 import { sendMetaEvent } from "./meta"
 import { sendTikTokEvent } from "./tiktok"
@@ -100,7 +101,7 @@ export interface Activity {
 export async function logActivity(
   leadId: string,
   actor: Actor,
-  type: "created" | "status_change" | "note" | "assignment" | "follow_up" | "marketing_withdrawn",
+  type: "created" | "status_change" | "note" | "assignment" | "follow_up" | "marketing_withdrawn" | "wa_in" | "wa_out",
   extra: { from_status?: Status; to_status?: Status; body?: string } = {}
 ): Promise<void> {
   await insertQuiet("landing_lead_activities", {
@@ -313,6 +314,13 @@ export async function qualifyLead(lead: LeadRow, input: QualificationInput, acto
   return { ok: true }
 }
 
+/** Échange WhatsApp saisi par le conseiller (message reçu / envoyé) : aucune API ne le prouve, c'est une déclaration tracée. */
+export async function logWhatsApp(lead: LeadRow, direction: "in" | "out", text: string, actor: Actor): Promise<EditResult> {
+  if (lead.anonymized_at) return LOCKED
+  await logActivity(lead.id, actor, direction === "in" ? "wa_in" : "wa_out", { body: text.trim().slice(0, 500) || undefined })
+  return { ok: true }
+}
+
 export async function assignLead(lead: LeadRow, userId: string | null, actor: Actor): Promise<EditResult> {
   if (lead.anonymized_at) return LOCKED
   if (userId !== null && !UUID_RE.test(userId)) return { ok: false, error: "Responsable invalide" }
@@ -336,10 +344,16 @@ export interface ManualLeadInput {
   offer?: string
   destination?: string
   message?: string
+  /** Message WhatsApp reçu collé tel quel (ou seulement « E2B-XXXXXX ») : sert à retrouver le clic d'origine. */
+  waRef?: string
 }
 
 /** Saisie manuelle d'un lead arrivé par WhatsApp ou téléphone (sans formulaire). */
-export async function createManualLead(input: ManualLeadInput, actor: Actor): Promise<{ ok: true; id: string; ref: string } | { ok: false; error: string }> {
+export type ManualLeadResult =
+  | { ok: true; id: string; ref: string; existing?: boolean; attached?: "click" | "none" }
+  | { ok: false; error: string }
+
+export async function createManualLead(input: ManualLeadInput, actor: Actor): Promise<ManualLeadResult> {
   const name = input.name.trim()
   const phone = normalizePhone(input.phone)
   if (name.length < 2 || name.length > 200) return { ok: false, error: "Nom requis" }
@@ -347,6 +361,21 @@ export async function createManualLead(input: ManualLeadInput, actor: Actor): Pr
   if (!isProduct(input.product)) return { ok: false, error: "Produit invalide" }
   if (!(SOURCES as readonly string[]).includes(input.source) || input.source === "form") return { ok: false, error: "Source invalide" }
   const [firstName, ...rest] = name.split(/\s+/)
+
+  // Rattachement à la conversation d'origine (référence « Réf: E2B-… » du message reçu)
+  let waRef: string | null = null
+  if (input.waRef?.trim()) {
+    waRef = parseWaRef(input.waRef)
+    if (!waRef) return { ok: false, error: "Référence WhatsApp introuvable dans le texte (attendue : E2B-XXXXXX)" }
+  }
+  const conv = waRef ? await lookupConversation(waRef).catch(() => null) : null
+  if (conv?.lead && !conv.lead.anonymized_at) {
+    // le visiteur a déjà un lead : on ajoute le message à son historique au lieu de créer un doublon
+    await logActivity(conv.lead.id, actor, "wa_in", { body: `Message reçu rattaché à ce lead (réf. ${waRef})${input.message?.trim() ? ` : ${input.message.trim().slice(0, 400)}` : ""}` })
+    return { ok: true, id: conv.lead.id, ref: conv.lead.ref, existing: true }
+  }
+  const click = conv?.clicks[0]
+  const oldest = conv?.clicks.at(-1)
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const ref = randomRef()
@@ -366,10 +395,25 @@ export async function createManualLead(input: ManualLeadInput, actor: Actor): Pr
         contact_consent: true,
         marketing_consent: false,
         tracking_consent: false,
-        assigned_to: actor.id,
+        assigned_to: actor.id, // le conseiller qui reçoit le message en est responsable
+        ...(waRef ? { visitor_ref: waRef } : {}),
+        // origine retrouvée par le clic du visiteur (campagne : donnée non personnelle ; aucun identifiant publicitaire copié)
+        ...(click
+          ? {
+              channel: click.channel,
+              utm_source: click.utm_source,
+              utm_campaign: click.utm_campaign,
+              utm_content: click.utm_content,
+              ad_id: click.ad_id,
+              first_channel: oldest?.channel ?? click.channel,
+              first_utm_source: oldest?.utm_source ?? click.utm_source,
+              first_utm_campaign: oldest?.utm_campaign ?? click.utm_campaign,
+            }
+          : {}),
       })
-      await logActivity(row.id, actor, "created", { body: `Saisie manuelle (${SOURCE_LABELS[input.source as Source]})` })
-      return { ok: true, id: row.id, ref: row.ref }
+      await logActivity(row.id, actor, "created", { body: `Saisie manuelle (${SOURCE_LABELS[input.source as Source]})${conv ? ` — ${describeAttachment(conv)}` : ""}` })
+      if (waRef || input.source === "whatsapp") await logActivity(row.id, actor, "wa_in", { body: "Premier message reçu" })
+      return { ok: true, id: row.id, ref: row.ref, attached: waRef ? (click ? "click" : "none") : undefined }
     } catch (e) {
       const err = e as { isUniqueViolation?: boolean }
       if (!err.isUniqueViolation) return { ok: false, error: "Enregistrement impossible" }

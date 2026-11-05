@@ -2,7 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
 import { SOURCE_LABELS, STATUSES, STATUS_LABELS, findDuplicates, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
-import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, qualifyAction, withdrawMarketingAction } from "../../../actions"
+import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
 import { CONTACT_CHANNEL_LABELS, CONTACT_CHANNELS, REGIONS } from "@/lib/regions"
 import { listTemplates, renderTemplate } from "@/lib/server/templates"
 import { STATUS_COLORS, formatDate } from "../../../format"
@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic"
 const ACTIVITY_LABELS: Record<string, string> = {
   created: "Création", status_change: "Statut", note: "Note", assignment: "Assignation",
   follow_up: "Relance", marketing_withdrawn: "Consentement", anonymized: "Anonymisation",
+  wa_in: "💬 WhatsApp reçu", wa_out: "💬 WhatsApp envoyé",
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -66,6 +67,23 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
               >
                 💬 {t.title}
               </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {lead.phone && !locked && (
+        <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
+          <h2 className="font-bold">Échanges WhatsApp</h2>
+          <p className="text-gray-500 mb-2">Aucune API WhatsApp n&apos;est connectée : enregistrez ici les messages reçus ou envoyés pour suivre la conversation (comptée dans les statistiques WhatsApp).</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {([["in", "💬 Message reçu"], ["out", "💬 Message envoyé"]] as const).map(([dir, label]) => (
+              <form key={dir} action={whatsappLogAction} className="flex gap-2">
+                <input type="hidden" name="id" value={lead.id} />
+                <input type="hidden" name="direction" value={dir} />
+                <input name="text" maxLength={500} placeholder="Résumé (facultatif)" className="flex-1 min-w-0 px-3 py-2 rounded-lg border" />
+                <button className="shrink-0 border border-green-300 text-green-800 bg-green-50 hover:bg-green-100 rounded-lg px-3 py-2 font-semibold">{label}</button>
+              </form>
             ))}
           </div>
         </section>

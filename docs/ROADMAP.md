@@ -24,7 +24,9 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | P2 | ~~En-têtes de sécurité HTTP absents~~ → **corrigé** et vérifié sur le serveur réel | 1 |
 | P2 | Limites de débit en mémoire (par instance serverless) : protection partielle | 1 |
 | P2 | Pipeline à 5 statuts (cible : 9) | 5 |
-| P2 | WhatsApp : clic ≠ message reçu ; pas d'API / webhook (accès propriétaire requis) | 4 |
+| P1 | ~~Message WhatsApp reçu non rattaché à sa source (la référence E2B n'était lue nulle part)~~ → **corrigé** (« Nouveau lead » + message collé) | 4 |
+| P2 | ~~Clic confondu avec conversation~~ → **corrigé** : onglet Statistiques → WhatsApp (observé / saisi / calculé), échanges saisis | 4 |
+| Bloqué | API officielle WhatsApp Business / webhook : accès, numéro et politique de conservation à fournir par le propriétaire (`docs/WHATSAPP.md`) | 4 |
 | P1 | **Canal mal détecté** : un `utm_source` contenant « ig », « fb » ou « wa » (ex. « digital », « big-sale », « wave ») était classé Meta ou WhatsApp → ~~corrigé~~ (mots entiers, testé) | 3 |
 | P2 | ~~Pas de générateur de liens UTM~~ → **corrigé** : `/admin/liens` | 3 |
 | P2 | ~~Page du formulaire non enregistrée~~ → **corrigé** (`form_page`, migration 0006) ; ~~Facebook et Instagram indiscernables dans les stats~~ → colonne « Source » | 3 |
@@ -42,7 +44,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 1 | Fiabilité des fondations | **TESTÉ** (partiel : limites de débit en mémoire et lint restent à traiter) | CI, en-têtes HTTP (`security-headers.test`, vérifiés par `curl`), repli d'insertion, export tolérant |
 | 2 | Formulaires et collecte | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* (migration 0006 à appliquer par le propriétaire) | `collecte.test` 11, `migration-0006.test` 6 (PostgreSQL/PGlite), `collect.e2e` (4 pages × mobile/bureau), `omra-journey` 9, `admin-flow` 70 |
 | 3 | Réseaux → landing pages | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* | `channel-links.test` 11, `collecte.test` 14, `migration-0006.test` 7, `social.e2e` 24 (navigateur réel + faux Supabase) ; aucune campagne lancée |
-| 4 | WhatsApp | À AUDITER | API officielle : arbitrage et accès propriétaire |
+| 4 | WhatsApp | **VALIDÉ PAR TESTS** pour tout ce qui est possible sans API — *PR PRÉPARÉE* ; API officielle **BLOQUÉE** (accès propriétaire) | `whatsapp.e2e` (38 liens × avec / sans consentement), `whatsapp.test` 12, `admin-flow` (rattachement, doublon, origine inconnue, échanges, stats) |
 | 5 | CRM et équipe | PARTIEL (pipeline à 5 statuts) | |
 | 6 | Customer 360 | À AUDITER | |
 | 7 | Segmentation et marketing | À AUDITER | aucun envoi réel sans autorisation |
@@ -73,3 +75,12 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | Clic → landing → navigation interne → formulaire → ligne enregistrée : canal, source, support, campagne, groupe, annonce, page d'arrivée, page du formulaire | Que les applications mobiles transmettent leur origine : sans UTM, seul le navigateur intégré (Instagram, Facebook, TikTok) est reconnu |
 | Sans consentement : campagne gardée, **aucun** fbclid / ttclid / identifiant visiteur / IP / navigateur enregistrés | Envoi réel à Meta / TikTok : jetons absents dans les tests ; Meta de production invalide |
 | Un `utm_source` inconnu ou trompeur (« digital_bio ») n'est pas attribué à Meta | Lien de bio sur un vrai profil : à coller par le propriétaire (aucun compte modifié) |
+- 05/11/2026 — Bloc 4 : audit navigateur des 38 liens WhatsApp (aucun défaut côté site) ; rattachement d'un message reçu à son clic d'origine (référence E2B) ; échanges reçus / envoyés saisis (`wa_in`, `wa_out`, migration 0006) ; onglet Statistiques → WhatsApp ; audit de l'API officielle documenté sans simulation (`docs/WHATSAPP.md`).
+
+### Bloc 4 — prouvé / non prouvé
+
+| Prouvé (test exécuté) | Non prouvé / bloqué |
+|---|---|
+| 38 liens, numéro officiel unique, référence ajoutée à chaque clic, événement « Contact » seulement avec consentement | **Envoi réel d'un message** et **réception réelle** : aucune API connectée, aucun message envoyé |
+| Message collé → clic d'origine retrouvé (canal, source, campagne) sans copier d'identifiant publicitaire ; doublon évité ; origine inconnue déclarée comme telle | Que le visiteur envoie réellement le message prérempli (non observable sans l'API officielle) |
+| Échanges saisis tracés ; entonnoir WhatsApp avec natures séparées | Webhook, statuts de lecture, réponses automatiques : bloqués (numéro, accès, conservation du texte) |

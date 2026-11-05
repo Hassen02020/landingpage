@@ -42,6 +42,13 @@ COMMENT ON COLUMN public.landing_leads.budget IS 'Budget DÉCLARÉ par le prospe
 ALTER TABLE public.landing_leads ALTER COLUMN adults DROP NOT NULL, ALTER COLUMN adults DROP DEFAULT;
 ALTER TABLE public.landing_leads ALTER COLUMN children DROP NOT NULL, ALTER COLUMN children DROP DEFAULT;
 
+-- ---------- 2 bis. Échanges WhatsApp enregistrés par l'équipe ----------
+-- « Message reçu » / « message envoyé » : saisis par le conseiller (aucune API WhatsApp n'est connectée).
+-- Ils permettent de compter les conversations suivies sans les confondre avec de simples clics.
+ALTER TABLE public.landing_lead_activities DROP CONSTRAINT landing_lead_activities_type_check;
+ALTER TABLE public.landing_lead_activities ADD CONSTRAINT landing_lead_activities_type_check
+  CHECK (type IN ('created', 'status_change', 'note', 'assignment', 'follow_up', 'marketing_withdrawn', 'anonymized', 'wa_in', 'wa_out'));
+
 -- ---------- 3. Conservation : l'e-mail et la région sont effacés à l'anonymisation ----------
 -- (fonction de 0002 reprise à l'identique, avec email et region en plus)
 CREATE OR REPLACE FUNCTION public.landing_purge_personal_data() RETURNS jsonb

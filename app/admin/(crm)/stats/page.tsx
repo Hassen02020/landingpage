@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { select } from "@/lib/server/db"
+import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
 import { groupBy, groupByOffer, loadLeadStats, loadTeam, parsePeriod, rates, teamStats, totals, type Counts, type Level, type Period } from "@/lib/server/stats"
 
 export const dynamic = "force-dynamic"
@@ -28,6 +29,7 @@ function Tabs({ view, p }: { view: string; p: Period }) {
     <div className="flex gap-2">
       <Link href={`/admin/stats?view=marketing&${q}`} className={cls("marketing")}>Marketing</Link>
       <Link href={`/admin/stats?view=equipe&${q}`} className={cls("equipe")}>Équipe | Suivi</Link>
+      <Link href={`/admin/stats?view=whatsapp&${q}`} className={cls("whatsapp")}>WhatsApp</Link>
       <Link href={`/admin/stats?view=offres&${q}`} className={cls("offres")}>Offres</Link>
       <Link href={`/admin/stats?view=niches&${q}`} className={cls("niches")}>Niches</Link>
     </div>
@@ -183,6 +185,51 @@ async function Team({ p, member }: { p: Period; member: string }) {
   )
 }
 
+async function WhatsAppView({ p }: { p: Period }) {
+  const f = await loadWhatsApp(p).catch(() => null)
+  if (!f) return <p className="text-red-700">Lecture impossible.</p>
+  const rows: { step: string; value: string | number; nature: "Observé" | "Saisi par l'équipe" | "Calculé"; source: string }[] = [
+    { step: "Clics WhatsApp", value: f.clicks, nature: "Observé", source: "Navigateur du visiteur (événement « Contact »), uniquement s'il a accepté les traceurs. Un clic n'est pas un message envoyé." },
+    { step: "Visiteurs distincts ayant cliqué", value: f.visitorsClicked, nature: "Observé", source: "Références E2B distinctes des clics." },
+    { step: "Demandes par formulaire", value: f.formLeads, nature: "Observé", source: "Leads créés par le formulaire du site." },
+    { step: "Leads créés depuis un message reçu", value: f.whatsappLeads, nature: "Saisi par l'équipe", source: "« Nouveau lead » avec la source WhatsApp." },
+    { step: "Leads rattachés à un clic", value: f.attachedLeads, nature: "Calculé", source: "Leads dont la référence E2B correspond à un clic enregistré." },
+    { step: "Messages reçus enregistrés", value: f.messagesIn, nature: "Saisi par l'équipe", source: "Bouton « Message reçu » de la fiche lead." },
+    { step: "Messages envoyés enregistrés", value: f.messagesOut, nature: "Saisi par l'équipe", source: "Bouton « Message envoyé » de la fiche lead." },
+    { step: "Conversations suivies", value: f.conversations, nature: "Calculé", source: "Leads avec au moins un échange enregistré." },
+    { step: "Réservations issues de WhatsApp", value: f.reserved, nature: "Calculé", source: "Leads réservés ayant la source WhatsApp, un clic rattaché ou un échange enregistré." },
+  ]
+  const tone: Record<string, string> = { "Observé": "bg-blue-100 text-blue-800", "Saisi par l'équipe": "bg-amber-100 text-amber-800", "Calculé": "bg-gray-200 text-gray-700" }
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Kpi label="Clics WhatsApp" value={f.clicks} tone="bg-blue-500" sub={`${f.visitorsClicked} visiteur(s)`} />
+        <Kpi label="Conversations suivies" value={f.conversations} tone="bg-amber-500" sub={`${f.messagesIn} reçus · ${f.messagesOut} envoyés`} />
+        <Kpi label="Rattachement des messages" value={pct(f.whatsappAttachedRate)} tone="bg-violet-600" sub="leads WhatsApp dont le clic est retrouvé" />
+        <Kpi label="Réservations" value={f.reserved} tone="bg-green-600" sub={`CA : ${tnd(f.revenue)}`} />
+      </div>
+      <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b bg-gray-50"><tr>{["Étape", "Valeur", "Nature", "Définition et source"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.step} className="border-b last:border-0">
+                <td className={`${td} font-semibold`}>{r.step}</td>
+                <td className={td}>{r.value}</td>
+                <td className={td}><span className={`text-xs font-bold px-2 py-1 rounded-full ${tone[r.nature]}`}>{r.nature}</span></td>
+                <td className="p-3 text-gray-600">{r.source}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">
+        <strong>Non observable sans l&apos;API officielle WhatsApp Business :</strong> l&apos;ouverture de l&apos;application, l&apos;envoi réel du message par le visiteur, la lecture et la réponse. Ces étapes ne sont jamais déduites d&apos;un clic.
+      </div>
+    </div>
+  )
+}
+
 async function Offers({ p }: { p: Period }) {
   const rows = await loadLeadStats(p).catch(() => null)
   if (!rows) return <p className="text-red-700">Lecture impossible.</p>
@@ -233,7 +280,7 @@ async function Niches() {
 }
 
 export default async function StatsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
-  const view = ["marketing", "equipe", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
+  const view = ["marketing", "equipe", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
   const p = parsePeriod(searchParams.from, searchParams.to)
   const level: Level = (["campaign", "adset", "ad"] as const).find((l) => l === searchParams.level) ?? "campaign"
   const member = /^[0-9a-f-]{36}$/i.test(searchParams.member || "") ? searchParams.member! : ""
@@ -253,7 +300,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
           view={view}
           p={p}
           extra={
-            view === "offres" ? null : view === "marketing" ? (
+            view === "offres" || view === "whatsapp" ? null : view === "marketing" ? (
               <label className="flex flex-col">Détail
                 <select name="level" defaultValue={level} className="border rounded-lg px-2 py-1.5">
                   <option value="campaign">Par campagne</option>
@@ -278,6 +325,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
 
       {view === "marketing" && <Marketing p={p} level={level} />}
       {view === "equipe" && <Team p={p} member={member} />}
+      {view === "whatsapp" && <WhatsAppView p={p} />}
       {view === "offres" && <Offers p={p} />}
       {view === "niches" && <Niches />}
     </div>

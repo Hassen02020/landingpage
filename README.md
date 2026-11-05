@@ -82,6 +82,10 @@ Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sq
 
 Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to sign up » : seuls les comptes créés par un administrateur doivent exister.
 
+## WhatsApp
+
+Les 38 liens WhatsApp des pages publiques pointent vers un numéro unique (`lib/config.ts`) et ajoutent au message une référence `Réf: E2B-XXXXXX`. Dans « Nouveau lead », collez le message reçu : le CRM retrouve le clic d'origine (canal, source, campagne) ou déclare l'origine inconnue ; un visiteur déjà connu n'est jamais dupliqué. Les messages reçus / envoyés sont **saisis** sur la fiche (aucune API WhatsApp n'est connectée) et comptés dans **Statistiques → WhatsApp**, où chaque étape indique si elle est observée, saisie ou calculée. Audit de l'API officielle, prérequis et blocages : `docs/WHATSAPP.md`. Preuve : `bash tests/e2e/run-public.sh tests/e2e/whatsapp.e2e.mjs`.
+
 ## Liens de campagne et attribution
 
 `/admin/liens` fabrique les liens à coller dans les bios, publications et publicités : réseau (Facebook, Instagram, TikTok, WhatsApp) × support (publicité, publication, bio, story, message) × page de destination × campagne. Noms normalisés (minuscules, sans accent), destination validée, option « paramètres dynamiques » pour les publicités payantes. Les liens de bio des comptes officiels y sont prêts à copier. **Aucune publicité n'est lancée et aucun compte n'est modifié par le code.**

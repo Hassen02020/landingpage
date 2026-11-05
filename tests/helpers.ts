@@ -71,7 +71,7 @@ export function installFetchMock(opts: { dbStatus?: number } = {}) {
         // filtres simulés : id, ref, idempotency_key, phone (suffisant pour ces tests)
         const eqs = Array.from(q.matchAll(/(\w+)[.=]eq\.([^,&)]+)/g))
           .map((m) => [m[1], m[2]])
-          .filter(([k]) => ["id", "ref", "idempotency_key", "phone", "lead_id", "user_id", "provider", "code"].includes(k))
+          .filter(([k]) => ["id", "ref", "idempotency_key", "phone", "lead_id", "user_id", "provider", "code", "visitor_ref", "event_name"].includes(k))
         const match = (r: any) => eqs.length === 0 || eqs.some(([k, v]) => String(r[k]) === v)
         if (method === "GET") return new Response(JSON.stringify(rows.filter(match).reverse()), { status: 200 })
         if (method === "PATCH") {

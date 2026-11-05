@@ -81,7 +81,11 @@ export function createFakeSupabase() {
     landing_lead_activities: [
       { id: 1, created_at: day(0.1), lead_id: "00000000-0000-4000-8000-000000000001", actor_label: "système", type: "created", from_status: null, to_status: null, body: "Formulaire /omra — consentement v2026-11-v1" },
     ],
-    landing_events: [],
+    landing_events: [
+      // clics WhatsApp enregistrés (visiteurs ayant accepté les traceurs) : permettent de retrouver l'origine d'un message reçu
+      { id: 1, created_at: day(1), event_name: "Contact", event_id: "evt-seed-0001", visitor_ref: "E2B-SEED22", product: "omra", offer: null, niche: "omra-ramadan-2027", location: "hero", channel: "meta", utm_source: "instagram", utm_campaign: "bio", utm_content: null, ad_id: null },
+      { id: 2, created_at: day(2), event_name: "Contact", event_id: "evt-seed-0002", visitor_ref: "E2B-SEED33", product: "voyage", offer: null, niche: null, location: "header", channel: "tiktok", utm_source: "tiktok", utm_campaign: "ugc-2", utm_content: null, ad_id: null },
+    ],
     landing_categories: [
       { id: "cccccccc-0000-4000-8000-000000000001", slug: "omra-2027", name: "عمرة رمضان وشوال 2027", product: "omra", lang: "ar", headline: "3 أفواج", description: null, banner_desktop: null, banner_mobile: null, seo_title: null, seo_description: null, visible: true, position: 0, updated_at: day(1) },
       { id: "cccccccc-0000-4000-8000-000000000002", slug: "turquie-ete", name: "Turquie été 2027", product: "voyage", lang: "fr", headline: "Istanbul, Cappadoce, Antalya", description: null, banner_desktop: null, banner_mobile: null, seo_title: null, seo_description: null, visible: false, position: 1, updated_at: day(1) },

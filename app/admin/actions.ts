@@ -23,6 +23,7 @@ import {
   createManualLead,
   getLead,
   isStatus,
+  logWhatsApp,
   qualifyLead,
   setFollowUp,
   withdrawMarketing,
@@ -134,6 +135,16 @@ export async function qualifyAction(fd: FormData): Promise<void> {
   redirect(`/admin/leads/${lead.id}?ok=Qualification+enregistr%C3%A9e`)
 }
 
+export async function whatsappLogAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadOr404(fd)
+  const direction = field(fd, "direction") === "out" ? "out" : "in"
+  const result = await logWhatsApp(lead, direction, field(fd, "text"), actorOf(staff)).catch(() => ({ ok: false as const, error: "Enregistrement impossible (migration 0006 appliquée ?)" }))
+  revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
+  redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(direction === "in" ? "Message reçu enregistré" : "Message envoyé enregistré")}`)
+}
+
 export async function withdrawMarketingAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadOr404(fd)
@@ -154,11 +165,19 @@ export async function createLeadAction(fd: FormData): Promise<void> {
       offer: field(fd, "offer"),
       destination: field(fd, "destination"),
       message: field(fd, "message"),
+      waRef: field(fd, "wa_ref"),
     },
     actorOf(staff)
   )
   if (!result.ok) redirect(`/admin/leads/new?erreur=${encodeURIComponent(result.error)}`)
-  redirect(`/admin/leads/${result.id}?ok=Lead+cr%C3%A9%C3%A9`)
+  const note = result.existing
+    ? `Ce visiteur avait déjà une demande (${result.ref}) : le message a été ajouté à son historique, aucun doublon créé`
+    : result.attached === "click"
+      ? "Lead créé et rattaché au clic WhatsApp d'origine (source et campagne retrouvées)"
+      : result.attached === "none"
+        ? "Lead créé. Aucun clic retrouvé pour cette référence : origine inconnue"
+        : "Lead créé"
+  redirect(`/admin/leads/${result.id}?ok=${encodeURIComponent(note)}`)
 }
 
 // ---------------------------------------------------------------- actions groupées et pipeline
