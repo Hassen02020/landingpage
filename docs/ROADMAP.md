@@ -46,7 +46,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 3 | Réseaux → landing pages | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* | `channel-links.test` 11, `collecte.test` 14, `migration-0006.test` 7, `social.e2e` 24 (navigateur réel + faux Supabase) ; aucune campagne lancée |
 | 4 | WhatsApp | **VALIDÉ PAR TESTS** pour tout ce qui est possible sans API — *PR PRÉPARÉE* ; API officielle **BLOQUÉE** (accès propriétaire) | `whatsapp.e2e` (38 liens × avec / sans consentement), `whatsapp.test` 12, `admin-flow` (rattachement, doublon, origine inconnue, échanges, stats) |
 | 5 | CRM et équipe | **VALIDÉ PAR TESTS** (pipeline à 10 statuts) — *PR PRÉPARÉE* (migration 0007, après 0006, à appliquer par le propriétaire) | `pipeline.test` 18, `crm-lot3.test`, `admin-flow` 96 contrôles dont le scénario prospect → conseiller → qualification → devis → négociation → réservation → gagné (faux Supabase) |
-| 6 | Customer 360 | À AUDITER | |
+| 6 | Customer 360 | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* (aucune migration) | `customer360.test` 8, `admin-flow` : liste Clients, fiche client (demandes, chronologie commune, consentements, ventes / CA), liens lead ⇄ client, 404 sur clé invalide |
 | 7 | Segmentation et marketing | À AUDITER | aucun envoi réel sans autorisation |
 | 8 | Fidélité / VIP | EN ATTENTE D'ARBITRAGE | règles non définies |
 | 9 | Analytics | PARTIEL | stats marketing / équipe / offres présentes |
@@ -93,3 +93,10 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 |---|---|
 | Parcours complet en navigateur (affectation, qualification, 6 étapes, réservation refusée sans montant, gagné) ; `booked_at` et montant inchangés de réservé à gagné ; historique avant / après de chaque étape | Migration 0007 sur la base de production : **non appliquée** (PGlite seulement) ; l'e2e tourne sur un faux Supabase |
 | Perdu depuis une étape ouverte, réouverture, filtre « vendus », actions groupées sans les statuts de vente, CA sans double comptage | Sens exact de `reserve` / `gagne` : **proposition à valider** par le propriétaire ; règle de répartition des leads entre conseillers : non définie |
+
+### Bloc 6 — prouvé / non prouvé
+
+| Prouvé (test exécuté) | Non prouvé / limites |
+|---|---|
+| Un numéro = un client (2 demandes du même numéro → 1 fiche) ; ventes = réservé + gagné sans double comptage ; un retrait marketing sur une demande exclut le client | Regroupement par **téléphone seulement** : un même client avec deux numéros reste deux fiches (pas de fusion manuelle) |
+| Chronologie commune de toutes les demandes ; clé non numérique refusée sans requête | Dossiers anonymisés exclus par construction ; e2e sur faux Supabase, pas sur la base réelle ; liste limitée aux 5 000 demandes les plus récentes |

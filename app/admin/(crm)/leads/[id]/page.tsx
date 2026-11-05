@@ -45,6 +45,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-black">{lead.first_name} {lead.last_name ?? ""}</h1>
         <span className="font-mono text-gray-500">{lead.ref}</span>
+        {lead.phone && !locked && <Link href={`/admin/clients/${lead.phone}`} className="text-sm underline">Voir le client (360°)</Link>}
         <span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>
         {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="ml-auto bg-green-500 text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>}
       </div>

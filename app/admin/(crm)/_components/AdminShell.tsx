@@ -54,6 +54,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/admin", label: "Leads", icon: "leads", match: (p, q) => (p === "/admin" && q.get("followUp") !== "due") || (p.startsWith("/admin/leads/") && p !== "/admin/leads/new") },
       { href: "/admin/pipeline", label: "Pipeline", icon: "pipeline" },
+      { href: "/admin/clients", label: "Clients", icon: "team" },
       { href: "/admin?followUp=due", label: "Relances", icon: "clock", match: (p, q) => p === "/admin" && q.get("followUp") === "due" },
       { href: "/admin/leads/new", label: "Nouveau lead", icon: "plus" },
     ],

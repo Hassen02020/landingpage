@@ -276,6 +276,40 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   check("statistiques : « Vendus » = réservé + gagné, chiffre d'affaires sans double comptage", statsText.includes("Vendus") && statsText.includes(`CA : ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(revenue).replace(/\u202f|\u00a0/g, " ")} TND`), `CA attendu ${revenue}`)
 }
 
+// ---------------------------------------------------------------- Customer 360 (Bloc 6)
+{
+  // Ahmed (lead 1) et Walid (lead 7) partagent le même numéro : un seul client, deux demandes
+  await page.goto(`${BASE}/admin/clients`, { waitUntil: "networkidle" })
+  const rows = await page.locator("tr[data-phone]").evaluateAll((els) => els.map((e) => e.getAttribute("data-phone")))
+  const shared = "21698140514"
+  check("clients : un numéro partagé n'apparaît qu'une fois", rows.filter((r) => r === shared).length === 1, rows.join(","))
+  check("clients : un client par numéro distinct", rows.length === new Set(db.landing_leads.filter((l) => l.phone).map((l) => l.phone)).size, String(rows.length))
+  await page.fill('input[name="q"]', "98140514")
+  await page.getByRole("button", { name: "Chercher" }).click()
+  await page.waitForURL(/q=98140514/)
+  check("clients : recherche par téléphone", (await page.locator("tr[data-phone]").count()) === 1)
+  await page.locator(`tr[data-phone="${shared}"] a`).first().click()
+  await page.waitForURL(new RegExp(`/admin/clients/${shared}`))
+  const text = await page.locator("main").innerText()
+  const mine = db.landing_leads.filter((l) => l.phone === shared)
+  check("fiche client : toutes les demandes du numéro sont listées", mine.length >= 2 && mine.every((l) => text.includes(l.ref)))
+  const acts = db.landing_lead_activities.filter((a) => mine.some((l) => l.id === a.lead_id))
+  check("fiche client : la chronologie commune contient chaque activité", (await page.locator('[data-testid="client-timeline"] li').count()) === Math.max(1, acts.length), `${acts.length}`)
+  check("fiche client : bloc consentements affiché", text.includes("Consentements"))
+  await page.getByRole("link", { name: mine[0].ref }).click()
+  await page.waitForURL(/\/admin\/leads\//)
+  check("fiche client → fiche lead", true)
+  await page.getByRole("link", { name: /Voir le client/ }).click()
+  await page.waitForURL(new RegExp(`/admin/clients/${shared}`))
+  check("fiche lead → fiche client (360°)", true)
+  check("fiche client inconnue → 404", (await page.goto(`${BASE}/admin/clients/21600000001`)).status() === 404)
+  check("clé invalide → 404 (aucune injection)", (await page.goto(`${BASE}/admin/clients/1;drop`)).status() === 404)
+  // la vente du scénario Bloc 5 (Slim) apparaît côté client avec son chiffre d'affaires
+  await page.goto(`${BASE}/admin/clients/21677889900`, { waitUntil: "networkidle" })
+  const stats = await page.locator('[data-testid="client-stats"]').innerText()
+  check("fiche client : ventes et CA du client (réservé → gagné compté une fois)", /Ventes[^\n]*\n?/.test(stats) && stats.replace(/\s/g, " ").includes("9") , stats.replace(/\n/g, " | "))
+}
+
 // ---------------------------------------------------------------- statistiques
 for (const [label, path, text] of [["marketing", "/admin/stats", "Leads reçus"], ["équipe", "/admin/stats?view=equipe", "Taux de conclusion"], ["offres", "/admin/stats?view=offres", "Offre"], ["calculateur", "/admin/calculateur", "Profit net"]]) {
   await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" })
