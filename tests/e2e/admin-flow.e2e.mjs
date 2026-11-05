@@ -310,6 +310,29 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   check("fiche client : ventes et CA du client (réservé → gagné compté une fois)", /Ventes[^\n]*\n?/.test(stats) && stats.replace(/\s/g, " ").includes("9") , stats.replace(/\n/g, " | "))
 }
 
+// ---------------------------------------------------------------- Segments (Bloc 7) : aucun envoi
+{
+  const sendsBefore = db.landing_lead_activities.length
+  await page.goto(`${BASE}/admin/segments`, { waitUntil: "networkidle" })
+  const cards = await page.locator("[data-segment]").count()
+  check("segments : 7 segments affichés", cards === 7, String(cards))
+  const txt = await page.locator("main").innerText()
+  check("segments : mention explicite « rien n'est envoyé »", txt.includes("Rien n'est envoyé") || txt.includes("n'est envoyé"))
+  // « À traiter » : au moins le lead Fatma (nouveau) ; tous les membres affichés ont un statut nouveau / à contacter
+  await page.locator('[data-segment="a-traiter"]').click()
+  await page.waitForURL(/s=a-traiter/)
+  const statuses = await page.locator('[data-testid="segment-members"] tr[data-phone] td:nth-child(2)').allInnerTexts()
+  check("segments : « À traiter » ne contient que nouveau / à contacter", statuses.length >= 1 && statuses.every((t) => t === "Nouveau" || t === "À contacter"), statuses.join(","))
+  // marketing : aucun client sans consentement marketing dans la liste contactable
+  for (const slug of ["perdus-recuperables", "omra-sans-reservation", "clients-reserves"]) {
+    await page.goto(`${BASE}/admin/segments?s=${slug}`, { waitUntil: "networkidle" })
+    const phones = await page.locator('[data-testid="segment-members"] tr[data-phone]').evaluateAll((els) => els.map((e) => e.getAttribute("data-phone")))
+    const bad = phones.filter((ph) => db.landing_leads.some((l) => l.phone === ph && (!l.marketing_consent || l.marketing_withdrawn_at)))
+    check(`segments : « ${slug} » exclut tout client sans consentement marketing`, bad.length === 0, bad.join(","))
+  }
+  check("segments : la consultation n'écrit rien (aucune activité créée)", db.landing_lead_activities.length === sendsBefore)
+}
+
 // ---------------------------------------------------------------- statistiques
 for (const [label, path, text] of [["marketing", "/admin/stats", "Leads reçus"], ["équipe", "/admin/stats?view=equipe", "Taux de conclusion"], ["offres", "/admin/stats?view=offres", "Offre"], ["calculateur", "/admin/calculateur", "Profit net"]]) {
   await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" })

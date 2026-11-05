@@ -47,7 +47,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 4 | WhatsApp | **VALIDÉ PAR TESTS** pour tout ce qui est possible sans API — *PR PRÉPARÉE* ; API officielle **BLOQUÉE** (accès propriétaire) | `whatsapp.e2e` (38 liens × avec / sans consentement), `whatsapp.test` 12, `admin-flow` (rattachement, doublon, origine inconnue, échanges, stats) |
 | 5 | CRM et équipe | **VALIDÉ PAR TESTS** (pipeline à 10 statuts) — *PR PRÉPARÉE* (migration 0007, après 0006, à appliquer par le propriétaire) | `pipeline.test` 18, `crm-lot3.test`, `admin-flow` 96 contrôles dont le scénario prospect → conseiller → qualification → devis → négociation → réservation → gagné (faux Supabase) |
 | 6 | Customer 360 | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* (aucune migration) | `customer360.test` 8, `admin-flow` : liste Clients, fiche client (demandes, chronologie commune, consentements, ventes / CA), liens lead ⇄ client, 404 sur clé invalide |
-| 7 | Segmentation et marketing | À AUDITER | aucun envoi réel sans autorisation |
+| 7 | Segmentation et marketing | **VALIDÉ PAR TESTS** pour la segmentation — *PR PRÉPARÉE* (aucune migration) ; **envoi / campagne : NON FAIT par décision** (autorisation du propriétaire requise) | `segments.test` 7, `admin-flow` (7 contrôles segments) |
 | 8 | Fidélité / VIP | EN ATTENTE D'ARBITRAGE | règles non définies |
 | 9 | Analytics | PARTIEL | stats marketing / équipe / offres présentes |
 | 10 | Certification | À AUDITER | |
@@ -100,3 +100,11 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 |---|---|
 | Un numéro = un client (2 demandes du même numéro → 1 fiche) ; ventes = réservé + gagné sans double comptage ; un retrait marketing sur une demande exclut le client | Regroupement par **téléphone seulement** : un même client avec deux numéros reste deux fiches (pas de fusion manuelle) |
 | Chronologie commune de toutes les demandes ; clé non numérique refusée sans requête | Dossiers anonymisés exclus par construction ; e2e sur faux Supabase, pas sur la base réelle ; liste limitée aux 5 000 demandes les plus récentes |
+
+### Bloc 7 — prouvé / non prouvé
+
+| Prouvé (test exécuté) | Non prouvé / limites |
+|---|---|
+| 7 segments calculés (à traiter, relance 7 j, proposition sans réponse, perdus à reprendre, Omra sans réservation, clients ayant réservé, région à renseigner) ; seuils testés aux bornes | **Aucun envoi, aucune campagne, aucun export** : volontairement non implémentés (protection du propriétaire) |
+| Segments « marketing » : client sans consentement marketing exclu et compté à part (test unitaire) ; segments « suivi » indépendants du consentement marketing | Dans l'e2e, le faux Supabase n'a presque aucun consentement marketing : l'exclusion y est vérifiée mais les listes marketing sont quasi vides — la preuve forte est le test unitaire |
+| La consultation n'écrit rien | Seuils (7 j, 60 j) et définitions = **propositions à valider** ; fenêtre de 5 000 demandes récentes |

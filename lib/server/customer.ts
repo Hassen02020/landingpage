@@ -17,6 +17,7 @@ export interface CustomerSummary {
   firstSeenAt: string
   products: string[]
   channels: string[]
+  region: string | null
   marketingOk: boolean // vrai seulement si AUCUN lead n'a retiré / refusé le consentement
   lastStatus: Status
 }
@@ -48,6 +49,7 @@ export function groupCustomers(leads: LeadRow[]): CustomerSummary[] {
         firstSeenAt: sorted.at(-1)!.created_at,
         products: Array.from(new Set(ls.map((l) => l.product))),
         channels: Array.from(new Set(ls.map((l) => l.channel || "direct"))),
+        region: sorted.find((l) => l.region)?.region ?? null,
         marketingOk: ls.every((l) => l.marketing_consent && !l.marketing_withdrawn_at),
         lastStatus: latest.status,
       }
@@ -116,6 +118,12 @@ export async function listCustomers(term: string | undefined, page = 0, pageSize
   }
   const leads = await select<LeadRow>("landing_leads", q.join("&"))
   return groupCustomers(leads).slice(page * pageSize, (page + 1) * pageSize)
+}
+
+/** Tous les clients (jusqu'à 5 000 demandes récentes), pour la segmentation. Lecture seule. */
+export async function loadAllCustomers(): Promise<CustomerSummary[]> {
+  const leads = await select<LeadRow>("landing_leads", "select=*&order=created_at.desc&limit=5000&phone=not.is.null")
+  return groupCustomers(leads)
 }
 
 export async function loadCustomer(phone: string): Promise<CustomerProfile | null> {
