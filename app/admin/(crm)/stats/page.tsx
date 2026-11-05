@@ -2,6 +2,7 @@ import Link from "next/link"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { select } from "@/lib/server/db"
 import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
+import { loadAnalytics } from "@/lib/server/analytics"
 import { groupBy, groupByOffer, loadLeadStats, loadTeam, parsePeriod, rates, teamStats, totals, type Counts, type Level, type Period } from "@/lib/server/stats"
 
 export const dynamic = "force-dynamic"
@@ -29,6 +30,7 @@ function Tabs({ view, p }: { view: string; p: Period }) {
     <div className="flex gap-2">
       <Link href={`/admin/stats?view=marketing&${q}`} className={cls("marketing")}>Marketing</Link>
       <Link href={`/admin/stats?view=equipe&${q}`} className={cls("equipe")}>Équipe | Suivi</Link>
+      <Link href={`/admin/stats?view=entonnoir&${q}`} className={cls("entonnoir")}>Entonnoir</Link>
       <Link href={`/admin/stats?view=whatsapp&${q}`} className={cls("whatsapp")}>WhatsApp</Link>
       <Link href={`/admin/stats?view=offres&${q}`} className={cls("offres")}>Offres</Link>
       <Link href={`/admin/stats?view=niches&${q}`} className={cls("niches")}>Niches</Link>
@@ -267,6 +269,45 @@ async function Offers({ p }: { p: Period }) {
   )
 }
 
+const fmtDuration = (m: number | null) => (m === null ? "—" : m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 6) / 10} h` : `${Math.round(m / 144) / 10} j`)
+
+async function Funnel({ p }: { p: Period }) {
+  const a = await loadAnalytics(p).catch(() => null)
+  if (!a) return <p className="text-red-700">Lecture impossible.</p>
+  const max = Math.max(1, ...a.series.map((d) => d.leads))
+  return (
+    <div className="space-y-4">
+      <section className="bg-white rounded-2xl shadow-sm p-4" data-testid="funnel">
+        <h2 className="font-bold mb-1">Entonnoir commercial</h2>
+        <p className="text-xs text-gray-500 mb-3">Étapes atteintes sur la période (un dossier perdu compte jusqu&apos;à l&apos;étape la plus avancée qu&apos;il a atteinte). Vendu = réservé ou gagné, compté une fois.</p>
+        <div className="space-y-2">
+          {a.funnel.map((s) => (
+            <div key={s.key} data-step={s.key}>
+              <div className="flex justify-between text-sm"><span className="font-semibold">{s.label}</span><span><b data-count>{s.count}</b> <span className="text-gray-500">· {pct(s.fromStart)} du total · {pct(s.fromPrevious)} de l&apos;étape précédente</span></span></div>
+              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-violet-600 rounded" style={{ width: `${Math.round(s.fromStart * 100)}%` }} /></div>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="response">
+        <Kpi label="Délai médian de premier traitement" value={fmtDuration(a.response.medianMinutes)} tone="bg-blue-500" />
+        <Kpi label="Traités dans l'heure" value={`${a.response.within1h} / ${a.leads.length}`} tone="bg-green-500" />
+        <Kpi label="Traités dans les 24 h" value={`${a.response.within24h} / ${a.leads.length}`} tone="bg-amber-500" />
+        <Kpi label="Jamais traités" value={a.response.untreated} tone="bg-red-500" />
+      </section>
+      <section className="bg-white rounded-2xl shadow-sm p-4 overflow-x-auto">
+        <h2 className="font-bold mb-2">Par jour</h2>
+        <table className="w-full text-sm" data-testid="daily">
+          <thead className="border-b bg-gray-50"><tr>{["Jour", "Leads", "", "Ventes", "CA"].map((h, i) => <th key={i} className={th}>{h}</th>)}</tr></thead>
+          <tbody>{a.series.map((d) => (
+            <tr key={d.day} data-day={d.day} className="border-b last:border-0"><td className={td}>{d.day}</td><td className={td}>{d.leads}</td><td className={td}><div className="h-2 bg-violet-300 rounded" style={{ width: `${Math.round((d.leads / max) * 120)}px` }} /></td><td className={td}>{d.sales}</td><td className={td}>{d.revenue ? tnd(d.revenue) : "—"}</td></tr>
+          ))}</tbody>
+        </table>
+      </section>
+    </div>
+  )
+}
+
 async function Niches() {
   const niches = await select<Niche>("landing_niche_performance", "select=*&order=leads.desc&limit=200").catch(() => null)
   if (!niches) return <p className="text-red-700">Lecture impossible.</p>
@@ -284,7 +325,7 @@ async function Niches() {
 }
 
 export default async function StatsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
-  const view = ["marketing", "equipe", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
+  const view = ["marketing", "equipe", "entonnoir", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
   const p = parsePeriod(searchParams.from, searchParams.to)
   const level: Level = (["campaign", "adset", "ad"] as const).find((l) => l === searchParams.level) ?? "campaign"
   const member = /^[0-9a-f-]{36}$/i.test(searchParams.member || "") ? searchParams.member! : ""
@@ -304,7 +345,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
           view={view}
           p={p}
           extra={
-            view === "offres" || view === "whatsapp" ? null : view === "marketing" ? (
+            view === "offres" || view === "whatsapp" || view === "entonnoir" ? null : view === "marketing" ? (
               <label className="flex flex-col">Détail
                 <select name="level" defaultValue={level} className="border rounded-lg px-2 py-1.5">
                   <option value="campaign">Par campagne</option>
@@ -329,6 +370,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
 
       {view === "marketing" && <Marketing p={p} level={level} />}
       {view === "equipe" && <Team p={p} member={member} />}
+      {view === "entonnoir" && <Funnel p={p} />}
       {view === "whatsapp" && <WhatsAppView p={p} />}
       {view === "offres" && <Offers p={p} />}
       {view === "niches" && <Niches />}

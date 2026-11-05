@@ -49,7 +49,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 6 | Customer 360 | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* (aucune migration) | `customer360.test` 8, `admin-flow` : liste Clients, fiche client (demandes, chronologie commune, consentements, ventes / CA), liens lead ⇄ client, 404 sur clé invalide |
 | 7 | Segmentation et marketing | **VALIDÉ PAR TESTS** pour la segmentation — *PR PRÉPARÉE* (aucune migration) ; **envoi / campagne : NON FAIT par décision** (autorisation du propriétaire requise) | `segments.test` 7, `admin-flow` (7 contrôles segments) |
 | 8 | Fidélité / VIP | EN ATTENTE D'ARBITRAGE | règles non définies |
-| 9 | Analytics | PARTIEL | stats marketing / équipe / offres présentes |
+| 9 | Analytics | **VALIDÉ PAR TESTS** (entonnoir, délais, série par jour) — *PR PRÉPARÉE* (aucune migration) | `analytics.test` 6, `admin-flow` (onglet Entonnoir) ; stats marketing / équipe / offres / WhatsApp existantes |
 | 10 | Certification | À AUDITER | |
 
 ## Journal
@@ -108,3 +108,11 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 7 segments calculés (à traiter, relance 7 j, proposition sans réponse, perdus à reprendre, Omra sans réservation, clients ayant réservé, région à renseigner) ; seuils testés aux bornes | **Aucun envoi, aucune campagne, aucun export** : volontairement non implémentés (protection du propriétaire) |
 | Segments « marketing » : client sans consentement marketing exclu et compté à part (test unitaire) ; segments « suivi » indépendants du consentement marketing | Dans l'e2e, le faux Supabase n'a presque aucun consentement marketing : l'exclusion y est vérifiée mais les listes marketing sont quasi vides — la preuve forte est le test unitaire |
 | La consultation n'écrit rien | Seuils (7 j, 60 j) et définitions = **propositions à valider** ; fenêtre de 5 000 demandes récentes |
+
+### Bloc 9 — prouvé / non prouvé
+
+| Prouvé (test exécuté) | Non prouvé / limites |
+|---|---|
+| Entonnoir en 6 étapes, un dossier perdu compte jusqu'à l'étape atteinte ; réservé → gagné compté une fois ; aucune division par zéro | Délais calculés sur les actes saisis dans le CRM (statut, note, WhatsApp saisi) : un contact fait hors CRM n'est pas vu |
+| Délai médian / moyen de premier traitement, seuils 1 h et 24 h, dossiers jamais traités ; série par jour sans trous | Coût par lead / ROAS : **impossibles sans les dépenses publicitaires réelles** (aucune API publicitaire connectée, aucun budget saisi) |
+| Consultation en lecture seule (contrôlé en e2e sur le faux Supabase) | Activités lues depuis le début de la période (50 000 max) ; e2e sur faux Supabase, pas sur la base réelle |

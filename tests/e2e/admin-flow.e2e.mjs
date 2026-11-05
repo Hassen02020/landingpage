@@ -298,10 +298,10 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   check("fiche client : bloc consentements affiché", text.includes("Consentements"))
   await page.getByRole("link", { name: mine[0].ref }).click()
   await page.waitForURL(/\/admin\/leads\//)
-  check("fiche client → fiche lead", true)
+  check("fiche client → fiche lead", /\/admin\/leads\//.test(page.url()))
   await page.getByRole("link", { name: /Voir le client/ }).click()
   await page.waitForURL(new RegExp(`/admin/clients/${shared}`))
-  check("fiche lead → fiche client (360°)", true)
+  check("fiche lead → fiche client (360°)", page.url().includes(`/admin/clients/${shared}`))
   check("fiche client inconnue → 404", (await page.goto(`${BASE}/admin/clients/21600000001`)).status() === 404)
   check("clé invalide → 404 (aucune injection)", (await page.goto(`${BASE}/admin/clients/1;drop`)).status() === 404)
   // la vente du scénario Bloc 5 (Slim) apparaît côté client avec son chiffre d'affaires
@@ -331,6 +331,27 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
     check(`segments : « ${slug} » exclut tout client sans consentement marketing`, bad.length === 0, bad.join(","))
   }
   check("segments : la consultation n'écrit rien (aucune activité créée)", db.landing_lead_activities.length === sendsBefore)
+}
+
+// ---------------------------------------------------------------- Analytics : entonnoir (Bloc 9)
+{
+  const writesBefore = db.landing_lead_activities.length + db.landing_leads.length
+  const from = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10)
+  const to = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  await page.goto(`${BASE}/admin/stats?view=entonnoir&from=${from}&to=${to}`, { waitUntil: "networkidle" })
+  const steps = await page.locator("[data-step]").evaluateAll((els) => els.map((e) => [e.getAttribute("data-step"), Number(e.querySelector("[data-count]").textContent)]))
+  const c = Object.fromEntries(steps)
+  check("entonnoir : 6 étapes dans l'ordre", steps.map((x) => x[0]).join() === "recus,contactes,qualifies,propositions,reserves,gagnes", steps.map((x) => x[0]).join())
+  const inPeriod = db.landing_leads.filter((l) => Date.parse(l.created_at) >= Date.parse(from) && Date.parse(l.created_at) <= Date.parse(to))
+  check("entonnoir : « reçus » = leads de la période", c.recus === inPeriod.length, `${c.recus} vs ${inPeriod.length}`)
+  check("entonnoir : monotone décroissant", steps.every((x, i) => i === 0 || x[1] <= steps[i - 1][1]), JSON.stringify(steps))
+  const sold = inPeriod.filter((l) => l.status === "reserve" || l.status === "gagne").length
+  check("entonnoir : « réservés » ≥ ventes actuelles (réservé + gagné, une fois chacune)", c.reserves >= sold && c.gagnes >= 1, `${c.reserves}/${sold}/${c.gagnes}`)
+  const resp = await page.locator('[data-testid="response"]').innerText()
+  check("entonnoir : délais de premier traitement affichés", /Délai médian/.test(resp) && /Jamais traités/.test(resp))
+  const dayRows = await page.locator('[data-testid="daily"] tr[data-day]').count()
+  check("entonnoir : une ligne par jour de la période", dayRows >= 40, String(dayRows))
+  check("entonnoir : la consultation n'écrit rien (ni lead ni activité)", db.landing_lead_activities.length + db.landing_leads.length === writesBefore)
 }
 
 // ---------------------------------------------------------------- statistiques
