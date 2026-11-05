@@ -1,6 +1,7 @@
 // Export des leads (CSV/JSON), partagé par l'API (clé admin) et l'interface /admin (session).
 import { NextResponse } from "next/server"
 import { DbError, select } from "./db"
+import { STATUSES } from "@/lib/status"
 
 const COLUMNS = [
   "created_at", "ref", "visitor_ref", "status", "first_name", "last_name", "phone", "product", "offer", "niche",
@@ -11,7 +12,7 @@ const COLUMNS = [
 const NEW_COLUMNS = ["region", "email", "contact_channel", "form_page"] // migration 0006
 const FILTERS: Record<string, RegExp> = {
   product: /^(omra|voyage|hotel|autre)$/,
-  status: /^(nouveau|contacte|qualifie|reserve|perdu)$/,
+  status: new RegExp(`^(${STATUSES.join("|")})$`),
   channel: /^[a-z_]{1,32}$/,
 }
 

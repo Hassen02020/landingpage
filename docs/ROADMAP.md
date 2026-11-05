@@ -45,7 +45,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 2 | Formulaires et collecte | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* (migration 0006 à appliquer par le propriétaire) | `collecte.test` 11, `migration-0006.test` 6 (PostgreSQL/PGlite), `collect.e2e` (4 pages × mobile/bureau), `omra-journey` 9, `admin-flow` 70 |
 | 3 | Réseaux → landing pages | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* | `channel-links.test` 11, `collecte.test` 14, `migration-0006.test` 7, `social.e2e` 24 (navigateur réel + faux Supabase) ; aucune campagne lancée |
 | 4 | WhatsApp | **VALIDÉ PAR TESTS** pour tout ce qui est possible sans API — *PR PRÉPARÉE* ; API officielle **BLOQUÉE** (accès propriétaire) | `whatsapp.e2e` (38 liens × avec / sans consentement), `whatsapp.test` 12, `admin-flow` (rattachement, doublon, origine inconnue, échanges, stats) |
-| 5 | CRM et équipe | PARTIEL (pipeline à 5 statuts) | |
+| 5 | CRM et équipe | **VALIDÉ PAR TESTS** (pipeline à 10 statuts) — *PR PRÉPARÉE* (migration 0007, après 0006, à appliquer par le propriétaire) | `pipeline.test` 18, `crm-lot3.test`, `admin-flow` 96 contrôles dont le scénario prospect → conseiller → qualification → devis → négociation → réservation → gagné (faux Supabase) |
 | 6 | Customer 360 | À AUDITER | |
 | 7 | Segmentation et marketing | À AUDITER | aucun envoi réel sans autorisation |
 | 8 | Fidélité / VIP | EN ATTENTE D'ARBITRAGE | règles non définies |
@@ -77,6 +77,8 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | Un `utm_source` inconnu ou trompeur (« digital_bio ») n'est pas attribué à Meta | Lien de bio sur un vrai profil : à coller par le propriétaire (aucun compte modifié) |
 - 05/11/2026 — Bloc 4 : audit navigateur des 38 liens WhatsApp (aucun défaut côté site) ; rattachement d'un message reçu à son clic d'origine (référence E2B) ; échanges reçus / envoyés saisis (`wa_in`, `wa_out`, migration 0006) ; onglet Statistiques → WhatsApp ; audit de l'API officielle documenté sans simulation (`docs/WHATSAPP.md`).
 
+- 05/11/2026 — Bloc 5 : pipeline NOUVEAU → À CONTACTER → CONTACTÉ → À QUALIFIER → QUALIFIÉ → DEVIS → NÉGOCIATION → RÉSERVÉ → GAGNÉ (+ PERDU) ; source unique `lib/status.ts` ; migration `0007_landing_pipeline.sql` ; anciens statuts conservés ; « Vendus » = réservé + gagné (une vente n'est comptée qu'une fois) ; tableau Pipeline à 10 colonnes ; statistiques équipe avec propositions.
+
 ### Bloc 4 — prouvé / non prouvé
 
 | Prouvé (test exécuté) | Non prouvé / bloqué |
@@ -84,3 +86,10 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 38 liens, numéro officiel unique, référence ajoutée à chaque clic, événement « Contact » seulement avec consentement | **Envoi réel d'un message** et **réception réelle** : aucune API connectée, aucun message envoyé |
 | Message collé → clic d'origine retrouvé (canal, source, campagne) sans copier d'identifiant publicitaire ; doublon évité ; origine inconnue déclarée comme telle | Que le visiteur envoie réellement le message prérempli (non observable sans l'API officielle) |
 | Échanges saisis tracés ; entonnoir WhatsApp avec natures séparées | Webhook, statuts de lecture, réponses automatiques : bloqués (numéro, accès, conservation du texte) |
+
+### Bloc 5 — prouvé / non prouvé
+
+| Prouvé (test exécuté) | Non prouvé / à valider |
+|---|---|
+| Parcours complet en navigateur (affectation, qualification, 6 étapes, réservation refusée sans montant, gagné) ; `booked_at` et montant inchangés de réservé à gagné ; historique avant / après de chaque étape | Migration 0007 sur la base de production : **non appliquée** (PGlite seulement) ; l'e2e tourne sur un faux Supabase |
+| Perdu depuis une étape ouverte, réouverture, filtre « vendus », actions groupées sans les statuts de vente, CA sans double comptage | Sens exact de `reserve` / `gagne` : **proposition à valider** par le propriétaire ; règle de répartition des leads entre conseillers : non définie |

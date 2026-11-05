@@ -23,7 +23,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Re
     ;[offers, categories, crm] = await Promise.all([
       listOffers({ archived: tab === "archivees", categoryId: searchParams.cat, q: searchParams.q }),
       listCategories(),
-      select<{ offer_id: string; adults: number | null; children: number | null }>("landing_leads", "select=offer_id,adults,children&status=eq.reserve&offer_id=not.is.null&limit=10000"),
+      select<{ offer_id: string; adults: number | null; children: number | null }>("landing_leads", "select=offer_id,adults,children&status=in.(reserve,gagne)&offer_id=not.is.null&limit=10000"),
     ])
   } catch {
     ready = false

@@ -207,7 +207,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
             <select name="status" defaultValue={lead.status} className="w-full px-3 py-2 rounded-lg border">
               {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
-            <input name="booking_value" inputMode="decimal" placeholder="Montant TND (obligatoire si réservé)" defaultValue={lead.booking_value ?? ""} className="w-full px-3 py-2 rounded-lg border" />
+            <input name="booking_value" inputMode="decimal" placeholder="Montant TND (obligatoire si réservé ou gagné)" defaultValue={lead.booking_value ?? ""} className="w-full px-3 py-2 rounded-lg border" />
             <input name="notes" placeholder="Commentaire (facultatif)" className="w-full px-3 py-2 rounded-lg border" />
             <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Enregistrer</button>
           </form>

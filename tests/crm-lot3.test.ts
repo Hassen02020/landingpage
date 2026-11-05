@@ -122,11 +122,11 @@ describe("liste, tableau de bord et doublons", () => {
     await listLeads({ followUp: "due" })
     const urls = f.dbCalls().map((c) => decodeURIComponent(c.url))
     expect(urls[0]).toContain(`assigned_to=eq.${A}`)
-    expect(urls[0]).toContain("status=in.(nouveau,contacte,qualifie)")
+    expect(urls[0]).toContain("status=in.(nouveau,a_contacter,contacte,a_qualifier,qualifie,devis,negociation)")
     expect(urls[1]).toContain("assigned_to=is.null")
     expect(urls[2]).not.toContain("drop")
     expect(urls[3]).toContain("next_follow_up_at=lte.")
-    expect(urls[3]).toContain("status=in.(nouveau,contacte,qualifie)")
+    expect(urls[3]).toContain("status=in.(nouveau,a_contacter,contacte,a_qualifier,qualifie,devis,negociation)")
   })
 
   it("tableau de bord : à traiter, relances échues, mes dossiers, non assignés, réservés du mois", async () => {
@@ -134,16 +134,17 @@ describe("liste, tableau de bord et doublons", () => {
     const past = new Date(Date.now() - 3600_000).toISOString()
     vi.stubGlobal("fetch", vi.fn(async (url: unknown) => {
       const u = decodeURIComponent(String(url))
-      if (u.includes("status=in.(nouveau,contacte,qualifie)"))
+      if (u.includes("status=in.(nouveau,a_contacter,contacte,a_qualifier,qualifie,devis,negociation)") && u.includes("select=status,next_follow_up_at"))
         return new Response(JSON.stringify([
           { status: "nouveau", next_follow_up_at: null, assigned_to: null },
+          { status: "a_contacter", next_follow_up_at: null, assigned_to: B },
           { status: "contacte", next_follow_up_at: past, assigned_to: A },
           { status: "qualifie", next_follow_up_at: null, assigned_to: B },
         ]))
-      if (u.includes("status=eq.reserve")) return new Response(JSON.stringify([{ booking_value: "11000" }, { booking_value: 5500 }]))
+      if (u.includes("status=in.(reserve,gagne)")) return new Response(JSON.stringify([{ booking_value: "11000" }, { booking_value: 5500 }]))
       return new Response(JSON.stringify([{ id: "1" }, { id: "2" }]))
     }))
-    expect(await loadDashboard(A)).toEqual({ toTreat: 1, today: 2, overdue: 1, mine: 1, unassigned: 1, bookedMonth: 2, revenueMonth: 16500 })
+    expect(await loadDashboard(A)).toEqual({ toTreat: 2, today: 2, overdue: 1, mine: 1, unassigned: 1, bookedMonth: 2, revenueMonth: 16500 })
   })
 
   it("doublons : même téléphone, autre fiche ; numéro invalide → aucune requête", async () => {

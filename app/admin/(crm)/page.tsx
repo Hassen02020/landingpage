@@ -3,6 +3,7 @@ import { PRODUCTS } from "@/lib/config"
 import { dbConfigured } from "@/lib/server/db"
 import { currentStaff } from "@/lib/server/auth"
 import { PAGE_SIZE, STATUSES, STATUS_LABELS, listLeads, listStaff, type LeadRow } from "@/lib/server/crm"
+import { isBooking, isOpen } from "@/lib/status"
 import { loadDashboard, type Dashboard } from "@/lib/server/dashboard"
 import { STATUS_COLORS, formatDate } from "../format"
 import { bulkAction } from "../actions"
@@ -58,12 +59,12 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
     <div className="space-y-4">
       {dash && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <Card href="/admin?status=nouveau" value={dash.toTreat} label="À traiter" tone="text-blue-700" />
+          <Card href="/admin?status=nouveau,a_contacter" value={dash.toTreat} label="À traiter" tone="text-blue-700" />
           <Card href="/admin" value={dash.today} label="Reçus aujourd'hui" tone="text-violet-700" />
           <Card href="/admin?followUp=due" value={dash.overdue} label="Relances échues" tone={dash.overdue ? "text-red-600" : "text-gray-900"} />
           <Card href="/admin?assigned=me&open=1" value={dash.mine} label="Mes dossiers ouverts" tone="text-gray-900" />
           <Card href="/admin?assigned=none&open=1" value={dash.unassigned} label="Non assignés" tone={dash.unassigned ? "text-amber-600" : "text-gray-900"} />
-          <Card href="/admin?status=reserve" value={dash.bookedMonth} label={`Réservés ce mois · ${tnd(dash.revenueMonth)}`} tone="text-green-700" />
+          <Card href="/admin?status=reserve,gagne" value={dash.bookedMonth} label={`Réservés ce mois · ${tnd(dash.revenueMonth)}`} tone="text-green-700" />
         </div>
       )}
 
@@ -122,13 +123,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
                 <option value="assign:none">Retirer le responsable</option>
               </optgroup>
               <optgroup label="Statut">
-                <option value="status:contacte">Contacté</option>
-                <option value="status:qualifie">Qualifié</option>
-                <option value="status:perdu">Perdu</option>
+                {STATUSES.filter((st) => !isBooking(st)).map((st) => <option key={st} value={`status:${st}`}>{STATUS_LABELS[st]}</option>)}
               </optgroup>
             </select>
             <button className="px-3 py-1.5 rounded-lg bg-gray-900 text-white font-bold">Appliquer</button>
-            <span className="text-xs text-gray-500">« Réservé » se fait sur la fiche (montant obligatoire).</span>
+            <span className="text-xs text-gray-500">« Réservé » et « Gagné » se font sur la fiche (montant obligatoire).</span>
           </div>
           <div className="overflow-x-auto bg-white rounded-2xl shadow-sm">
             <table className="w-full text-sm">
@@ -141,7 +140,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
               </thead>
               <tbody>
                 {leads.map((l) => {
-                  const late = l.next_follow_up_at && Date.parse(l.next_follow_up_at) <= Date.now() && ["nouveau", "contacte", "qualifie"].includes(l.status)
+                  const late = l.next_follow_up_at && Date.parse(l.next_follow_up_at) <= Date.now() && isOpen(l.status)
                   return (
                     <tr key={l.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="p-3"><input type="checkbox" name="ids" value={l.id} aria-label={`Sélectionner ${l.ref}`} /></td>

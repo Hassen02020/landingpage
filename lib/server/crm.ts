@@ -9,15 +9,11 @@ import { sendMetaEvent } from "./meta"
 import { sendTikTokEvent } from "./tiktok"
 import { isProduct, type Product } from "../config"
 
-export const STATUSES = ["nouveau", "contacte", "qualifie", "reserve", "perdu"] as const
-export type Status = (typeof STATUSES)[number]
-export const STATUS_LABELS: Record<Status, string> = {
-  nouveau: "Nouveau",
-  contacte: "Contacté",
-  qualifie: "Qualifié",
-  reserve: "Réservé",
-  perdu: "Perdu",
-}
+import { OPEN_STATUSES, STATUSES, STATUS_LABELS, inFilter, isBooking, isStatus, parseStatusList, type Status } from "@/lib/status"
+
+// Source unique : lib/status.ts (ré-exportée ici pour les imports existants)
+export { STATUSES, STATUS_LABELS, isStatus }
+export type { Status }
 export const SOURCES = ["form", "whatsapp", "phone", "manual"] as const
 export type Source = (typeof SOURCES)[number]
 export const SOURCE_LABELS: Record<Source, string> = { form: "Formulaire", whatsapp: "WhatsApp", phone: "Téléphone", manual: "Saisie manuelle" }
@@ -28,7 +24,6 @@ export function tunisDay(date = new Date()): string {
 }
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-export const isStatus = (v: unknown): v is Status => typeof v === "string" && (STATUSES as readonly string[]).includes(v)
 
 export interface Actor {
   id: string | null // landing_staff.user_id, null pour le système ou l'API
@@ -132,11 +127,13 @@ export const PAGE_SIZE = 50
 /** Liste filtrée. Les filtres sont validés : aucune valeur libre n'atteint la requête Supabase. */
 export async function listLeads(f: LeadFilters): Promise<LeadRow[]> {
   const q = ["select=*", "order=created_at.desc", `limit=${PAGE_SIZE}`, `offset=${Math.max(0, (f.page ?? 0) * PAGE_SIZE)}`]
-  if (isStatus(f.status)) q.push(`status=eq.${f.status}`)
+  const wanted = parseStatusList(f.status) // « a,b » accepté (ex. À traiter = nouveau + à contacter)
+  if (wanted.length === 1) q.push(`status=eq.${wanted[0]}`)
+  else if (wanted.length > 1) q.push(`status=${inFilter(wanted)}`)
   if (isProduct(f.product)) q.push(`product=eq.${f.product}`)
   if (f.channel && /^[a-z_]{1,32}$/.test(f.channel)) q.push(`channel=eq.${f.channel}`)
-  if (f.followUp === "due") q.push(`next_follow_up_at=lte.${new Date().toISOString()}`, "status=in.(nouveau,contacte,qualifie)")
-  if (f.open === "1" && f.followUp !== "due") q.push("status=in.(nouveau,contacte,qualifie)")
+  if (f.followUp === "due") q.push(`next_follow_up_at=lte.${new Date().toISOString()}`, `status=${inFilter(OPEN_STATUSES)}`)
+  if (f.open === "1" && f.followUp !== "due" && !wanted.length) q.push(`status=${inFilter(OPEN_STATUSES)}`)
   if (f.assigned === "none") q.push("assigned_to=is.null")
   else if (f.assigned === "me" && f.me && UUID_RE.test(f.me)) q.push(`assigned_to=eq.${f.me}`)
   else if (f.assigned && UUID_RE.test(f.assigned)) q.push(`assigned_to=eq.${f.assigned}`)
@@ -190,11 +187,14 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   if (opts.bookingValue !== undefined && (!Number.isFinite(opts.bookingValue) || opts.bookingValue < 0 || opts.bookingValue > 1e9)) {
     return { ok: false, error: "Montant invalide" }
   }
-  if (status === "reserve" && opts.bookingValue === undefined && lead.booking_value === null) {
+  // vente (réservé OU gagné) : montant obligatoire
+  if (isBooking(status) && opts.bookingValue === undefined && lead.booking_value === null) {
     return { ok: false, error: "Montant de la réservation obligatoire" }
   }
 
-  const firstBooking = status === "reserve" && !lead.booked_at
+  // La date de réservation n'est posée qu'UNE fois : réservé → gagné, ou un retour en arrière suivi
+  // d'une nouvelle réservation, n'envoie jamais une seconde conversion Purchase.
+  const firstBooking = isBooking(status) && !lead.booked_at
   const patch: Record<string, unknown> = { status, status_updated_at: new Date().toISOString() }
   if (opts.bookingValue !== undefined) patch.booking_value = opts.bookingValue
   if (opts.notes) patch.notes = opts.notes.slice(0, 2000)

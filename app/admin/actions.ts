@@ -16,6 +16,7 @@ import {
   type Staff,
 } from "@/lib/server/auth"
 import { rateLimited } from "@/lib/server/guard"
+import { STATUSES, isBooking } from "@/lib/status"
 import {
   addNote,
   assignLead,
@@ -181,7 +182,8 @@ export async function createLeadAction(fd: FormData): Promise<void> {
 }
 
 // ---------------------------------------------------------------- actions groupées et pipeline
-const QUICK_STATUSES = ["nouveau", "contacte", "qualifie", "perdu"] as const
+// Transitions rapides (pipeline, actions groupées) : toutes les étapes SAUF les ventes (réservé / gagné), qui exigent un montant et se font sur la fiche.
+const QUICK_STATUSES = STATUSES.filter((s) => !isBooking(s))
 
 /** Liste : assigner / changer le statut de plusieurs leads (100 max). « Réservé » se fait sur la fiche (montant requis). */
 export async function bulkAction(fd: FormData): Promise<void> {

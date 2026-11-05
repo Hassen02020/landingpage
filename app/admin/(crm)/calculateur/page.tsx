@@ -8,13 +8,13 @@ export default async function CalculatorPage() {
   const rows = await loadLeadStats(parsePeriod(undefined, undefined, 90)).catch(() => [])
   const c = totals(rows)
   const r = rates(c)
-  const contacted = c.leads - c.nouveau
+  const contacted = c.leads - c.toTreat
   const real =
     c.leads >= 10
       ? {
           leads: c.leads,
           contactRate: Math.round(r.treatmentRate * 100),
-          bookingRate: contacted ? Math.round((c.reserve / contacted) * 100) : 0,
+          bookingRate: contacted ? Math.round((c.booked / contacted) * 100) : 0,
           avgBasket: Math.round(r.avgBasket),
         }
       : null

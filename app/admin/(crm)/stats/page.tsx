@@ -62,11 +62,12 @@ function KpiGrid({ c }: { c: Counts }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <Kpi label="Leads reçus" value={c.leads} tone="bg-violet-600" sub={`Traités : ${pct(r.treatmentRate)}`} />
-      <Kpi label="À traiter (nouveaux)" value={c.nouveau} tone="bg-blue-500" />
-      <Kpi label="Contactés" value={c.contacte} tone="bg-sky-500" />
-      <Kpi label="Qualifiés" value={c.qualifie} tone="bg-amber-500" />
-      <Kpi label="Réservés" value={c.reserve} tone="bg-green-600" sub={`CA : ${tnd(c.revenue)}`} />
-      <Kpi label="Perdus" value={c.perdu} tone="bg-red-500" sub={`Conclusion : ${pct(r.closingRate)}`} />
+      <Kpi label="À traiter" value={c.toTreat} tone="bg-blue-500" sub="nouveau + à contacter" />
+      <Kpi label="En contact" value={c.inContact} tone="bg-sky-500" sub="contacté + à qualifier" />
+      <Kpi label="Qualifiés" value={c.qualified} tone="bg-amber-500" />
+      <Kpi label="Devis / négociation" value={c.proposal} tone="bg-indigo-500" />
+      <Kpi label="Vendus" value={c.booked} tone="bg-green-600" sub={`réservé + gagné · CA : ${tnd(c.revenue)}`} />
+      <Kpi label="Perdus" value={c.lost} tone="bg-red-500" sub={`Conclusion : ${pct(r.closingRate)}`} />
     </div>
   )
 }
@@ -99,8 +100,8 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
               {level === "ad" && <th className={th}>Annonce</th>}
               <th className={th}>Leads</th>
               <th className={th}>Traités</th>
-              <th className={th}>Réservés</th>
-              <th className={th}>Taux résa.</th>
+              <th className={th}>Vendus</th>
+              <th className={th}>Taux de vente</th>
               <th className={th}>CA</th>
             </tr>
           </thead>
@@ -119,7 +120,7 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
                   {level === "ad" && <td className={td}>{g.ad}</td>}
                   <td className={td}>{g.leads}</td>
                   <td className={td}>{gr.treated}</td>
-                  <td className={td}>{g.reserve}</td>
+                  <td className={td}>{g.booked}</td>
                   <td className={td}>{pct(gr.bookingRate)}</td>
                   <td className={td}>{tnd(g.revenue)}</td>
                 </tr>
@@ -141,8 +142,8 @@ async function Team({ p, member }: { p: Period; member: string }) {
   const all = teamStats(data.staff, data.activities, data.leads)
   const list = member ? all.filter((m) => m.userId === member) : all
   const sum = list.reduce(
-    (a, m) => ({ actions: a.actions + m.actions, contacted: a.contacted + m.contacted, qualified: a.qualified + m.qualified, booked: a.booked + m.booked, lost: a.lost + m.lost, notes: a.notes + m.notes, assigned: a.assigned + m.assigned }),
-    { actions: 0, contacted: 0, qualified: 0, booked: 0, lost: 0, notes: 0, assigned: 0 }
+    (a, m) => ({ actions: a.actions + m.actions, contacted: a.contacted + m.contacted, qualified: a.qualified + m.qualified, proposals: a.proposals + m.proposals, booked: a.booked + m.booked, lost: a.lost + m.lost, notes: a.notes + m.notes, assigned: a.assigned + m.assigned }),
+    { actions: 0, contacted: 0, qualified: 0, proposals: 0, booked: 0, lost: 0, notes: 0, assigned: 0 }
   )
   const closing = sum.booked + sum.lost ? sum.booked / (sum.booked + sum.lost) : 0
   return (
@@ -152,7 +153,8 @@ async function Team({ p, member }: { p: Period; member: string }) {
         <Kpi label="Actions (statuts, notes…)" value={sum.actions} tone="bg-blue-500" sub={`dont notes : ${sum.notes}`} />
         <Kpi label="Contactés" value={sum.contacted} tone="bg-sky-500" />
         <Kpi label="Qualifiés" value={sum.qualified} tone="bg-amber-500" />
-        <Kpi label="Réservés" value={sum.booked} tone="bg-green-600" />
+        <Kpi label="Devis envoyés" value={sum.proposals} tone="bg-indigo-500" />
+        <Kpi label="Ventes" value={sum.booked} tone="bg-green-600" sub="réservé / gagné, comptée une fois" />
         <Kpi label="Perdus" value={sum.lost} tone="bg-red-500" />
         <Kpi label="Taux de conclusion" value={pct(closing)} tone="bg-emerald-600" sub="réservés / (réservés + perdus)" />
       </div>
@@ -160,7 +162,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50">
             <tr>
-              {["Membre", "Rôle", "Assignés", "Actions", "Contactés", "Qualifiés", "Réservés", "Perdus", "Conclusion"].map((h) => <th key={h} className={th}>{h}</th>)}
+              {["Membre", "Rôle", "Assignés", "Actions", "Contactés", "Qualifiés", "Devis", "Ventes", "Perdus", "Conclusion"].map((h) => <th key={h} className={th}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -172,6 +174,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
                 <td className={td}>{m.actions}</td>
                 <td className={td}>{m.contacted}</td>
                 <td className={td}>{m.qualified}</td>
+                <td className={td}>{m.proposals}</td>
                 <td className={td}>{m.booked}</td>
                 <td className={td}>{m.lost}</td>
                 <td className={td}>{pct(m.closingRate)}</td>
@@ -239,19 +242,20 @@ async function Offers({ p }: { p: Period }) {
       <KpiGrid c={totals(rows)} />
       <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-b bg-gray-50"><tr>{["Produit", "Offre", "Leads", "À traiter", "Contactés", "Qualifiés", "Réservés", "Perdus", "Taux résa.", "CA"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+          <thead className="border-b bg-gray-50"><tr>{["Produit", "Offre", "Leads", "À traiter", "En contact", "Qualifiés", "Devis / négo.", "Vendus", "Perdus", "Taux de vente", "CA"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
           <tbody>
-            {groups.length === 0 && <tr><td colSpan={10} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>}
+            {groups.length === 0 && <tr><td colSpan={11} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>}
             {groups.map((g) => (
               <tr key={g.key} className="border-b last:border-0">
                 <td className={td}>{PRODUCTS[g.product as Product] ?? g.product}</td>
                 <td className={td}>{g.offer}</td>
                 <td className={td}>{g.leads}</td>
-                <td className={td}>{g.nouveau}</td>
-                <td className={td}>{g.contacte}</td>
-                <td className={td}>{g.qualifie}</td>
-                <td className={td}>{g.reserve}</td>
-                <td className={td}>{g.perdu}</td>
+                <td className={td}>{g.toTreat}</td>
+                <td className={td}>{g.inContact}</td>
+                <td className={td}>{g.qualified}</td>
+                <td className={td}>{g.proposal}</td>
+                <td className={td}>{g.booked}</td>
+                <td className={td}>{g.lost}</td>
                 <td className={td}>{pct(rates(g).bookingRate)}</td>
                 <td className={td}>{tnd(g.revenue)}</td>
               </tr>

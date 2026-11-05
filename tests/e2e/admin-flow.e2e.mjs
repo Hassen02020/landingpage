@@ -90,10 +90,11 @@ check("action groupée : assignation à un agent", db.landing_leads.find((l) => 
 
 // ---------------------------------------------------------------- pipeline
 await page.goto(`${BASE}/admin/pipeline`, { waitUntil: "networkidle" })
-check("pipeline : 5 colonnes", (await page.locator("section h2").filter({ hasText: /^(Nouveau|Contacté|Qualifié|Réservé|Perdu)/ }).count()) === 5)
-await page.locator(`a[href="/admin/leads/${LEAD(7)}"]`).locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]").getByRole("button", { name: "→ Contacté" }).click()
+const columns = await page.locator("[data-testid=pipeline-board] section").evaluateAll((els) => els.map((e) => e.getAttribute("data-status")))
+check("pipeline : 10 colonnes dans l'ordre du pipeline commercial", JSON.stringify(columns) === JSON.stringify(["nouveau", "a_contacter", "contacte", "a_qualifier", "qualifie", "devis", "negociation", "reserve", "gagne", "perdu"]), columns.join(","))
+await page.locator(`a[href="/admin/leads/${LEAD(7)}"]`).locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]").getByRole("button", { name: "→ À contacter" }).click()
 await page.waitForTimeout(1200)
-check("pipeline : « → Contacté » déplace le lead", db.landing_leads.find((l) => l.id === LEAD(7)).status === "contacte")
+check("pipeline : « → À contacter » déplace le lead d'une étape", db.landing_leads.find((l) => l.id === LEAD(7)).status === "a_contacter")
 
 // ---------------------------------------------------------------- fiche lead
 await page.goto(`${BASE}/admin/leads/${LEAD(1)}`, { waitUntil: "networkidle" })
@@ -195,6 +196,85 @@ check("WhatsApp : « message envoyé » saisi sur la fiche et tracé", db.landin
 await page.goto(`${BASE}/admin/stats?view=whatsapp`, { waitUntil: "networkidle" })
 const waStats = await page.locator("main").innerText()
 check("stats WhatsApp : clics observés, messages saisis, rattachement calculé, avertissement « non observable »", ["Clics WhatsApp", "Observé", "Saisi par l'équipe", "Calculé", "Conversations suivies", "Non observable sans l'API officielle"].every((t) => waStats.includes(t)))
+
+// ---------------------------------------------------------------- scénario commercial complet (Bloc 5)
+// prospect → conseiller → qualification → devis → négociation → réservation → gagné
+{
+  const id = LEAD(9) // « Slim » : prospect du formulaire, statut nouveau
+  const row = () => db.landing_leads.find((l) => l.id === id)
+  const goBoard = async () => page.goto(`${BASE}/admin/pipeline`, { waitUntil: "networkidle" })
+  const card = () => page.locator(`a[href="/admin/leads/${id}"]`).locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]")
+  const step = async (label, expected) => {
+    await goBoard()
+    await card().getByRole("button", { name: label }).click()
+    await page.waitForTimeout(1100)
+    check(`pipeline : « ${label} » → statut ${expected}`, row().status === expected, row().status)
+  }
+  // 1. affecter au conseiller et qualifier pendant l'échange
+  await page.goto(`${BASE}/admin/leads/${id}`, { waitUntil: "networkidle" })
+  await page.selectOption('select[name="assigned_to"]', db.landing_staff[1].user_id)
+  await Promise.all([page.waitForURL(/ok=/), page.getByRole("button", { name: "Assigner" }).click()])
+  check("scénario : lead affecté au conseiller", row().assigned_to === db.landing_staff[1].user_id)
+  await page.selectOption('select[name="region"]', "Nabeul")
+  await page.fill('input[name="budget"]', "4000 TND / pers.")
+  await page.getByRole("button", { name: "Enregistrer la qualification" }).click()
+  await page.getByText("Qualification enregistrée").waitFor({ timeout: 10000 }).catch(() => {})
+  check("scénario : qualification (région, budget déclaré) enregistrée", row().region === "Nabeul" && row().budget === "4000 TND / pers.")
+  // 2. avancer dans le pipeline, étape par étape
+  await step("→ À contacter", "a_contacter")
+  await step("→ Contacté", "contacte")
+  await step("→ À qualifier", "a_qualifier")
+  await step("→ Qualifié", "qualifie")
+  await step("→ Devis / proposition", "devis")
+  await step("→ En négociation", "negociation")
+  // 3. la réservation exige un montant : le bouton mène à la fiche
+  await goBoard()
+  await card().getByRole("link", { name: /Réservé \(montant\)/ }).click()
+  await page.waitForURL(new RegExp(`/admin/leads/${id}`))
+  await page.selectOption('select[name="status"]', "reserve")
+  await page.locator("form").filter({ hasText: "Changer le statut" }).getByRole("button", { name: "Enregistrer" }).click()
+  await page.getByText("Montant de la réservation obligatoire").waitFor({ timeout: 8000 }).catch(() => {})
+  check("scénario : « réservé » sans montant refusé", (await page.getByText("Montant de la réservation obligatoire").isVisible()) && row().status === "negociation")
+  await page.selectOption('select[name="status"]', "reserve")
+  await page.fill('input[name="booking_value"]', "9000")
+  await page.locator("form").filter({ hasText: "Changer le statut" }).getByRole("button", { name: "Enregistrer" }).click()
+  await page.getByText(/Statut enregistré/).waitFor({ timeout: 10000 }).catch(() => {})
+  const bookedAt = row().booked_at
+  check("scénario : réservation effectuée avec montant et date de réservation", row().status === "reserve" && Number(row().booking_value) === 9000 && Boolean(bookedAt))
+  // 4. gagné : aucun nouveau montant, la date de réservation ne bouge pas
+  await page.selectOption('select[name="status"]', "gagne")
+  await page.locator("form").filter({ hasText: "Changer le statut" }).getByRole("button", { name: "Enregistrer" }).click()
+  await page.waitForTimeout(1200)
+  check("scénario : gagné — même montant, même date de réservation (vente comptée une seule fois)", row().status === "gagne" && Number(row().booking_value) === 9000 && row().booked_at === bookedAt)
+  const trail = db.landing_lead_activities.filter((a) => a.lead_id === id && a.type === "status_change").map((a) => `${a.from_status}>${a.to_status}`)
+  check("scénario : l'historique trace chaque étape avant / après", JSON.stringify(trail) === JSON.stringify(["nouveau>a_contacter", "a_contacter>contacte", "contacte>a_qualifier", "a_qualifier>qualifie", "qualifie>devis", "devis>negociation", "negociation>reserve", "reserve>gagne"]), trail.join(" | "))
+  await page.goto(`${BASE}/admin/leads/${id}`, { waitUntil: "networkidle" })
+  check("scénario : la fiche affiche le badge « Gagné »", (await page.locator("main").innerText()).includes("Gagné"))
+  // 5. « Perdu » depuis une étape ouverte, puis réouverture
+  await page.locator(`input[type=hidden][name=id]`).first().waitFor({ state: "attached" })
+  await goBoard()
+  const other = LEAD(8) // « Rim » : contacté
+  await page.locator(`a[href="/admin/leads/${other}"]`).locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]").getByRole("button", { name: "Perdu" }).click()
+  await page.waitForTimeout(1100)
+  check("pipeline : « Perdu » depuis une étape ouverte", db.landing_leads.find((l) => l.id === other).status === "perdu")
+  await goBoard()
+  await page.locator(`a[href="/admin/leads/${other}"]`).locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]").getByRole("button", { name: "→ Rouvrir" }).click()
+  await page.waitForTimeout(1100)
+  check("pipeline : un lead perdu peut être rouvert (→ contacté)", db.landing_leads.find((l) => l.id === other).status === "contacte")
+  // 6. liste : filtre « vendus » (réservé + gagné) et actions groupées sur les nouvelles étapes
+  await page.goto(`${BASE}/admin?status=reserve,gagne`, { waitUntil: "networkidle" })
+  const sold = await page.locator('input[name="ids"]').count()
+  check("liste : le filtre « réservé + gagné » affiche les ventes", sold >= 2 && sold === db.landing_leads.filter((l) => l.status === "reserve" || l.status === "gagne").length, String(sold))
+  await page.goto(`${BASE}/admin`, { waitUntil: "networkidle" })
+  const bulkOptions = await page.locator('select[name="bulk"] option').allInnerTexts()
+  check("actions groupées : toutes les étapes sauf les ventes (montant requis)", ["À contacter", "À qualifier", "Devis / proposition", "En négociation", "Perdu"].every((t) => bulkOptions.includes(t)) && !bulkOptions.includes("Gagné") && !bulkOptions.includes("Réservé"))
+  // 7. statistiques : la vente n'apparaît qu'une fois (vendus = réservé + gagné)
+  await page.goto(`${BASE}/admin/stats`, { waitUntil: "networkidle" })
+  const sellers = db.landing_leads.filter((l) => l.status === "reserve" || l.status === "gagne")
+  const revenue = sellers.reduce((a, l) => a + (Number(l.booking_value) || 0), 0)
+  const statsText = (await page.locator("main").innerText()).replace(/\u202f|\u00a0/g, " ")
+  check("statistiques : « Vendus » = réservé + gagné, chiffre d'affaires sans double comptage", statsText.includes("Vendus") && statsText.includes(`CA : ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(revenue).replace(/\u202f|\u00a0/g, " ")} TND`), `CA attendu ${revenue}`)
+}
 
 // ---------------------------------------------------------------- statistiques
 for (const [label, path, text] of [["marketing", "/admin/stats", "Leads reçus"], ["équipe", "/admin/stats?view=equipe", "Taux de conclusion"], ["offres", "/admin/stats?view=offres", "Offre"], ["calculateur", "/admin/calculateur", "Profit net"]]) {

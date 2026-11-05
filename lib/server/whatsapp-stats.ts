@@ -1,6 +1,7 @@
 // Entonnoir WhatsApp : chaque étape garde sa NATURE (observé / saisi par l'équipe / calculé).
 // Un clic prouve une intention, pas un message envoyé : sans API officielle, « envoyé » et « reçu » sont saisis.
 import { select } from "./db"
+import { isBooking } from "@/lib/status"
 import { periodFilter, type Period } from "./stats"
 
 export interface WaClick {
@@ -39,7 +40,7 @@ export function whatsappFunnel(clicks: WaClick[], leads: WaLead[], activities: W
   const whatsappLeads = leads.filter((l) => l.source === "whatsapp")
   const attached = leads.filter((l) => l.visitor_ref && clickRefs.has(l.visitor_ref))
   const related = leads.filter((l) => l.source === "whatsapp" || (l.visitor_ref && clickRefs.has(l.visitor_ref)) || convIds.has(l.id))
-  const reserved = related.filter((l) => l.status === "reserve")
+  const reserved = related.filter((l) => isBooking(l.status))
   return {
     clicks: clicks.length,
     visitorsClicked: clickRefs.size,
