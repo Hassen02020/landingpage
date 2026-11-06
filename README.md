@@ -123,6 +123,8 @@ Rôle « admin » en plus :
 
 Les jetons Meta / TikTok sont **chiffrés** (AES-256-GCM) par le serveur avant d'être enregistrés ; la base ne garde que le texte chiffré et les 4 derniers caractères. La clé est dérivée de `LANDING_SECRETS_KEY` si elle existe, sinon de `LANDING_SUPABASE_SERVICE_ROLE_KEY` : après une rotation de cette clé, ressaisir les jetons dans `/admin/integrations` (l'écran le signale). Toutes les modifications d'intégration sont journalisées (qui, quand, quels champs, jamais les valeurs).
 
+**Fidélité (Fidèle / VIP)** : `LANDING_VIP_THRESHOLD_TND` (facultative) fixe le chiffre d'affaires cumulé à vie, en TND, à partir duquel un client est VIP. Absente ou invalide : personne n'est VIP (les clients ayant acheté sont « Fidèle »).
+
 ## Mise en place de la base dédiée
 
 1. Projet Supabase des landing pages : **`tdexdlukqciolslvjmhd`** (région eu-west-3), distinct d'EasyV4 et d'EasyV4-preview.

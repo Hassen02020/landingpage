@@ -315,7 +315,7 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   const sendsBefore = db.landing_lead_activities.length
   await page.goto(`${BASE}/admin/segments`, { waitUntil: "networkidle" })
   const cards = await page.locator("[data-segment]").count()
-  check("segments : 7 segments affichés", cards === 7, String(cards))
+  check("segments : 8 segments affichés (dont VIP)", cards === 8, String(cards))
   const txt = await page.locator("main").innerText()
   check("segments : mention explicite « rien n'est envoyé »", txt.includes("Rien n'est envoyé") || txt.includes("n'est envoyé"))
   // « À traiter » : au moins le lead Fatma (nouveau) ; tous les membres affichés ont un statut nouveau / à contacter
@@ -352,6 +352,29 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   const dayRows = await page.locator('[data-testid="daily"] tr[data-day]').count()
   check("entonnoir : une ligne par jour de la période", dayRows >= 40, String(dayRows))
   check("entonnoir : la consultation n'écrit rien (ni lead ni activité)", db.landing_lead_activities.length + db.landing_leads.length === writesBefore)
+}
+
+// ---------------------------------------------------------------- Fidélité (Bloc 8) : seuil de test 10 000 TND
+{
+  const KARIM = "21699001122" // vendu 15 600 → VIP
+  const HELA = "21633221100" // vendu 7 800 → Fidèle
+  const SAMI = "21655443322" // aucune vente → aucun niveau
+  const writesBefore = db.landing_lead_activities.length + db.landing_leads.length
+  await page.goto(`${BASE}/admin/clients`, { waitUntil: "networkidle" })
+  const tier = async (phone) => (await page.locator(`tr[data-phone="${phone}"] td[data-tier]`).first().getAttribute("data-tier"))
+  check("fidélité : 15 600 TND cumulés → VIP", (await tier(KARIM)) === "vip", String(await tier(KARIM)))
+  check("fidélité : 7 800 TND cumulés → Fidèle (sous le seuil)", (await tier(HELA)) === "fidele", String(await tier(HELA)))
+  check("fidélité : aucune vente → aucun niveau", (await tier(SAMI)) === "", String(await tier(SAMI)))
+  await page.goto(`${BASE}/admin/clients/${KARIM}`, { waitUntil: "networkidle" })
+  check("fiche client : badge VIP", (await page.locator('[data-testid="tier"]').innerText()).trim() === "VIP")
+  const loyalty = await page.locator('[data-testid="loyalty"]').innerText()
+  check("fiche client : fidélité explique le calcul (CA cumulé, seuil, aucun avantage automatique)", /15\s?600/.test(loyalty.replace(/[\u202f\u00a0]/g, " ")) && /Seuil VIP/.test(loyalty) && /Aucun avantage automatique/.test(loyalty), loyalty.replace(/\n/g, " | "))
+  // segment VIP : le client VIP est compté ; sans consentement marketing il est exclu de la liste contactable
+  await page.goto(`${BASE}/admin/segments`, { waitUntil: "networkidle" })
+  const vipCard = await page.locator('[data-segment="vip"]').innerText()
+  const karimConsent = db.landing_leads.some((l) => l.phone === KARIM && l.marketing_consent && !l.marketing_withdrawn_at)
+  check("segment VIP : un client VIP sans consentement marketing est exclu, avec ou sans consentement il est compté", karimConsent ? /^\s*VIP|Clients VIP/.test(vipCard) : /exclu/.test(vipCard), vipCard.replace(/\n/g, " | "))
+  check("fidélité : consultation en lecture seule", db.landing_lead_activities.length + db.landing_leads.length === writesBefore)
 }
 
 // ---------------------------------------------------------------- statistiques

@@ -3,6 +3,7 @@
 import { select } from "./db"
 import { isBooking, isOpen, type Status } from "@/lib/status"
 import type { Activity, LeadRow } from "./crm"
+import { tierOf, type Tier } from "@/lib/loyalty"
 
 export const PHONE_KEY_RE = /^\d{8,15}$/
 
@@ -20,6 +21,7 @@ export interface CustomerSummary {
   region: string | null
   marketingOk: boolean // vrai seulement si AUCUN lead n'a retiré / refusé le consentement
   lastStatus: Status
+  tier: Tier // fidélité : cumul à vie du chiffre d'affaires (lib/loyalty.ts)
 }
 
 const pickName = (l: Pick<LeadRow, "first_name" | "last_name">) => [l.first_name, l.last_name].filter(Boolean).join(" ")
@@ -52,6 +54,7 @@ export function groupCustomers(leads: LeadRow[]): CustomerSummary[] {
         region: sorted.find((l) => l.region)?.region ?? null,
         marketingOk: ls.every((l) => l.marketing_consent && !l.marketing_withdrawn_at),
         lastStatus: latest.status,
+        tier: tierOf(booked.length, booked.reduce((a, l) => a + (Number(l.booking_value) || 0), 0)),
       }
     })
     .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
