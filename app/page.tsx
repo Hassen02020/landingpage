@@ -55,7 +55,7 @@ const OFFERS: {
 ]
 
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  "Bonjour Easy2Book 👋 je souhaite des informations sur vos offres (voyages organisés / Omra / hôtels)."
+  "Bonjour Easy2Book, je souhaite des informations sur vos offres (voyages organisés / Omra / hôtels)."
 )}`
 
 export default function HomePage() {

@@ -5,6 +5,7 @@
 import { getAttribution } from "./attribution"
 import { hasTrackingConsent } from "./consent"
 import { WHATSAPP_NUMBER, type Product } from "./config"
+import { waText } from "./wa-text"
 
 type Fbq = (...args: unknown[]) => void
 interface Ttq {
@@ -135,7 +136,7 @@ export interface WhatsAppContext {
 /** Construit un lien WhatsApp avec le code de référence du visiteur en fin de message. */
 export function buildWhatsAppUrl(message: string, ref?: string): string {
   const text = ref ? `${message}\n\nRéf: ${ref}` : message
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText(text))}`
 }
 
 /**
@@ -154,7 +155,7 @@ export function handleWhatsAppClick(
     const url = new URL(anchor.href)
     const text = url.searchParams.get("text") || ""
     if (ref && !text.includes(ref)) {
-      url.searchParams.set("text", `${text || "Bonjour Easy2Book 👋"}\n\nRéf: ${ref}`)
+      url.searchParams.set("text", waText(`${text || "Bonjour Easy2Book"}\n\nRéf: ${ref}`))
       anchor.href = url.toString()
     }
   } catch {

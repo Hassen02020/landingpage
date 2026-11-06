@@ -11,6 +11,7 @@ import { notifyNewLead } from "@/lib/server/notify"
 import { verifyCaptcha } from "@/lib/server/captcha"
 import { cleanEmail } from "@/lib/validation"
 import { checkLead } from "@/lib/server/protection"
+import { waText } from "@/lib/wa-text"
 import { discountLabel, findUsablePromo, normalizeCode, redeemPromo, type PromoRow } from "@/lib/server/promo"
 
 export const runtime = "nodejs"
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
 
   const whatsappUrlFor = (leadRef: string) => {
     const whatsappText = [
-    `Bonjour Easy2Book 👋 je souhaite réserver : ${PRODUCTS[product]}${offer ? ` — ${offer}` : ""}`,
+    `Bonjour Easy2Book, je souhaite réserver : ${PRODUCTS[product]}${offer ? ` — ${offer}` : ""}`,
     `Nom : ${name}`,
     str(body.destination) ? `Destination : ${str(body.destination)}` : null,
     travelDate ? `Date : ${travelDate}` : str(body.travel_period, 64) ? `Période : ${str(body.travel_period, 64)}` : null,
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
     ]
       .filter((l) => l !== null)
       .join("\n")
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappText)}`
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText(whatsappText))}`
   }
 
   // Anti-doublon : double clic (même event_id) ou nouvel envoi identique en 10 min
