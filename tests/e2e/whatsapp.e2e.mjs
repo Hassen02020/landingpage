@@ -44,6 +44,9 @@ for (const consent of [true, false]) {
     const hrefs = await page.locator('a[href*="wa.me"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")))
     const wrongNumber = hrefs.filter((h) => !h.startsWith(`https://wa.me/${NUMBER}`))
     const tag = `${label} (${consent ? "avec" : "sans"} consentement)`
+    const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\u{20E3}]/u
+    const withEmoji = hrefs.filter((h) => emojiRe.test(decodeURIComponent((h.split("text=")[1] || "").replace(/\+/g, " "))))
+    check(`${tag} : aucun emoji dans les textes préremplis (wa.me les remplace par « � »)`, withEmoji.length === 0, withEmoji.map((h) => h.slice(0, 80)).join(" | "))
     check(`${tag} : ${hrefs.length} lien(s) WhatsApp, tous vers le numéro officiel`, hrefs.length > 0 && wrongNumber.length === 0, wrongNumber.join(" | "))
 
     const n = await page.locator('a[href*="wa.me"]').count()

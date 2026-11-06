@@ -50,4 +50,23 @@ describe("textes WhatsApp préremplis : aucun emoji", () => {
     }
     expect(offenders).toEqual([])
   })
+
+  it("garde-fou 2 : tout fichier qui construit un lien wa.me avec un texte passe par waText ou buildWhatsAppUrl", () => {
+    const files: string[] = []
+    const walk = (d: string) => {
+      for (const f of readdirSync(d)) {
+        const p = join(d, f)
+        if (statSync(p).isDirectory()) walk(p)
+        else if (/\.(ts|tsx)$/.test(f)) files.push(p)
+      }
+    }
+    walk("app")
+    walk("lib")
+    const unprotected = files.filter((f) => {
+      if (f.endsWith("wa-text.ts")) return false
+      const src = readFileSync(f, "utf8")
+      return /wa\.me\/[^\n]*\?text=/.test(src) && !/waText\(|buildWhatsAppUrl\(/.test(src)
+    })
+    expect(unprotected).toEqual([])
+  })
 })
