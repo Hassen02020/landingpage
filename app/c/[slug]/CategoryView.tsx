@@ -6,6 +6,7 @@ import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
 import { arDate } from "@/lib/dates-ar"
 import type { Category, PublicOffer } from "@/lib/server/catalog"
+import { waText } from "@/lib/wa-text"
 
 const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
 const frDate = (iso: string) => {
@@ -34,7 +35,7 @@ export function CategoryView({ category, offers }: { category: Category; offers:
     document.getElementById("reservation")?.scrollIntoView({ behavior: "smooth" })
   }
   const wa = (o?: PublicOffer) =>
-    `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(o ? `Bonjour Easy2Book, je suis intéressé(e) par : ${label(o)} (${o.price} TND).` : `Bonjour Easy2Book, je souhaite des informations sur : ${category.name}.`)}`
+    `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText(o ? `Bonjour Easy2Book, je suis intéressé(e) par : ${label(o)} (${o.price} TND).` : `Bonjour Easy2Book, je souhaite des informations sur : ${category.name}.`))}`
 
   return (
     <div className="min-h-screen bg-stone-50 text-gray-900 pb-20 sm:pb-0" dir={dir}>

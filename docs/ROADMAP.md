@@ -141,3 +141,7 @@ Niveaux : CODE ÉCRIT < TESTÉ < INTÉGRATION CONNECTÉE < PARCOURS VALIDÉ < PR
 | Production | **NON CERTIFIÉE tant que la vérification en ligne n'est pas faite** | — | Déploiement + contrôles en ligne (ci-dessous) |
 
 Écarts connus : limites de débit en mémoire par instance ; lint non configuré ; e2e sur faux Supabase ; coût par lead / ROAS impossibles sans dépenses réelles ; sens de `reserve` / `gagne`, seuils de segments et répartition des leads à valider.
+
+### Correction WhatsApp — emojis (06/11/2026)
+
+Constat en production (capture du propriétaire) puis par requêtes sur `wa.me` : **tout emoji d'un texte prérempli est remplacé par « � »** dans la redirection vers `api.whatsapp.com` (👋 ✈️ 🏖️ 📅 testés). Les accents et l'arabe passent. Correction : `lib/wa-text.ts` (`waText`) retire les emojis des liens WhatsApp (formulaire, accueil, Summer Vibes, voyages organisés, catégories, modèles d'équipe) ; les puces des listes deviennent des tirets. Test garde-fou `tests/wa-emoji.test.ts` : aucun message « Bonjour Easy2Book… » du code ne peut contenir d'emoji. Les emojis de l'**interface** (boutons, pages) sont conservés : seuls les textes envoyés via `wa.me` sont concernés. Les modèles d'équipe déjà en base gardent leurs emojis (migration 0005 non modifiée) ; ils sont nettoyés à l'envoi.

@@ -8,6 +8,7 @@ import { listTemplates, renderTemplate } from "@/lib/server/templates"
 import { STATUS_COLORS, formatDate } from "../../../format"
 import { blockLeadPhoneAction } from "../../../settings-actions"
 import { currentStaff } from "@/lib/server/auth"
+import { waText } from "@/lib/wa-text"
 
 export const dynamic = "force-dynamic"
 
@@ -60,10 +61,10 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
             {templates.map((t) => (
               <a
                 key={t.id}
-                href={`https://wa.me/${lead.phone}?text=${encodeURIComponent(renderTemplate(t.body, lead))}`}
+                href={`https://wa.me/${lead.phone}?text=${encodeURIComponent(waText(renderTemplate(t.body, lead)))}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                title={renderTemplate(t.body, lead)}
+                title={waText(renderTemplate(t.body, lead))}
                 className="border border-green-300 text-green-800 bg-green-50 hover:bg-green-100 rounded-xl px-3 py-1.5 font-semibold"
               >
                 💬 {t.title}
