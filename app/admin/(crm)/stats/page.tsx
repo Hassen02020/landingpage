@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { select } from "@/lib/server/db"
+import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
+import { loadAnalytics } from "@/lib/server/analytics"
 import { groupBy, groupByOffer, loadLeadStats, loadTeam, parsePeriod, rates, teamStats, totals, type Counts, type Level, type Period } from "@/lib/server/stats"
 
 export const dynamic = "force-dynamic"
@@ -28,6 +30,8 @@ function Tabs({ view, p }: { view: string; p: Period }) {
     <div className="flex gap-2">
       <Link href={`/admin/stats?view=marketing&${q}`} className={cls("marketing")}>Marketing</Link>
       <Link href={`/admin/stats?view=equipe&${q}`} className={cls("equipe")}>Équipe | Suivi</Link>
+      <Link href={`/admin/stats?view=entonnoir&${q}`} className={cls("entonnoir")}>Entonnoir</Link>
+      <Link href={`/admin/stats?view=whatsapp&${q}`} className={cls("whatsapp")}>WhatsApp</Link>
       <Link href={`/admin/stats?view=offres&${q}`} className={cls("offres")}>Offres</Link>
       <Link href={`/admin/stats?view=niches&${q}`} className={cls("niches")}>Niches</Link>
     </div>
@@ -60,11 +64,12 @@ function KpiGrid({ c }: { c: Counts }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <Kpi label="Leads reçus" value={c.leads} tone="bg-violet-600" sub={`Traités : ${pct(r.treatmentRate)}`} />
-      <Kpi label="À traiter (nouveaux)" value={c.nouveau} tone="bg-blue-500" />
-      <Kpi label="Contactés" value={c.contacte} tone="bg-sky-500" />
-      <Kpi label="Qualifiés" value={c.qualifie} tone="bg-amber-500" />
-      <Kpi label="Réservés" value={c.reserve} tone="bg-green-600" sub={`CA : ${tnd(c.revenue)}`} />
-      <Kpi label="Perdus" value={c.perdu} tone="bg-red-500" sub={`Conclusion : ${pct(r.closingRate)}`} />
+      <Kpi label="À traiter" value={c.toTreat} tone="bg-blue-500" sub="nouveau + à contacter" />
+      <Kpi label="En contact" value={c.inContact} tone="bg-sky-500" sub="contacté + à qualifier" />
+      <Kpi label="Qualifiés" value={c.qualified} tone="bg-amber-500" />
+      <Kpi label="Devis / négociation" value={c.proposal} tone="bg-indigo-500" />
+      <Kpi label="Vendus" value={c.booked} tone="bg-green-600" sub={`réservé + gagné · CA : ${tnd(c.revenue)}`} />
+      <Kpi label="Perdus" value={c.lost} tone="bg-red-500" sub={`Conclusion : ${pct(r.closingRate)}`} />
     </div>
   )
 }
@@ -91,31 +96,33 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
           <thead className="border-b bg-gray-50">
             <tr>
               <th className={th}>Canal</th>
+              <th className={th}>Source</th>
               <th className={th}>Campagne</th>
               {level !== "campaign" && <th className={th}>Groupe d&apos;annonces</th>}
               {level === "ad" && <th className={th}>Annonce</th>}
               <th className={th}>Leads</th>
               <th className={th}>Traités</th>
-              <th className={th}>Réservés</th>
-              <th className={th}>Taux résa.</th>
+              <th className={th}>Vendus</th>
+              <th className={th}>Taux de vente</th>
               <th className={th}>CA</th>
             </tr>
           </thead>
           <tbody>
             {groups.length === 0 && (
-              <tr><td colSpan={9} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>
+              <tr><td colSpan={10} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>
             )}
             {groups.map((g) => {
               const gr = rates(g)
               return (
                 <tr key={g.key} className="border-b last:border-0">
                   <td className={td}>{g.channel}</td>
+                  <td className={td}>{g.source}</td>
                   <td className={td}>{g.campaign}</td>
                   {level !== "campaign" && <td className={td}>{g.adset}</td>}
                   {level === "ad" && <td className={td}>{g.ad}</td>}
                   <td className={td}>{g.leads}</td>
                   <td className={td}>{gr.treated}</td>
-                  <td className={td}>{g.reserve}</td>
+                  <td className={td}>{g.booked}</td>
                   <td className={td}>{pct(gr.bookingRate)}</td>
                   <td className={td}>{tnd(g.revenue)}</td>
                 </tr>
@@ -137,8 +144,8 @@ async function Team({ p, member }: { p: Period; member: string }) {
   const all = teamStats(data.staff, data.activities, data.leads)
   const list = member ? all.filter((m) => m.userId === member) : all
   const sum = list.reduce(
-    (a, m) => ({ actions: a.actions + m.actions, contacted: a.contacted + m.contacted, qualified: a.qualified + m.qualified, booked: a.booked + m.booked, lost: a.lost + m.lost, notes: a.notes + m.notes, assigned: a.assigned + m.assigned }),
-    { actions: 0, contacted: 0, qualified: 0, booked: 0, lost: 0, notes: 0, assigned: 0 }
+    (a, m) => ({ actions: a.actions + m.actions, contacted: a.contacted + m.contacted, qualified: a.qualified + m.qualified, proposals: a.proposals + m.proposals, booked: a.booked + m.booked, lost: a.lost + m.lost, notes: a.notes + m.notes, assigned: a.assigned + m.assigned }),
+    { actions: 0, contacted: 0, qualified: 0, proposals: 0, booked: 0, lost: 0, notes: 0, assigned: 0 }
   )
   const closing = sum.booked + sum.lost ? sum.booked / (sum.booked + sum.lost) : 0
   return (
@@ -148,7 +155,8 @@ async function Team({ p, member }: { p: Period; member: string }) {
         <Kpi label="Actions (statuts, notes…)" value={sum.actions} tone="bg-blue-500" sub={`dont notes : ${sum.notes}`} />
         <Kpi label="Contactés" value={sum.contacted} tone="bg-sky-500" />
         <Kpi label="Qualifiés" value={sum.qualified} tone="bg-amber-500" />
-        <Kpi label="Réservés" value={sum.booked} tone="bg-green-600" />
+        <Kpi label="Devis envoyés" value={sum.proposals} tone="bg-indigo-500" />
+        <Kpi label="Ventes" value={sum.booked} tone="bg-green-600" sub="réservé / gagné, comptée une fois" />
         <Kpi label="Perdus" value={sum.lost} tone="bg-red-500" />
         <Kpi label="Taux de conclusion" value={pct(closing)} tone="bg-emerald-600" sub="réservés / (réservés + perdus)" />
       </div>
@@ -156,7 +164,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50">
             <tr>
-              {["Membre", "Rôle", "Assignés", "Actions", "Contactés", "Qualifiés", "Réservés", "Perdus", "Conclusion"].map((h) => <th key={h} className={th}>{h}</th>)}
+              {["Membre", "Rôle", "Assignés", "Actions", "Contactés", "Qualifiés", "Devis", "Ventes", "Perdus", "Conclusion"].map((h) => <th key={h} className={th}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -168,6 +176,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
                 <td className={td}>{m.actions}</td>
                 <td className={td}>{m.contacted}</td>
                 <td className={td}>{m.qualified}</td>
+                <td className={td}>{m.proposals}</td>
                 <td className={td}>{m.booked}</td>
                 <td className={td}>{m.lost}</td>
                 <td className={td}>{pct(m.closingRate)}</td>
@@ -181,6 +190,51 @@ async function Team({ p, member }: { p: Period; member: string }) {
   )
 }
 
+async function WhatsAppView({ p }: { p: Period }) {
+  const f = await loadWhatsApp(p).catch(() => null)
+  if (!f) return <p className="text-red-700">Lecture impossible.</p>
+  const rows: { step: string; value: string | number; nature: "Observé" | "Saisi par l'équipe" | "Calculé"; source: string }[] = [
+    { step: "Clics WhatsApp", value: f.clicks, nature: "Observé", source: "Navigateur du visiteur (événement « Contact »), uniquement s'il a accepté les traceurs. Un clic n'est pas un message envoyé." },
+    { step: "Visiteurs distincts ayant cliqué", value: f.visitorsClicked, nature: "Observé", source: "Références E2B distinctes des clics." },
+    { step: "Demandes par formulaire", value: f.formLeads, nature: "Observé", source: "Leads créés par le formulaire du site." },
+    { step: "Leads créés depuis un message reçu", value: f.whatsappLeads, nature: "Saisi par l'équipe", source: "« Nouveau lead » avec la source WhatsApp." },
+    { step: "Leads rattachés à un clic", value: f.attachedLeads, nature: "Calculé", source: "Leads dont la référence E2B correspond à un clic enregistré." },
+    { step: "Messages reçus enregistrés", value: f.messagesIn, nature: "Saisi par l'équipe", source: "Bouton « Message reçu » de la fiche lead." },
+    { step: "Messages envoyés enregistrés", value: f.messagesOut, nature: "Saisi par l'équipe", source: "Bouton « Message envoyé » de la fiche lead." },
+    { step: "Conversations suivies", value: f.conversations, nature: "Calculé", source: "Leads avec au moins un échange enregistré." },
+    { step: "Réservations issues de WhatsApp", value: f.reserved, nature: "Calculé", source: "Leads réservés ayant la source WhatsApp, un clic rattaché ou un échange enregistré." },
+  ]
+  const tone: Record<string, string> = { "Observé": "bg-blue-100 text-blue-800", "Saisi par l'équipe": "bg-amber-100 text-amber-800", "Calculé": "bg-gray-200 text-gray-700" }
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Kpi label="Clics WhatsApp" value={f.clicks} tone="bg-blue-500" sub={`${f.visitorsClicked} visiteur(s)`} />
+        <Kpi label="Conversations suivies" value={f.conversations} tone="bg-amber-500" sub={`${f.messagesIn} reçus · ${f.messagesOut} envoyés`} />
+        <Kpi label="Rattachement des messages" value={pct(f.whatsappAttachedRate)} tone="bg-violet-600" sub="leads WhatsApp dont le clic est retrouvé" />
+        <Kpi label="Réservations" value={f.reserved} tone="bg-green-600" sub={`CA : ${tnd(f.revenue)}`} />
+      </div>
+      <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b bg-gray-50"><tr>{["Étape", "Valeur", "Nature", "Définition et source"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.step} className="border-b last:border-0">
+                <td className={`${td} font-semibold`}>{r.step}</td>
+                <td className={td}>{r.value}</td>
+                <td className={td}><span className={`text-xs font-bold px-2 py-1 rounded-full ${tone[r.nature]}`}>{r.nature}</span></td>
+                <td className="p-3 text-gray-600">{r.source}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">
+        <strong>Non observable sans l&apos;API officielle WhatsApp Business :</strong> l&apos;ouverture de l&apos;application, l&apos;envoi réel du message par le visiteur, la lecture et la réponse. Ces étapes ne sont jamais déduites d&apos;un clic.
+      </div>
+    </div>
+  )
+}
+
 async function Offers({ p }: { p: Period }) {
   const rows = await loadLeadStats(p).catch(() => null)
   if (!rows) return <p className="text-red-700">Lecture impossible.</p>
@@ -190,24 +244,64 @@ async function Offers({ p }: { p: Period }) {
       <KpiGrid c={totals(rows)} />
       <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-b bg-gray-50"><tr>{["Produit", "Offre", "Leads", "À traiter", "Contactés", "Qualifiés", "Réservés", "Perdus", "Taux résa.", "CA"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+          <thead className="border-b bg-gray-50"><tr>{["Produit", "Offre", "Leads", "À traiter", "En contact", "Qualifiés", "Devis / négo.", "Vendus", "Perdus", "Taux de vente", "CA"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
           <tbody>
-            {groups.length === 0 && <tr><td colSpan={10} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>}
+            {groups.length === 0 && <tr><td colSpan={11} className="p-6 text-center text-gray-500">Aucun lead sur la période.</td></tr>}
             {groups.map((g) => (
               <tr key={g.key} className="border-b last:border-0">
                 <td className={td}>{PRODUCTS[g.product as Product] ?? g.product}</td>
                 <td className={td}>{g.offer}</td>
                 <td className={td}>{g.leads}</td>
-                <td className={td}>{g.nouveau}</td>
-                <td className={td}>{g.contacte}</td>
-                <td className={td}>{g.qualifie}</td>
-                <td className={td}>{g.reserve}</td>
-                <td className={td}>{g.perdu}</td>
+                <td className={td}>{g.toTreat}</td>
+                <td className={td}>{g.inContact}</td>
+                <td className={td}>{g.qualified}</td>
+                <td className={td}>{g.proposal}</td>
+                <td className={td}>{g.booked}</td>
+                <td className={td}>{g.lost}</td>
                 <td className={td}>{pct(rates(g).bookingRate)}</td>
                 <td className={td}>{tnd(g.revenue)}</td>
               </tr>
             ))}
           </tbody>
+        </table>
+      </section>
+    </div>
+  )
+}
+
+const fmtDuration = (m: number | null) => (m === null ? "—" : m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 6) / 10} h` : `${Math.round(m / 144) / 10} j`)
+
+async function Funnel({ p }: { p: Period }) {
+  const a = await loadAnalytics(p).catch(() => null)
+  if (!a) return <p className="text-red-700">Lecture impossible.</p>
+  const max = Math.max(1, ...a.series.map((d) => d.leads))
+  return (
+    <div className="space-y-4">
+      <section className="bg-white rounded-2xl shadow-sm p-4" data-testid="funnel">
+        <h2 className="font-bold mb-1">Entonnoir commercial</h2>
+        <p className="text-xs text-gray-500 mb-3">Étapes atteintes sur la période (un dossier perdu compte jusqu&apos;à l&apos;étape la plus avancée qu&apos;il a atteinte). Vendu = réservé ou gagné, compté une fois.</p>
+        <div className="space-y-2">
+          {a.funnel.map((s) => (
+            <div key={s.key} data-step={s.key}>
+              <div className="flex justify-between text-sm"><span className="font-semibold">{s.label}</span><span><b data-count>{s.count}</b> <span className="text-gray-500">· {pct(s.fromStart)} du total · {pct(s.fromPrevious)} de l&apos;étape précédente</span></span></div>
+              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-violet-600 rounded" style={{ width: `${Math.round(s.fromStart * 100)}%` }} /></div>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="response">
+        <Kpi label="Délai médian de premier traitement" value={fmtDuration(a.response.medianMinutes)} tone="bg-blue-500" />
+        <Kpi label="Traités dans l'heure" value={`${a.response.within1h} / ${a.leads.length}`} tone="bg-green-500" />
+        <Kpi label="Traités dans les 24 h" value={`${a.response.within24h} / ${a.leads.length}`} tone="bg-amber-500" />
+        <Kpi label="Jamais traités" value={a.response.untreated} tone="bg-red-500" />
+      </section>
+      <section className="bg-white rounded-2xl shadow-sm p-4 overflow-x-auto">
+        <h2 className="font-bold mb-2">Par jour</h2>
+        <table className="w-full text-sm" data-testid="daily">
+          <thead className="border-b bg-gray-50"><tr>{["Jour", "Leads", "", "Ventes", "CA"].map((h, i) => <th key={i} className={th}>{h}</th>)}</tr></thead>
+          <tbody>{a.series.map((d) => (
+            <tr key={d.day} data-day={d.day} className="border-b last:border-0"><td className={td}>{d.day}</td><td className={td}>{d.leads}</td><td className={td}><div className="h-2 bg-violet-300 rounded" style={{ width: `${Math.round((d.leads / max) * 120)}px` }} /></td><td className={td}>{d.sales}</td><td className={td}>{d.revenue ? tnd(d.revenue) : "—"}</td></tr>
+          ))}</tbody>
         </table>
       </section>
     </div>
@@ -231,7 +325,7 @@ async function Niches() {
 }
 
 export default async function StatsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
-  const view = ["marketing", "equipe", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
+  const view = ["marketing", "equipe", "entonnoir", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
   const p = parsePeriod(searchParams.from, searchParams.to)
   const level: Level = (["campaign", "adset", "ad"] as const).find((l) => l === searchParams.level) ?? "campaign"
   const member = /^[0-9a-f-]{36}$/i.test(searchParams.member || "") ? searchParams.member! : ""
@@ -251,7 +345,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
           view={view}
           p={p}
           extra={
-            view === "offres" ? null : view === "marketing" ? (
+            view === "offres" || view === "whatsapp" || view === "entonnoir" ? null : view === "marketing" ? (
               <label className="flex flex-col">Détail
                 <select name="level" defaultValue={level} className="border rounded-lg px-2 py-1.5">
                   <option value="campaign">Par campagne</option>
@@ -276,6 +370,8 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
 
       {view === "marketing" && <Marketing p={p} level={level} />}
       {view === "equipe" && <Team p={p} member={member} />}
+      {view === "entonnoir" && <Funnel p={p} />}
+      {view === "whatsapp" && <WhatsAppView p={p} />}
       {view === "offres" && <Offers p={p} />}
       {view === "niches" && <Niches />}
     </div>

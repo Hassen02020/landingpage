@@ -18,11 +18,15 @@ export default function NewLeadPage({ searchParams }: { searchParams: { erreur?:
         <select name="source" required className={input}>
           {(["whatsapp", "phone", "manual"] as const).map((s) => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
         </select>
+        <div className="space-y-1">
+          <input name="wa_ref" placeholder="Message WhatsApp reçu ou référence E2B-XXXXXX (facultatif)" className={`${input} font-mono`} dir="ltr" autoComplete="off" />
+          <p className="text-xs text-gray-500">Collez le message reçu : la référence « Réf: E2B-… » qu&apos;il contient permet de retrouver la page, la campagne et le bouton d&apos;origine. Si ce visiteur a déjà une demande, le message est ajouté à son historique (pas de doublon).</p>
+        </div>
         <input name="offer" placeholder="Offre (facultatif)" className={input} />
         <input name="destination" placeholder="Destination (facultatif)" className={input} />
         <textarea name="message" rows={3} placeholder="Détails de la demande (facultatif)" className={input} />
         <p className="text-xs text-gray-500">Le prospect nous a contactés lui-même : le recontact au sujet de sa demande est autorisé. Aucun consentement marketing n'est enregistré.</p>
-        <button className="w-full bg-blue-800 text-white font-bold py-2 rounded-lg">Créer le lead</button>
+        <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Créer le lead</button>
       </form>
     </div>
   )

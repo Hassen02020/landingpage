@@ -5,8 +5,13 @@ export function formatDate(iso: string | null | undefined): string {
 
 export const STATUS_COLORS: Record<string, string> = {
   nouveau: "bg-blue-100 text-blue-800",
+  a_contacter: "bg-sky-100 text-sky-800",
   contacte: "bg-amber-100 text-amber-800",
+  a_qualifier: "bg-orange-100 text-orange-800",
   qualifie: "bg-purple-100 text-purple-800",
+  devis: "bg-indigo-100 text-indigo-800",
+  negociation: "bg-fuchsia-100 text-fuchsia-800",
   reserve: "bg-green-100 text-green-800",
+  gagne: "bg-emerald-200 text-emerald-900",
   perdu: "bg-gray-200 text-gray-600",
 }

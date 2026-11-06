@@ -5,7 +5,14 @@
 // garde le premier contact (first touch) et le dernier contact (last touch) afin que
 // chaque lead / clic WhatsApp soit rattaché à la publicité qui l'a généré.
 
-export type Channel = "meta" | "tiktok" | "whatsapp" | "google" | "organic" | "referral" | "direct"
+import { detectChannel as detect, type Channel } from "./channel"
+
+export type { Channel }
+
+// Détection du canal : voir lib/channel.ts (mots entiers, navigateurs intégrés, testée)
+export function detectChannel(params: URLSearchParams, referrer: string): Channel {
+  return detect(params, referrer, { host: typeof window !== "undefined" ? window.location.hostname : undefined, userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined })
+}
 
 export interface Touch {
   channel: Channel
@@ -107,27 +114,6 @@ export function refFromVisitorId(vid: string): string {
     hash >>>= 5
   }
   return `E2B-${out}`
-}
-
-export function detectChannel(params: URLSearchParams, referrer: string): Channel {
-  const src = (params.get("utm_source") || "").toLowerCase()
-  if (params.get("fbclid") || /(facebook|fb|instagram|ig|meta|messenger)/.test(src)) return "meta"
-  if (params.get("ttclid") || /tiktok/.test(src)) return "tiktok"
-  if (/(whatsapp|wa)/.test(src)) return "whatsapp"
-  if (params.get("gclid") || /google/.test(src)) return "google"
-  if (src) return "referral"
-  if (!referrer) return "direct"
-  try {
-    const host = new URL(referrer).hostname
-    if (host === window.location.hostname) return "direct"
-    if (/(facebook|instagram|fb\.|messenger)/.test(host)) return "meta"
-    if (/tiktok/.test(host)) return "tiktok"
-    if (/whatsapp|wa\.me/.test(host)) return "whatsapp"
-    if (/(google|bing|yahoo|duckduckgo)/.test(host)) return "organic"
-  } catch {
-    return "direct"
-  }
-  return "referral"
 }
 
 function getVisitorId(): string {

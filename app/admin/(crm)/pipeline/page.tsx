@@ -2,18 +2,26 @@ import Link from "next/link"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { currentStaff } from "@/lib/server/auth"
 import { select } from "@/lib/server/db"
-import { STATUS_LABELS, UUID_RE, listStaff, type LeadRow, type Status } from "@/lib/server/crm"
+import { UUID_RE, listStaff, type LeadRow } from "@/lib/server/crm"
+import { NEXT_STAGE, OPEN_STATUSES, STATUSES, STATUS_LABELS, inFilter, isBooking, isOpen, type Status } from "@/lib/status"
 import { moveLeadAction } from "../../actions"
 
 export const dynamic = "force-dynamic"
 
-const COLUMNS: { status: Status; tone: string; next?: Status[] }[] = [
-  { status: "nouveau", tone: "border-blue-400", next: ["contacte", "perdu"] },
-  { status: "contacte", tone: "border-sky-400", next: ["qualifie", "perdu"] },
-  { status: "qualifie", tone: "border-amber-400", next: ["contacte", "perdu"] },
-  { status: "reserve", tone: "border-green-500" },
-  { status: "perdu", tone: "border-red-400", next: ["contacte"] },
-]
+// Une colonne par statut, dans l'ordre du pipeline commercial (lib/status.ts).
+const TONES: Record<Status, string> = {
+  nouveau: "border-blue-400",
+  a_contacter: "border-sky-400",
+  contacte: "border-amber-400",
+  a_qualifier: "border-orange-400",
+  qualifie: "border-purple-400",
+  devis: "border-indigo-400",
+  negociation: "border-fuchsia-400",
+  reserve: "border-green-500",
+  gagne: "border-emerald-600",
+  perdu: "border-red-400",
+}
+const COLUMNS = STATUSES.map((status) => ({ status, tone: TONES[status] }))
 
 const age = (iso: string) => {
   const h = Math.floor((Date.now() - Date.parse(iso)) / 3_600_000)
@@ -32,7 +40,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: { p
   // dossiers conclus : 30 derniers jours seulement (le tableau reste lisible)
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
   const [cards, staff] = await Promise.all([
-    select<Card>("landing_leads", `${filters.join("&")}&or=(status.in.(nouveau,contacte,qualifie),updated_at.gte.${since})`).catch(() => null),
+    select<Card>("landing_leads", `${filters.join("&")}&or=(status.${inFilter(OPEN_STATUSES)},updated_at.gte.${since})`).catch(() => null),
     listStaff().catch(() => []),
   ])
   const name = new Map(staff.map((s) => [s.user_id, s.full_name || s.email.split("@")[0]]))
@@ -59,21 +67,21 @@ export default async function PipelinePage({ searchParams }: { searchParams: { p
       {!cards ? (
         <p className="text-red-700">Lecture impossible.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3 items-start">
+        <div className="flex gap-3 items-start overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0" data-testid="pipeline-board">
           {COLUMNS.map((col) => {
             const list = cards.filter((c) => c.status === col.status)
             const total = list.reduce((a, c) => a + (Number(c.booking_value) || 0), 0)
             return (
-              <section key={col.status} className={`bg-gray-100 rounded-2xl p-2 border-t-4 ${col.tone}`}>
+              <section key={col.status} data-status={col.status} className={`bg-gray-100 rounded-2xl p-2 border-t-4 shrink-0 w-64 ${col.tone}`}>
                 <h2 className="font-black px-2 py-1 flex justify-between">
                   <span>{STATUS_LABELS[col.status]}</span>
                   <span className="text-gray-500">{list.length}</span>
                 </h2>
-                {col.status === "reserve" && total > 0 && <p className="px-2 text-xs text-green-700 font-bold">{new Intl.NumberFormat("fr-FR").format(total)} TND</p>}
-                {(col.status === "reserve" || col.status === "perdu") && <p className="px-2 text-xs text-gray-500">30 derniers jours</p>}
+                {isBooking(col.status) && total > 0 && <p className="px-2 text-xs text-green-700 font-bold">{new Intl.NumberFormat("fr-FR").format(total)} TND</p>}
+                {!isOpen(col.status) && <p className="px-2 text-xs text-gray-500">30 derniers jours</p>}
                 <div className="space-y-2 mt-2 max-h-[70vh] overflow-y-auto">
                   {list.slice(0, 100).map((c) => {
-                    const late = c.next_follow_up_at && Date.parse(c.next_follow_up_at) <= Date.now() && ["nouveau", "contacte", "qualifie"].includes(c.status)
+                    const late = c.next_follow_up_at && Date.parse(c.next_follow_up_at) <= Date.now() && isOpen(c.status)
                     return (
                       <div key={c.id} className="bg-white rounded-xl p-3 shadow-sm text-sm">
                         <Link href={`/admin/leads/${c.id}`} className="font-bold hover:underline">{c.first_name} {c.last_name ?? ""}</Link>
@@ -83,19 +91,31 @@ export default async function PipelinePage({ searchParams }: { searchParams: { p
                           <span className={c.assigned_to ? "text-gray-600" : "text-amber-600"}>{c.assigned_to ? name.get(c.assigned_to) ?? "—" : "non assigné"}</span>
                           {late && <span className="text-red-600 font-bold">relance échue</span>}
                         </div>
-                        {col.next && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {col.next.map((n) => (
-                              <form key={n} action={moveLeadAction}>
-                                <input type="hidden" name="id" value={c.id} />
-                                <input type="hidden" name="status" value={n} />
-                                <input type="hidden" name="back" value={back} />
-                                <button className="text-xs border rounded-lg px-2 py-0.5 hover:bg-gray-50">→ {STATUS_LABELS[n]}</button>
-                              </form>
-                            ))}
-                            {col.status === "qualifie" && <Link href={`/admin/leads/${c.id}`} className="text-xs border border-green-300 text-green-700 rounded-lg px-2 py-0.5">→ Réservé</Link>}
-                          </div>
-                        )}
+                        {(() => {
+                          const next = NEXT_STAGE[col.status]
+                          return (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {next && (isBooking(next) ? (
+                                <Link href={`/admin/leads/${c.id}`} className="text-xs border border-green-300 text-green-700 rounded-lg px-2 py-0.5" title="Le montant est obligatoire : se fait sur la fiche">→ {STATUS_LABELS[next]} (montant)</Link>
+                              ) : (
+                                <form action={moveLeadAction}>
+                                  <input type="hidden" name="id" value={c.id} />
+                                  <input type="hidden" name="status" value={next} />
+                                  <input type="hidden" name="back" value={back} />
+                                  <button className="text-xs border rounded-lg px-2 py-0.5 hover:bg-gray-50">→ {col.status === "perdu" ? "Rouvrir" : STATUS_LABELS[next]}</button>
+                                </form>
+                              ))}
+                              {isOpen(col.status) && (
+                                <form action={moveLeadAction}>
+                                  <input type="hidden" name="id" value={c.id} />
+                                  <input type="hidden" name="status" value="perdu" />
+                                  <input type="hidden" name="back" value={back} />
+                                  <button className="text-xs border rounded-lg px-2 py-0.5 hover:bg-red-50 text-red-700">Perdu</button>
+                                </form>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
                     )
                   })}

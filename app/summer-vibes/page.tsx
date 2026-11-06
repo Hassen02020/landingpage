@@ -302,8 +302,6 @@ export default function SummerVibesPage() {
             formId="hotel-lead-form"
             offers={CATEGORIES.map((c) => c.label)}
             destinations={["Hammamet", "Sousse", "Monastir", "Djerba", "Mahdia", "Tabarka", "Tunis", "Tozeur"]}
-            tripTypes={["Famille", "Voyage de noces", "Entre amis", "Affaires", "Weekend"]}
-            budgets={["100-200 TND / nuit", "200-300 TND / nuit", "300-500 TND / nuit", "500+ TND / nuit"]}
           />
         </div>
       </section>

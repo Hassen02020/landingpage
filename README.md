@@ -82,6 +82,28 @@ Ces durées sont des propositions : elles se modifient dans `0002_landing_crm.sq
 
 Dans **Authentication > Sign In / Providers**, désactivez « Allow new users to sign up » : seuls les comptes créés par un administrateur doivent exister.
 
+## WhatsApp
+
+Les 38 liens WhatsApp des pages publiques pointent vers un numéro unique (`lib/config.ts`) et ajoutent au message une référence `Réf: E2B-XXXXXX`. Dans « Nouveau lead », collez le message reçu : le CRM retrouve le clic d'origine (canal, source, campagne) ou déclare l'origine inconnue ; un visiteur déjà connu n'est jamais dupliqué. Les messages reçus / envoyés sont **saisis** sur la fiche (aucune API WhatsApp n'est connectée) et comptés dans **Statistiques → WhatsApp**, où chaque étape indique si elle est observée, saisie ou calculée. Audit de l'API officielle, prérequis et blocages : `docs/WHATSAPP.md`. Preuve : `bash tests/e2e/run-public.sh tests/e2e/whatsapp.e2e.mjs`.
+
+## Liens de campagne et attribution
+
+`/admin/liens` fabrique les liens à coller dans les bios, publications et publicités : réseau (Facebook, Instagram, TikTok, WhatsApp) × support (publicité, publication, bio, story, message) × page de destination × campagne. Noms normalisés (minuscules, sans accent), destination validée, option « paramètres dynamiques » pour les publicités payantes. Les liens de bio des comptes officiels y sont prêts à copier. **Aucune publicité n'est lancée et aucun compte n'est modifié par le code.**
+
+Chaque lead conserve : canal, source (`utm_source` · `utm_medium`), campagne / groupe / annonce, page d'**arrivée**, page du **formulaire**. Le canal est détecté sur des **mots entiers** (`lib/channel.ts`) ; un navigateur intégré (Instagram, Facebook, TikTok) sans paramètre est reconnu par son User-Agent, sans inventer d'UTM. Sans consentement aux traceurs : la campagne est gardée, mais ni fbclid / ttclid, ni identifiant visiteur, ni IP, ni navigateur. Preuve : `tests/e2e/social.e2e.mjs` (`bash tests/e2e/run-fake.sh tests/e2e/social.e2e.mjs`).
+
+## Collecte : premier contact court, qualification ensuite
+
+Décisions du propriétaire appliquées au code :
+
+| Moment | Données |
+|---|---|
+| **Premier contact** (formulaire public) | prénom (ou nom), téléphone, produit, offre / destination selon la page, consentements. WhatsApp est le canal de réponse. |
+| **Qualification** (fiche CRM, pendant l'échange) | région (gouvernorat), e-mail (facultatif), budget **déclaré** (jamais une dépense), voyageurs, période souhaitée, canal préféré |
+| **Jamais demandé** | âge ; budget, région, voyageurs, dates, type de séjour au premier contact |
+
+Rien n'est inventé : sans réponse, voyageurs = « non précisé » (NULL), pas « 1 adulte ». Un e-mail invalide n'empêche jamais l'envoi. Garde-fous : `tests/collecte.test.ts` (API + contenu du formulaire) et `tests/e2e/collect.e2e.mjs` (navigateur, 4 pages, mobile et bureau).
+
 ## Écrans d'administration
 
 Pour toute l'équipe : **accueil `/admin`** (cartes du jour : à traiter, reçus aujourd'hui, relances échues, mes dossiers, non assignés, réservés du mois ; filtres rapides ; **actions groupées** : assigner, contacté / qualifié / perdu), **`/admin/pipeline`** (colonnes par statut, déplacement en un clic, « réservé » via la fiche pour saisir le montant), **fiche lead** (messages WhatsApp prêts, doublons du même numéro avec « marquer comme doublon »), **`/admin/compte`** (changer son mot de passe).
@@ -107,6 +129,7 @@ Les jetons Meta / TikTok sont **chiffrés** (AES-256-GCM) par le serveur avant d
 2. Dans ce projet, ouvrir **SQL Editor** et exécuter, dans l'ordre, `supabase/migrations/0001_landing_leads.sql` (**appliquée le 31/10/2026**), puis `supabase/migrations/0002_landing_crm.sql`. Chaque script s'arrête de lui-même sur une base EasyV4, si le précédent manque, ou s'il a déjà été appliqué.
    **Ordre de déploiement** : appliquer `0002` **avant** de déployer ce code. Le formulaire enregistre `consent_text_version`, une colonne créée par `0002`.
    Puis `supabase/migrations/0005_landing_team_templates.sql` (équipe, modèles, journal) après 0004.
+   Puis `supabase/migrations/0006_landing_qualification.sql` (e-mail, région, canal de contact, voyageurs facultatifs) après 0005, puis `supabase/migrations/0007_landing_pipeline.sql` (pipeline à 10 statuts). **À appliquer, dans cet ordre, AVANT le déploiement qui les accompagne** ; sans elle, le site continue d'enregistrer les leads (repli sur l'ancien schéma) mais sans e-mail ni canal, et avec les voyageurs historiques.
    Puis `supabase/migrations/0004_landing_catalog.sql` (catalogue, catégories, médias) : peut être appliquée après le déploiement ; sans elle, `/omra` affiche les offres intégrées.
    Puis `supabase/migrations/0003_landing_admin.sql` (intégrations, protection, codes promo), **avant** de déployer la version qui contient ces écrans : sans elle, le site fonctionne (variables Vercel, aucune règle de protection) mais un code promo saisi est refusé.
 3. Saisir dans Vercel, **en Production uniquement** pour que les déploiements de test n'écrivent jamais dans la base réelle : `LANDING_SUPABASE_URL` et `LANDING_SUPABASE_PUBLISHABLE_KEY` (créées le 31/10/2026), `LANDING_SUPABASE_SERVICE_ROLE_KEY` (secrète, à saisir par vous), et, en option, les variables de notification et de captcha (voir `.env.example`). `LANDING_ADMIN_API_KEY` est déconseillée (voir « API d'administration »).
@@ -190,7 +213,7 @@ curl -X POST -H "x-api-key: $LANDING_ADMIN_API_KEY" -H "content-type: applicatio
   https://landingpage-easy2book.vercel.app/api/leads/status
 ```
 
-`ref` désigne la référence du **lead**, renvoyée par le formulaire, et non le code visiteur. Statuts : `nouveau` → `contacte` → `qualifie` → `reserve` | `perdu`. L'export CSV peut servir à alimenter manuellement un autre outil. Aucune synchronisation automatique avec EasyV4 n'est prévue.
+`ref` désigne la référence du **lead**, renvoyée par le formulaire, et non le code visiteur. Statuts : `nouveau` → `a_contacter` → `contacte` → `a_qualifier` → `qualifie` → `devis` → `negociation` → `reserve` → `gagne`, ou `perdu` (le sens de `reserve` / `gagne` est une proposition à valider). L'export CSV peut servir à alimenter manuellement un autre outil. Aucune synchronisation automatique avec EasyV4 n'est prévue.
 
 ## Sécurité
 

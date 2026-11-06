@@ -9,6 +9,7 @@ import { CONSENT_TEXT_VERSION, PRODUCTS, isProduct, WHATSAPP_NUMBER, type Produc
 import { logActivity, tunisDay } from "@/lib/server/crm"
 import { notifyNewLead } from "@/lib/server/notify"
 import { verifyCaptcha } from "@/lib/server/captcha"
+import { cleanEmail } from "@/lib/validation"
 import { checkLead } from "@/lib/server/protection"
 import { discountLabel, findUsablePromo, normalizeCode, redeemPromo, type PromoRow } from "@/lib/server/promo"
 
@@ -16,12 +17,46 @@ export const runtime = "nodejs"
 
 const DUPLICATE_WINDOW_MS = 10 * 60 * 1000
 
-const int = (v: unknown, min: number, max: number, fallback: number): number => {
-  const n = typeof v === "number" ? v : parseInt(String(v ?? ""), 10)
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback
+// Entier borné, ou null si la valeur n'a pas été fournie : on n'invente JAMAIS une donnée (ex. « 1 adulte »).
+const optInt = (v: unknown, min: number, max: number): number | null => {
+  if (v === undefined || v === null || String(v).trim() === "") return null
+  const n = typeof v === "number" ? v : parseInt(String(v), 10)
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : null
 }
 
+
 const cut = (v: string | undefined, max: number) => (v ? v.slice(0, max) : undefined)
+
+// Chemin (sans paramètres) de la page du formulaire, d'après l'URL envoyée par le navigateur.
+function formPage(pageUrl: string | undefined): string | null {
+  if (!pageUrl) return null
+  try {
+    const path = new URL(pageUrl).pathname
+    return /^\/[A-Za-z0-9\-_/.]*$/.test(path) ? path.slice(0, 255) : null
+  } catch {
+    return null
+  }
+}
+
+// Retire les colonnes récentes d'une ligne que la base refuse. Retourne true si la ligne a changé.
+function degradeRow(row: Record<string, unknown>, code: string | undefined): boolean {
+  let changed = false
+  if (code === "23503" || code === "PGRST204" || code === "42703") {
+    for (const col of ["offer_id", "email", "contact_channel", "form_page"]) {
+      if (col in row) {
+        delete row[col]
+        changed = true
+      }
+    }
+  }
+  // ancienne base : voyageurs obligatoires (NOT NULL, avant 0006) → valeurs historiques
+  if (code === "23502" && (row.adults === null || row.children === null)) {
+    row.adults = row.adults ?? 1
+    row.children = row.children ?? 0
+    changed = true
+  }
+  return changed
+}
 
 /**
  * POST /api/leads — formulaire des landing pages.
@@ -95,8 +130,9 @@ export async function POST(request: NextRequest) {
 
   const offer = str(body.offer)
   const travelDate = str(body.travel_date, 10)
-  const adults = int(body.adults, 1, 50, 1)
-  const children = int(body.children, 0, 20, 0)
+  const adults = optInt(body.adults, 1, 50)
+  const children = optInt(body.children, 0, 20)
+  const email = cleanEmail(body.email)
   const [firstName, ...rest] = name!.split(/\s+/)
 
   const whatsappUrlFor = (leadRef: string) => {
@@ -105,7 +141,7 @@ export async function POST(request: NextRequest) {
     `Nom : ${name}`,
     str(body.destination) ? `Destination : ${str(body.destination)}` : null,
     travelDate ? `Date : ${travelDate}` : str(body.travel_period, 64) ? `Période : ${str(body.travel_period, 64)}` : null,
-    `Voyageurs : ${adults} adulte(s)${children ? ` + ${children} enfant(s)` : ""}`,
+    adults !== null ? `Voyageurs : ${adults} adulte(s)${children ? ` + ${children} enfant(s)` : ""}` : null,
     promo ? `Code promo : ${promo.code} (${discountLabel(promo)})` : null,
     "",
     `Réf: ${leadRef}`,
@@ -136,8 +172,10 @@ export async function POST(request: NextRequest) {
     destination: str(body.destination, 128) || null,
     travel_date: travelDate && /^\d{4}-\d{2}-\d{2}$/.test(travelDate) ? travelDate : null,
     travel_period: str(body.travel_period, 64) || null,
-    adults,
+    adults, // null = non précisé (la fiche CRM le complète pendant la qualification)
     children,
+    email,
+    contact_channel: "whatsapp",
     budget: str(body.budget, 64) || null,
     trip_type: str(body.trip_type, 64) || null,
     message: str(body.message, 1000) || null,
@@ -161,7 +199,8 @@ export async function POST(request: NextRequest) {
     first_channel: attr.first_channel ?? null,
     first_utm_source: attr.first_utm_source ?? null,
     first_utm_campaign: attr.first_utm_campaign ?? null,
-    landing_page: attr.landing_page ?? null,
+    landing_page: attr.landing_page ?? null, // page d'ARRIVÉE de la visite
+    form_page: formPage(attr.page_url), // page où le formulaire a été ENVOYÉ (colonne ajoutée par 0006)
     // identifiants publicitaires : uniquement avec consentement (contrainte en base)
     ...(trackingConsent
       ? {
@@ -187,9 +226,9 @@ export async function POST(request: NextRequest) {
         leadId = saved?.id ?? null
         stored = true
       } catch (e) {
-        // offre du catalogue inconnue ou colonne absente : on enregistre le lead sans le lien (jamais perdu)
-        if (e instanceof DbError && "offer_id" in row && (e.code === "23503" || e.code === "PGRST204" || e.code === "42703")) {
-          delete row.offer_id
+        // Base pas encore à jour (colonnes des migrations 0004 / 0006 absentes) ou offre inconnue :
+        // on dégrade l'enregistrement plutôt que de PERDRE le lead (ordre conseillé : migration avant déploiement).
+        if (e instanceof DbError && degradeRow(row, e.code)) {
           attempt--
           continue
         }

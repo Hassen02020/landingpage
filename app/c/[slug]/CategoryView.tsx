@@ -128,7 +128,6 @@ export function CategoryView({ category, offers }: { category: Category; offers:
               offerIds={Object.fromEntries(offers.map((o) => [label(o), o.id]))}
               offerValue={offer}
               onOfferChange={setOffer}
-              showDate={offers.every((o) => !o.departure_date)}
               showPromo
             />
           </div>

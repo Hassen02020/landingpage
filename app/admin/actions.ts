@@ -16,6 +16,7 @@ import {
   type Staff,
 } from "@/lib/server/auth"
 import { rateLimited } from "@/lib/server/guard"
+import { STATUSES, isBooking } from "@/lib/status"
 import {
   addNote,
   assignLead,
@@ -23,6 +24,8 @@ import {
   createManualLead,
   getLead,
   isStatus,
+  logWhatsApp,
+  qualifyLead,
   setFollowUp,
   withdrawMarketing,
   type Actor,
@@ -120,6 +123,29 @@ export async function assignAction(fd: FormData): Promise<void> {
   redirect(`/admin/leads/${lead.id}?ok=Assignation+enregistr%C3%A9e`)
 }
 
+export async function qualifyAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadOr404(fd)
+  const input: Record<string, string> = {}
+  for (const k of ["region", "email", "budget", "adults", "children", "travel_period", "contact_channel"]) {
+    if (fd.has(k)) input[k] = field(fd, k)
+  }
+  const result = await qualifyLead(lead, input, actorOf(staff))
+  revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
+  redirect(`/admin/leads/${lead.id}?ok=Qualification+enregistr%C3%A9e`)
+}
+
+export async function whatsappLogAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadOr404(fd)
+  const direction = field(fd, "direction") === "out" ? "out" : "in"
+  const result = await logWhatsApp(lead, direction, field(fd, "text"), actorOf(staff)).catch(() => ({ ok: false as const, error: "Enregistrement impossible (migration 0006 appliquée ?)" }))
+  revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
+  redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(direction === "in" ? "Message reçu enregistré" : "Message envoyé enregistré")}`)
+}
+
 export async function withdrawMarketingAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadOr404(fd)
@@ -140,15 +166,24 @@ export async function createLeadAction(fd: FormData): Promise<void> {
       offer: field(fd, "offer"),
       destination: field(fd, "destination"),
       message: field(fd, "message"),
+      waRef: field(fd, "wa_ref"),
     },
     actorOf(staff)
   )
   if (!result.ok) redirect(`/admin/leads/new?erreur=${encodeURIComponent(result.error)}`)
-  redirect(`/admin/leads/${result.id}?ok=Lead+cr%C3%A9%C3%A9`)
+  const note = result.existing
+    ? `Ce visiteur avait déjà une demande (${result.ref}) : le message a été ajouté à son historique, aucun doublon créé`
+    : result.attached === "click"
+      ? "Lead créé et rattaché au clic WhatsApp d'origine (source et campagne retrouvées)"
+      : result.attached === "none"
+        ? "Lead créé. Aucun clic retrouvé pour cette référence : origine inconnue"
+        : "Lead créé"
+  redirect(`/admin/leads/${result.id}?ok=${encodeURIComponent(note)}`)
 }
 
 // ---------------------------------------------------------------- actions groupées et pipeline
-const QUICK_STATUSES = ["nouveau", "contacte", "qualifie", "perdu"] as const
+// Transitions rapides (pipeline, actions groupées) : toutes les étapes SAUF les ventes (réservé / gagné), qui exigent un montant et se font sur la fiche.
+const QUICK_STATUSES = STATUSES.filter((s) => !isBooking(s))
 
 /** Liste : assigner / changer le statut de plusieurs leads (100 max). « Réservé » se fait sur la fiche (montant requis). */
 export async function bulkAction(fd: FormData): Promise<void> {

@@ -36,10 +36,9 @@ check("pas de champ date (départs fixes)", (await page.locator("#omra-lead-form
 
 await page.fill("#omra-lead-form input[name=name]", "Test Parcours")
 await page.fill("#omra-lead-form input[name=phone]", "98140514")
-await page.selectOption("#omra-lead-form select[name=adults]", "3")
 await page.check("#omra-lead-form input[name=consent]")
 await Promise.all([page.waitForURL(/wa\.me/, { timeout: 10000 }), page.click("#omra-lead-form button[type=submit]")])
-check("lead envoyé avec produit, fuseau, niche et nombre de personnes", lead?.product === "omra" && lead?.offer === "الفوج الثاني — 18 فيفري 2027" && lead?.niche === "omra-ramadan-2027" && lead?.adults === "3")
+check("lead envoyé avec produit, fuseau et niche — sans voyageurs ni budget (qualification plus tard)", lead?.product === "omra" && lead?.offer === "الفوج الثاني — 18 فيفري 2027" && lead?.niche === "omra-ramadan-2027" && lead?.adults === undefined && lead?.budget === undefined)
 check("redirection WhatsApp avec la référence CRM", decodeURIComponent(page.url()).includes("Réf: E2B-TEST01"))
 
 await page.goto(`${BASE}/omra`, { waitUntil: "networkidle" })

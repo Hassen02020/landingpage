@@ -3,6 +3,7 @@ import { obj, str } from "@/lib/server/attribution"
 import { isAdminRequest } from "@/lib/server/admin-auth"
 import { dbConfigured } from "@/lib/server/db"
 import { STATUSES, UUID_RE, changeStatus, getLead, getLeadByRef, isStatus } from "@/lib/server/crm"
+import { isBooking } from "@/lib/status"
 
 export const runtime = "nodejs"
 
@@ -34,8 +35,8 @@ export async function POST(request: NextRequest) {
   if (bookingValue !== undefined && (!Number.isFinite(bookingValue) || bookingValue < 0 || bookingValue > 1e9)) {
     return NextResponse.json({ error: "booking_value invalide" }, { status: 400 })
   }
-  if (status === "reserve" && bookingValue === undefined) {
-    return NextResponse.json({ error: "booking_value requis pour une réservation" }, { status: 400 })
+  if (isBooking(status) && bookingValue === undefined) {
+    return NextResponse.json({ error: "booking_value requis pour une réservation ou un dossier gagné" }, { status: 400 })
   }
 
   try {

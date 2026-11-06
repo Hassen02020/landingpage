@@ -1,7 +1,7 @@
 // Statistiques de l'espace équipe : marketing (campagne / groupe d'annonces / annonce) et équipe.
 // Les agrégations sont des fonctions pures (testées) ; aucune donnée personnelle n'est lue.
 import { select } from "./db"
-import type { Status } from "./crm"
+import { STATUSES, isBooking, isUntreated, type Status } from "@/lib/status"
 
 export interface Period {
   from: string // AAAA-MM-JJ (jour de Tunis, inclus)
@@ -35,6 +35,8 @@ export interface LeadStatRow {
   channel: string | null
   utm_campaign: string | null
   utm_term: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
   utm_content: string | null
   campaign_id: string | null
   adset_id: string | null
@@ -46,33 +48,44 @@ export interface LeadStatRow {
 
 export type Level = "campaign" | "adset" | "ad"
 
-export interface Counts {
+// Un chiffre par statut + regroupements lisibles. « Vendu » (booked) = réservé + gagné : un lead n'a qu'un statut
+// et un seul montant, donc réservé → gagné ne compte jamais la vente deux fois.
+export type Counts = Record<Status, number> & {
   leads: number
-  nouveau: number
-  contacte: number
-  qualifie: number
-  reserve: number
-  perdu: number
   revenue: number
+  toTreat: number // nouveau + à contacter (aucun premier contact)
+  inContact: number // contacté + à qualifier
+  qualified: number // qualifié
+  proposal: number // devis / proposition + en négociation
+  booked: number // réservé + gagné
+  lost: number
 }
 
-const empty = (): Counts => ({ leads: 0, nouveau: 0, contacte: 0, qualifie: 0, reserve: 0, perdu: 0, revenue: 0 })
+const empty = (): Counts => ({ ...(Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<Status, number>), leads: 0, revenue: 0, toTreat: 0, inContact: 0, qualified: 0, proposal: 0, booked: 0, lost: 0 })
 
 function add(c: Counts, r: LeadStatRow) {
   c.leads++
   c[r.status]++
-  if (r.status === "reserve") c.revenue += Number(r.booking_value) || 0
+  if (isUntreated(r.status)) c.toTreat++
+  else if (r.status === "contacte" || r.status === "a_qualifier") c.inContact++
+  else if (r.status === "qualifie") c.qualified++
+  else if (r.status === "devis" || r.status === "negociation") c.proposal++
+  else if (r.status === "perdu") c.lost++
+  if (isBooking(r.status)) {
+    c.booked++
+    c.revenue += Number(r.booking_value) || 0
+  }
 }
 
 export function rates(c: Counts) {
-  const treated = c.leads - c.nouveau
-  const closed = c.reserve + c.perdu
+  const treated = c.leads - c.toTreat
+  const closed = c.booked + c.lost
   return {
     treated,
     treatmentRate: c.leads ? treated / c.leads : 0, // leads traités / leads reçus
-    bookingRate: c.leads ? c.reserve / c.leads : 0, // réservations / leads reçus
-    closingRate: closed ? c.reserve / closed : 0, // réservations / dossiers conclus (réservé + perdu)
-    avgBasket: c.reserve ? c.revenue / c.reserve : 0,
+    bookingRate: c.leads ? c.booked / c.leads : 0, // ventes / leads reçus
+    closingRate: closed ? c.booked / closed : 0, // ventes / dossiers conclus (vendu + perdu)
+    avgBasket: c.booked ? c.revenue / c.booked : 0,
   }
 }
 
@@ -85,6 +98,7 @@ export function totals(rows: LeadStatRow[]): Counts {
 export interface GroupRow extends Counts {
   key: string
   channel: string
+  source: string // utm_source · utm_medium (ex. instagram · bio) : distingue Facebook / Instagram dans le canal « meta »
   campaign: string
   adset: string
   ad: string
@@ -96,13 +110,14 @@ export function groupBy(rows: LeadStatRow[], level: Level): GroupRow[] {
   const map = new Map<string, GroupRow>()
   for (const r of rows) {
     const channel = r.channel || "direct"
+    const source = [r.utm_source, r.utm_medium].filter(Boolean).join(" · ") || "—"
     const campaign = label(r.utm_campaign, r.campaign_id)
     const adset = level === "campaign" ? "" : label(r.utm_term, r.adset_id)
     const ad = level === "ad" ? label(r.utm_content, r.ad_id) : ""
-    const key = [channel, campaign, adset, ad].join("\u0000")
+    const key = [channel, source, campaign, adset, ad].join("\u0000")
     let g = map.get(key)
     if (!g) {
-      g = { key, channel, campaign, adset, ad, ...empty() }
+      g = { key, channel, source, campaign, adset, ad, ...empty() }
       map.set(key, g)
     }
     add(g, r)
@@ -136,7 +151,7 @@ export function groupByOffer(rows: LeadStatRow[]): OfferRow[] {
 export async function loadLeadStats(p: Period): Promise<LeadStatRow[]> {
   return select<LeadStatRow>(
     "landing_leads",
-    `select=status,booking_value,channel,utm_campaign,utm_term,utm_content,campaign_id,adset_id,ad_id,assigned_to,product,offer&${periodFilter("created_at", p)}&limit=10000`
+    `select=status,booking_value,channel,utm_source,utm_medium,utm_campaign,utm_term,utm_content,campaign_id,adset_id,ad_id,assigned_to,product,offer&${periodFilter("created_at", p)}&limit=10000`
   )
 }
 
@@ -144,6 +159,7 @@ export async function loadLeadStats(p: Period): Promise<LeadStatRow[]> {
 export interface ActivityStatRow {
   actor_id: string | null
   type: string
+  from_status?: Status | null
   to_status: Status | null
 }
 
@@ -165,9 +181,10 @@ export interface MemberStats {
   notes: number
   contacted: number
   qualified: number
+  proposals: number
   booked: number
   lost: number
-  closingRate: number // réservés / (réservés + perdus) traités par ce membre
+  closingRate: number // ventes / (ventes + perdus) traités par ce membre
 }
 
 export function teamStats(staff: StaffRow[], activities: ActivityStatRow[], leads: LeadStatRow[]): MemberStats[] {
@@ -175,7 +192,8 @@ export function teamStats(staff: StaffRow[], activities: ActivityStatRow[], lead
     .map((s) => {
       const mine = activities.filter((a) => a.actor_id === s.user_id)
       const to = (st: Status) => mine.filter((a) => a.type === "status_change" && a.to_status === st).length
-      const booked = to("reserve")
+      // une vente = passage VERS réservé / gagné depuis une étape qui n'était pas déjà une vente (réservé → gagné ne recompte pas)
+      const booked = mine.filter((a) => a.type === "status_change" && a.to_status && isBooking(a.to_status) && !(a.from_status && isBooking(a.from_status))).length
       const lost = to("perdu")
       return {
         userId: s.user_id,
@@ -187,6 +205,7 @@ export function teamStats(staff: StaffRow[], activities: ActivityStatRow[], lead
         notes: mine.filter((a) => a.type === "note").length,
         contacted: to("contacte"),
         qualified: to("qualifie"),
+        proposals: to("devis"),
         booked,
         lost,
         closingRate: booked + lost ? booked / (booked + lost) : 0,
@@ -198,7 +217,7 @@ export function teamStats(staff: StaffRow[], activities: ActivityStatRow[], lead
 export async function loadTeam(p: Period) {
   const [staff, activities, leads] = await Promise.all([
     select<StaffRow>("landing_staff", "select=user_id,email,full_name,role,active&order=email.asc"),
-    select<ActivityStatRow>("landing_lead_activities", `select=actor_id,type,to_status&actor_id=not.is.null&${periodFilter("created_at", p)}&limit=20000`),
+    select<ActivityStatRow>("landing_lead_activities", `select=actor_id,type,from_status,to_status&actor_id=not.is.null&${periodFilter("created_at", p)}&limit=20000`),
     loadLeadStats(p),
   ])
   return { staff, activities, leads }

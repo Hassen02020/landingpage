@@ -22,12 +22,12 @@ export function BlockForm({ kind }: { kind: "phone" | "ip" }) {
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="kind" value={kind} />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <input
           name="value"
           required
           placeholder={kind === "phone" ? "ex. 98 140 514 ou +33612345678" : "ex. 102.45.12.8"}
-          className="flex-1 border rounded-xl px-3 py-2"
+          className="min-w-0 flex-1 border rounded-xl px-3 py-2"
           dir="ltr"
           autoComplete="off"
         />

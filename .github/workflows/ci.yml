@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests unitaires et migrations (PGlite)
+        run: npm test
+      - name: Build de production
+        run: npm run build
+        env:
+          # aucune valeur réelle : le build ne se connecte à aucune base
+          NEXT_PUBLIC_SITE_URL: https://landingpage-easy2book.vercel.app

@@ -100,6 +100,12 @@ export async function getOffer(id: string): Promise<Offer | null> {
 // ---------------------------------------------------------------- validation
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 const URL_RE = /^(https:\/\/|\/)[^\s"'<>]{1,500}$/
+// lien vers NOTRE stockage (même hôte que LANDING_SUPABASE_URL) : accepté même en http (base locale de test)
+const isOwnStorage = (v: string) => {
+  const base = process.env.LANDING_SUPABASE_URL?.replace(/\/$/, "")
+  return Boolean(base) && v.startsWith(`${base}/storage/v1/object/public/landing-media/`) && !/[\s"'<>]/.test(v) && v.length <= 500
+}
+const safeUrl = (v: string) => URL_RE.test(v) || isOwnStorage(v)
 const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".").replace(/\s/g, "")))
 const int = (v: string) => (v.trim() === "" ? null : parseInt(v, 10))
 const PRODUCTS = ["omra", "voyage", "hotel", "autre"]
@@ -138,7 +144,7 @@ export function validateOffer(f: Record<string, string>, features: string[]): { 
   const sku = (f.sku || "").trim().toUpperCase()
   if (sku && !/^[A-Z0-9-]{3,32}$/.test(sku)) e.sku = "3 à 32 caractères : majuscules, chiffres, -."
   const image = (f.image_url || "").trim()
-  if (image && !URL_RE.test(image)) e.image_url = "Lien https:// ou chemin /… attendu."
+  if (image && !safeUrl(image)) e.image_url = "Lien https:// ou chemin /… attendu."
   const categoryId = (f.category_id || "").trim()
   if (categoryId && !UUID.test(categoryId)) e.category_id = "Catégorie invalide."
   const feats = features.map((x) => x.trim()).filter(Boolean).slice(0, 20).map((x) => x.slice(0, 160))
@@ -180,7 +186,7 @@ export function validateCategory(f: Record<string, string>): { row?: Record<stri
   const lang = f.lang === "ar" ? "ar" : "fr"
   for (const k of ["banner_desktop", "banner_mobile"]) {
     const v = (f[k] || "").trim()
-    if (v && !URL_RE.test(v)) e[k] = "Lien https:// ou chemin /… attendu."
+    if (v && !safeUrl(v)) e[k] = "Lien https:// ou chemin /… attendu."
   }
   const seoTitle = (f.seo_title || "").trim()
   if (seoTitle.length > 70) e.seo_title = "70 caractères maximum."
