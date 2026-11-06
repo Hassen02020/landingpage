@@ -50,7 +50,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 7 | Segmentation et marketing | **VALIDÉ PAR TESTS** pour la segmentation — *PR PRÉPARÉE* (aucune migration) ; **envoi / campagne : NON FAIT par décision** (autorisation du propriétaire requise) | `segments.test` 7, `admin-flow` (7 contrôles segments) |
 | 8 | Fidélité / VIP | EN ATTENTE D'ARBITRAGE | règles non définies |
 | 9 | Analytics | **VALIDÉ PAR TESTS** (entonnoir, délais, série par jour) — *PR PRÉPARÉE* (aucune migration) | `analytics.test` 6, `admin-flow` (onglet Entonnoir) ; stats marketing / équipe / offres / WhatsApp existantes |
-| 10 | Certification | À AUDITER | |
+| 10 | Certification | **AUDIT FAIT** (06/11/2026) — voir la matrice ci-dessous ; *PRODUCTION CERTIFIÉE* seulement après vérification en ligne | tsc, Vitest 260/260, build, e2e : whatsapp, collect, omra-journey, consent, social (0 échec), admin 121 contrôles (0 échec), CI GitHub verte (run 9) |
 
 ## Journal
 
@@ -120,3 +120,24 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 ### Migrations 0006 et 0007 — vérification en production (06/11/2026)
 
 Requête de lecture seule exécutée par le propriétaire dans le projet des landing pages : `colonnes_0006 = 4`, `statuts_0007 = true`, `purge_0007 = true`. Les deux migrations sont donc appliquées. **Le code des blocs 2 à 9 n'est pas encore déployé** (PR #8 en brouillon, aucune fusion, aucun déploiement sans autorisation).
+
+## Bloc 10 — Matrice de certification (06/11/2026)
+
+Niveaux : CODE ÉCRIT < TESTÉ < INTÉGRATION CONNECTÉE < PARCOURS VALIDÉ < PRODUCTION CERTIFIÉE.
+
+| Domaine | Niveau atteint | Preuve | Ce qui manque pour le niveau suivant |
+|---|---|---|---|
+| Formulaire court, collecte, anti-doublon | PARCOURS VALIDÉ (navigateur, faux Supabase) | `collect.e2e`, `omra-journey`, `collecte.test` | Un lead de test réel après déploiement |
+| Consentements et traceurs | PARCOURS VALIDÉ | `consent.e2e`, tests CAPI / Events | Vérification avec un vrai pixel (jetons) |
+| Attribution sociale / liens de campagne | TESTÉ + PARCOURS VALIDÉ | `social.e2e`, `channel-links.test` | Lien de bio posé sur un vrai profil (propriétaire) |
+| WhatsApp (liens, rattachement, échanges saisis) | PARCOURS VALIDÉ pour les liens ; API officielle **NON CONNECTÉE** | `whatsapp.e2e`, `whatsapp.test` | Accès Business API (propriétaire) |
+| Pipeline à 10 statuts, ventes comptées une fois | PARCOURS VALIDÉ + migration 0007 **appliquée en production** | `pipeline.test`, scénario `admin-flow`, requête du propriétaire | Parcours réel après déploiement |
+| Customer 360, segments, analytics | PARCOURS VALIDÉ (faux Supabase) | `customer360`, `segments`, `analytics` + e2e | Relecture sur données réelles |
+| Intégration Meta | CODE ÉCRIT + TESTÉ ; **jeton invalide en production (190)** | `meta-tiktok.test` | Jeton régénéré par le propriétaire |
+| Intégration TikTok | CODE ÉCRIT + TESTÉ ; non connectée | `meta-tiktok.test` | Jeton et pixel (propriétaire) |
+| Sécurité (en-têtes, RLS, droits minimaux, EasyV4 interdit) | TESTÉ | `security-headers`, `db-minimal`, migrations PGlite ; aucun secret trouvé dans le dépôt | Revue externe / lint non configuré |
+| Fidélité / VIP (Bloc 8) | **NON FAIT** | — | Règles à définir par le propriétaire |
+| Envoi de messages, campagnes, export de segments | **NON FAIT par décision** | — | Autorisation spécifique du propriétaire |
+| Production | **NON CERTIFIÉE tant que la vérification en ligne n'est pas faite** | — | Déploiement + contrôles en ligne (ci-dessous) |
+
+Écarts connus : limites de débit en mémoire par instance ; lint non configuré ; e2e sur faux Supabase ; coût par lead / ROAS impossibles sans dépenses réelles ; sens de `reserve` / `gagne`, seuils de segments et répartition des leads à valider.
