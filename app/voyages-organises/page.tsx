@@ -5,6 +5,7 @@ import Image from "next/image"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
+import { waText } from "@/lib/wa-text"
 
 function trackWhatsAppClick(event: { currentTarget: HTMLAnchorElement }, location: string, tripName: string = "") {
   const voyage = VOYAGES.find((v) => v.title === tripName)
@@ -161,11 +162,11 @@ function CTAButton({
   location: string
   tripName?: string
 }) {
-  const msg = encodeURIComponent(
+  const msg = encodeURIComponent(waText(
     tripName
       ? `Bonjour Easy2Book, je souhaite avoir des informations sur le voyage "${tripName}"\n\nMerci de me préciser :\n- Date de voyage souhaitée\n- Nombre de personnes\n- Âges des participants\n- Numéro de téléphone`
       : "Bonjour Easy2Book, je souhaite me renseigner sur vos voyages organisés 2026.\n\nMerci de me préciser :\n- Destination souhaitée\n- Date de voyage\n- Nombre de personnes\n- Âges des participants\n- Numéro de téléphone"
-  )
+  ))
   return (
     <a
       href={`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`}

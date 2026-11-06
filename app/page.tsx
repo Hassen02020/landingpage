@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { waText } from "@/lib/wa-text"
 import { LeadCaptureForm } from "./components/LeadCaptureForm"
 import { PHONE_NUMBER, WHATSAPP_NUMBER, type Product } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
@@ -54,9 +55,9 @@ const OFFERS: {
   },
 ]
 
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText(
   "Bonjour Easy2Book, je souhaite des informations sur vos offres (voyages organisés / Omra / hôtels)."
-)}`
+))}`
 
 export default function HomePage() {
   return (

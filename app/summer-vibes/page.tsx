@@ -12,10 +12,11 @@ import { STATS } from "./data/stats"
 import { CATEGORIES } from "./config"
 import { WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
+import { waText } from "@/lib/wa-text"
 
-const WHATSAPP_MESSAGE = encodeURIComponent(
+const WHATSAPP_MESSAGE = encodeURIComponent(waText(
   "Bonjour Easy2Book, je souhaite avoir le tarif pour Summer Vibes 2026 !\n\nMerci de me préciser :\n- Date du congés\n- Nombre d'adultes\n- Âges des enfants\n- Zone : Hammamet / Monastir / Sousse / Tabarka / Mahdia / Djerba"
-)
+))
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`
 
 function trackWhatsAppClick(event: { currentTarget: HTMLAnchorElement }, location: string = "general"): void {

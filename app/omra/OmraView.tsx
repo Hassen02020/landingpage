@@ -11,6 +11,7 @@ import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 // ---------------------------------------------------------------------------
 
 import { DEFAULT_PACKAGES, type OmraPackage } from "./packages"
+import { waText } from "@/lib/wa-text"
 
 // Libellé enregistré dans le CRM (champ « offre ») et proposé dans le formulaire
 const offerLabel = (p: OmraPackage) => `${p.name} — ${p.date}`
@@ -110,7 +111,7 @@ function WhatsAppLink({
 }) {
   return (
     <a
-      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waMessage(pkg, group))}`}
+      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText(waMessage(pkg, group)))}`}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) =>
