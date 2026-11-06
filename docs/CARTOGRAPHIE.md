@@ -41,8 +41,8 @@
 | 0003 | intégrations, protection, codes promo | appliquée (01/11) |
 | 0004 | catalogue, catégories, stockage médias | appliquée (02/11) |
 | 0005 | équipe gérée, modèles WhatsApp, journal admin | appliquée (02/11) |
-| 0006 | e-mail, région, canal de contact, page du formulaire, voyageurs facultatifs, effacement à l'anonymisation | **à appliquer par le propriétaire** (préparée dans cette PR) |
-| 0007 | pipeline à 10 statuts (à contacter, à qualifier, devis, négociation, gagné), vues et purge mises à jour | **à appliquer par le propriétaire après 0006** (préparée dans cette PR) |
+| 0006 | e-mail, région, canal de contact, page du formulaire, voyageurs facultatifs, effacement à l'anonymisation | **appliquée en production par le propriétaire, vérifiée le 06/11/2026** (4 colonnes présentes) |
+| 0007 | pipeline à 10 statuts (à contacter, à qualifier, devis, négociation, gagné), vues et purge mises à jour | **appliquée en production par le propriétaire, vérifiée le 06/11/2026** (contrainte de statuts et purge contiennent `gagne`) |
 
 Règles transverses vérifiées sous PGlite : `anon`/`authenticated` sans accès aux tables sensibles ; `service_role` sans DELETE ni TRUNCATE ; historique en ajout seul ; il reste toujours un administrateur actif.
 

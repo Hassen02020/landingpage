@@ -116,3 +116,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | Entonnoir en 6 étapes, un dossier perdu compte jusqu'à l'étape atteinte ; réservé → gagné compté une fois ; aucune division par zéro | Délais calculés sur les actes saisis dans le CRM (statut, note, WhatsApp saisi) : un contact fait hors CRM n'est pas vu |
 | Délai médian / moyen de premier traitement, seuils 1 h et 24 h, dossiers jamais traités ; série par jour sans trous | Coût par lead / ROAS : **impossibles sans les dépenses publicitaires réelles** (aucune API publicitaire connectée, aucun budget saisi) |
 | Consultation en lecture seule (contrôlé en e2e sur le faux Supabase) | Activités lues depuis le début de la période (50 000 max) ; e2e sur faux Supabase, pas sur la base réelle |
+
+### Migrations 0006 et 0007 — vérification en production (06/11/2026)
+
+Requête de lecture seule exécutée par le propriétaire dans le projet des landing pages : `colonnes_0006 = 4`, `statuts_0007 = true`, `purge_0007 = true`. Les deux migrations sont donc appliquées. **Le code des blocs 2 à 9 n'est pas encore déployé** (PR #8 en brouillon, aucune fusion, aucun déploiement sans autorisation).
