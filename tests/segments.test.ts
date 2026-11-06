@@ -7,7 +7,7 @@ const ago = (d: number) => new Date(NOW - d * 86_400_000).toISOString()
 let n = 0
 const cust = (o: Partial<CustomerSummary> = {}): CustomerSummary => ({
   phone: `2169800${String(++n).padStart(4, "0")}`, name: "X", leads: 1, openLeads: 0, booked: 0, revenue: 0, lastActivityAt: ago(1), firstSeenAt: ago(30),
-  products: ["omra"], channels: ["meta"], region: null, marketingOk: true, lastStatus: "nouveau", ...o,
+  products: ["omra"], channels: ["meta"], region: null, marketingOk: true, lastStatus: "nouveau", tier: null, ...o,
 })
 const members = (res: ReturnType<typeof evaluate>, slug: string) => res.find((r) => r.segment.slug === slug)!
 
@@ -61,6 +61,15 @@ describe("segments : règles", () => {
   it("Omra sans réservation : exclut les clients qui ont réservé ou qui ont une demande en cours", () => {
     const res = evaluate([cust(), cust({ booked: 1 }), cust({ openLeads: 1, lastStatus: "contacte" }), cust({ products: ["hotel"] })], NOW)
     expect(members(res, "omra-sans-reservation").members).toHaveLength(1)
+  })
+
+  it("segment VIP : seulement les clients VIP, avec exclusion sans consentement marketing", () => {
+    const res = evaluate([cust({ tier: "vip", booked: 2, marketingOk: true }), cust({ tier: "vip", booked: 1, marketingOk: false }), cust({ tier: "fidele", booked: 1 }), cust()], NOW)
+    const vip = members(res, "vip")
+    expect(vip.members).toHaveLength(2)
+    expect(vip.eligible).toHaveLength(1)
+    expect(vip.excluded).toBe(1)
+    expect(vip.segment.kind).toBe("marketing")
   })
 
   it("un segment vide ne plante pas", () => {

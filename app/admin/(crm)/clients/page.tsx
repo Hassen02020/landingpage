@@ -2,6 +2,7 @@ import Link from "next/link"
 import { dbConfigured } from "@/lib/server/db"
 import { listCustomers } from "@/lib/server/customer"
 import { STATUS_LABELS } from "@/lib/status"
+import { TIER_COLORS, TIER_LABELS } from "@/lib/loyalty"
 import { STATUS_COLORS, formatDate } from "../../format"
 
 export const dynamic = "force-dynamic"
@@ -25,7 +26,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
       <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-gray-500 border-b">
-            <tr><th className="p-3">Client</th><th className="p-3">Demandes</th><th className="p-3">Dernier statut</th><th className="p-3">Ventes</th><th className="p-3">CA</th><th className="p-3">Marketing</th><th className="p-3">Dernière activité</th></tr>
+            <tr><th className="p-3">Client</th><th className="p-3">Demandes</th><th className="p-3">Dernier statut</th><th className="p-3">Ventes</th><th className="p-3">CA</th><th className="p-3">Niveau</th><th className="p-3">Marketing</th><th className="p-3">Dernière activité</th></tr>
           </thead>
           <tbody>
             {customers.map((c) => (
@@ -35,11 +36,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
                 <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[c.lastStatus]}`}>{STATUS_LABELS[c.lastStatus]}</span></td>
                 <td className="p-3">{c.booked}</td>
                 <td className="p-3">{c.revenue ? tnd(c.revenue) : "—"}</td>
+                <td className="p-3" data-tier={c.tier ?? ""}>{c.tier ? <span className={`px-2 py-1 rounded-full text-xs font-bold ${TIER_COLORS[c.tier]}`}>{TIER_LABELS[c.tier]}</span> : "—"}</td>
                 <td className="p-3">{c.marketingOk ? "Accord" : "Non"}</td>
                 <td className="p-3">{formatDate(c.lastActivityAt)}</td>
               </tr>
             ))}
-            {!customers.length && <tr><td colSpan={7} className="p-6 text-center text-gray-500">Aucun client.</td></tr>}
+            {!customers.length && <tr><td colSpan={8} className="p-6 text-center text-gray-500">Aucun client.</td></tr>}
           </tbody>
         </table>
       </div>

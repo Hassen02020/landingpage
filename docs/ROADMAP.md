@@ -48,7 +48,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 5 | CRM et équipe | **VALIDÉ PAR TESTS** (pipeline à 10 statuts) — *PR PRÉPARÉE* (migration 0007, après 0006, à appliquer par le propriétaire) | `pipeline.test` 18, `crm-lot3.test`, `admin-flow` 96 contrôles dont le scénario prospect → conseiller → qualification → devis → négociation → réservation → gagné (faux Supabase) |
 | 6 | Customer 360 | **VALIDÉ PAR TESTS** — *PR PRÉPARÉE* (aucune migration) | `customer360.test` 8, `admin-flow` : liste Clients, fiche client (demandes, chronologie commune, consentements, ventes / CA), liens lead ⇄ client, 404 sur clé invalide |
 | 7 | Segmentation et marketing | **VALIDÉ PAR TESTS** pour la segmentation — *PR PRÉPARÉE* (aucune migration) ; **envoi / campagne : NON FAIT par décision** (autorisation du propriétaire requise) | `segments.test` 7, `admin-flow` (7 contrôles segments) |
-| 8 | Fidélité / VIP | EN ATTENTE D'ARBITRAGE | règles non définies |
+| 8 | Fidélité / VIP | **CODE ÉCRIT + TESTÉ** (règles décidées le 06/11/2026) ; **seuil VIP en attente** ; *non déployé* | `loyalty.test` 6, `segments.test`, `admin-flow` (niveaux, fiche client, segment VIP) |
 | 9 | Analytics | **VALIDÉ PAR TESTS** (entonnoir, délais, série par jour) — *PR PRÉPARÉE* (aucune migration) | `analytics.test` 6, `admin-flow` (onglet Entonnoir) ; stats marketing / équipe / offres / WhatsApp existantes |
 | 10 | Certification | **AUDIT FAIT** (06/11/2026) — voir la matrice ci-dessous ; *PRODUCTION CERTIFIÉE* seulement après vérification en ligne | tsc, Vitest 260/260, build, e2e : whatsapp, collect, omra-journey, consent, social (0 échec), admin 121 contrôles (0 échec), CI GitHub verte (run 9) |
 
@@ -147,3 +147,15 @@ Niveaux : CODE ÉCRIT < TESTÉ < INTÉGRATION CONNECTÉE < PARCOURS VALIDÉ < PR
 Constat en production (capture du propriétaire) puis par requêtes sur `wa.me` : **tout emoji d'un texte prérempli est remplacé par « � »** dans la redirection vers `api.whatsapp.com` (👋 ✈️ 🏖️ 📅 testés). Les accents et l'arabe passent. Correction : `lib/wa-text.ts` (`waText`) retire les emojis des liens WhatsApp (formulaire, accueil, Summer Vibes, voyages organisés, catégories, modèles d'équipe) ; les puces des listes deviennent des tirets. Test garde-fou `tests/wa-emoji.test.ts` : aucun message « Bonjour Easy2Book… » du code ne peut contenir d'emoji. Les emojis de l'**interface** (boutons, pages) sont conservés : seuls les textes envoyés via `wa.me` sont concernés. Les modèles d'équipe déjà en base gardent leurs emojis (migration 0005 non modifiée) ; ils sont nettoyés à l'envoi.
 
 Complément (même jour) : la vérification en ligne après le premier déploiement a montré que `/omra` envoyait encore « 🕋 » (le garde-fou ne cherchait que « Bonjour Easy2Book », pas le texte arabe). Tous les liens `wa.me` passent maintenant par `waText` ; `wa-emoji.test` vérifie que tout fichier qui construit un lien `wa.me?text=` l'utilise, et `whatsapp.e2e` contrôle l'absence d'emoji sur les liens réellement rendus (4 pages × avec / sans consentement).
+
+### Bloc 8 — règles décidées et preuves (06/11/2026)
+
+**Règles (décision du propriétaire)** : base = chiffre d'affaires cumulé des ventes (réservé + gagné) ; période = cumul à vie ; deux niveaux, **Fidèle** dès la 1re vente et **VIP** à partir d'un seuil ; avantages = étiquette + segment « Clients VIP » seulement (aucune remise automatique, aucun envoi, aucun prix modifié ; le segment VIP exclut les clients sans consentement marketing).
+
+**Seuil VIP : montant non décidé.** Il se règle par la variable d'environnement `LANDING_VIP_THRESHOLD_TND` (nombre > 0). Tant qu'elle est absente ou invalide, **personne n'est classé VIP** (tous les clients ayant acheté sont « Fidèle ») : aucune valeur n'est inventée.
+
+| Prouvé (test exécuté) | Non prouvé / à faire |
+|---|---|
+| Seuil absent / invalide → jamais VIP ; seuil inclus (≥) ; aucun niveau sans vente ; cumul sur toutes les demandes y compris anciennes ; perdu non compté | Montant du seuil : à fixer par le propriétaire, puis variable à poser sur Vercel (action propriétaire) |
+| Niveaux affichés dans Clients et la fiche client (avec explication du calcul) ; segment VIP avec exclusion sans consentement marketing | Aucun avantage concret (remise, code, message) : non demandé, non fait |
+| Consultation en lecture seule | Rétrogradation : sans objet (cumul à vie) ; e2e sur faux Supabase avec seuil de test 10 000 TND |

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { loadCustomer } from "@/lib/server/customer"
 import { STATUS_LABELS } from "@/lib/status"
+import { TIER_COLORS, TIER_LABELS, vipThreshold } from "@/lib/loyalty"
 import { SOURCE_LABELS, type Source } from "@/lib/server/crm"
 import { STATUS_COLORS, formatDate } from "../../../format"
 
@@ -26,6 +27,7 @@ export default async function ClientPage({ params }: { params: { phone: string }
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-2xl font-black">{c.name}</h1>
         <span className="font-mono text-gray-500">+{c.phone}</span>
+        {s.tier && <span data-testid="tier" className={`px-3 py-1 rounded-full text-sm font-bold ${TIER_COLORS[s.tier]}`}>{TIER_LABELS[s.tier]}</span>}
         {c.email && <span className="text-gray-500">{c.email}</span>}
         {c.region && <span className="text-gray-500">· {c.region}</span>}
         <a href={`https://wa.me/${c.phone}`} target="_blank" rel="noopener noreferrer" className="ml-auto bg-green-500 text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>
@@ -37,6 +39,10 @@ export default async function ClientPage({ params }: { params: { phone: string }
         {stat("Chiffre d'affaires", s.revenue ? tnd(s.revenue) : "—")}
         {stat("WhatsApp reçus / envoyés", `${c.whatsapp.received} / ${c.whatsapp.sent}`)}
       </div>
+      <section className="bg-white rounded-2xl shadow-sm p-4 text-sm" data-testid="loyalty">
+        <h2 className="font-bold mb-2">Fidélité</h2>
+        <p>Chiffre d'affaires cumulé à vie : <b>{tnd(s.revenue)}</b> sur {s.booked} vente(s). Niveau : <b>{s.tier ? TIER_LABELS[s.tier] : "aucun (pas encore de vente)"}</b>. {vipThreshold() === null ? "Seuil VIP non défini : personne n'est classé VIP pour l'instant." : `Seuil VIP : ${tnd(vipThreshold()!)}.`} Aucun avantage automatique (étiquette et segment seulement).</p>
+      </section>
       <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
         <h2 className="font-bold mb-2">Consentements</h2>
         <p>Contact : accord (obligatoire pour enregistrer une demande). Marketing : <b>{c.consents.marketing ? "accord" : "non"}</b>{c.consents.marketingWithdrawnAt ? ` — retiré le ${formatDate(c.consents.marketingWithdrawnAt)}` : ""}. Suivi publicitaire : {c.consents.tracking ? "accepté sur au moins une demande" : "non"}. Un seul refus ou retrait sur une demande suffit à exclure le client du marketing.</p>

@@ -23,6 +23,7 @@ export const SEGMENTS: Segment[] = [
   { slug: "proposition-silencieuse", label: "Proposition sans réponse", description: "Devis ou négociation, sans activité depuis 7 jours ou plus.", kind: "suivi", match: (c, n) => (c.lastStatus === "devis" || c.lastStatus === "negociation") && idleDays(c, n) >= 7 },
   { slug: "perdus-recuperables", label: "Perdus à reprendre (60 jours)", description: "Dernière demande perdue, aucune vente, inactif depuis 60 jours ou plus.", kind: "marketing", match: (c, n) => c.lastStatus === "perdu" && c.booked === 0 && idleDays(c, n) >= 60 },
   { slug: "omra-sans-reservation", label: "Omra sans réservation", description: "A demandé l'Omra, aucune vente, aucune demande en cours.", kind: "marketing", match: (c) => c.products.includes("omra") && c.booked === 0 && c.openLeads === 0 },
+  { slug: "vip", label: "Clients VIP", description: "Chiffre d'affaires cumulé à vie au-dessus du seuil VIP (variable LANDING_VIP_THRESHOLD_TND ; vide tant que le seuil n'est pas défini).", kind: "marketing", match: (c) => c.tier === "vip" },
   { slug: "clients-reserves", label: "Clients ayant réservé", description: "Au moins une réservation ou vente (réservé + gagné).", kind: "marketing", match: (c) => c.booked > 0 },
   { slug: "region-inconnue", label: "Région à renseigner", description: "Aucune région connue : à demander pendant la qualification.", kind: "suivi", match: (c) => c.openLeads > 0 && !c.region },
 ]
