@@ -115,3 +115,41 @@ Exécutée **par le propriétaire** (éditeur SQL du projet des landing pages), 
 
 **Non encore fait** : rôle Super Admin (en attente du contrôle du compte `Tarhouni.Hassene@gmail.com` : existence, adresse confirmée, compte non suspendu) ; fusion de la PR #12 et déploiement du code (sans effet visible pour le CRM actuel).
 La production tourne toujours avec le code `2ca4fc0` ; seul le schéma de la base a changé, de façon compatible.
+
+## 10. Chantier 02 — cloisonnement par organisation côté serveur (TENANT-APP-SCOPING-02)
+
+**Statut : CODE ÉCRIT + TESTÉ. Non fusionné, non déployé.** Garantie recherchée : *aucun chemin de code ne peut lire ou écrire dans une organisation par hasard* ;
+dès qu'une deuxième organisation existe, tout accès sans contexte d'organisation est **refusé** (jamais de lecture au hasard).
+
+**Où :** un seul point, `lib/server/db.ts` (aucun des ~80 appels n'est réécrit). Les 13 tables d'entreprise reçoivent `organization_id=eq.<org>` en lecture / modification,
+et `organization_id` à l'insertion ; une valeur d'une autre organisation est refusée avant tout envoi.
+
+| Mode (détecté par une sonde sur `organizations`, cache 30 s) | Comportement |
+|---|---|
+| **off** : table absente ou vide (avant 0008, après retour arrière) | historique inchangé |
+| **single** : une organisation (**production aujourd'hui**) | tout est filtré / rattaché à Easy2Book |
+| **multi** : plusieurs organisations | `runWithOrg(orgId, …)` **obligatoire** ; sans contexte → `TenantContextError` ; vues sans `organization_id`, fonctions SQL globales (`landing_redeem_promo`, purge) et **écritures** sur les unicités encore globales (intégrations, codes promo, offres, catégories, équipe, protection) refusées |
+
+Garde-fous de la sonde : une sonde en panne ne retombe **jamais** sur « off » (dernier mode connu conservé, sinon erreur de base) ; une réponse ambiguë est traitée comme « multi » ;
+la sonde n'utilise pas `no-store` (sinon les pages statiques à rafraîchissement `/omra` et `/c/[slug]` passent en erreur 500 — défaut trouvé et corrigé pendant le chantier).
+
+**Preuves :**
+- `tests/tenant-db.test.ts` (16) : les 3 modes, les 13 tables, insertions (objet, lot, upsert), refus des organisations croisées, contextes simultanés sans mélange, sonde (cache, pannes, ambiguïté, pas de `no-store`) ; **3 sabotages détectés** (filtre retiré, multi sans contexte accepté, sonde en panne → off).
+- E2E : le faux Supabase sait jouer la base après 0008 (`FAKE_TENANT=1`) : le parcours admin complet (132 contrôles) passe avec **557 requêtes vers des tables d'entreprise toutes filtrées par organisation**, chaque insertion envoyée par le site portant `organization_id` (et non le seul défaut de la base) ; mode « off » : 128 contrôles ; parcours réseaux → lead : 25 / 25 dans les deux modes.
+- Les scripts d'e2e vident le cache de données de Next avant chaque lancement (un test en mode « une organisation » laissait une réponse de sonde périmée au test suivant).
+
+**Effet du déploiement :** la production est déjà en mode « single » : déployer ce code **ajoute le filtre `organization_id` à toutes les requêtes du site**. À vérifier après déploiement (voir §11).
+
+**Limites (chantiers suivants) :**
+1. **Le mode multi n'est pas encore exploitable** : aucun point d'entrée (pages admin, actions, routes publiques) n'établit un contexte d'organisation à partir du compte connecté ou du domaine ; en multi, tout est donc refusé (sûr, mais inutilisable). C'est la condition préalable de l'inscription des entreprises.
+2. **Lecture de l'admin avec le jeton de l'utilisateur (RLS)** : non faite. La règle « un employé voit ses leads et les non affectés » n'est donc **toujours pas appliquée au CRM** (elle l'est en base, pour les accès par jeton).
+3. Unicités par organisation, vues de performance par organisation, fonctions SQL par organisation, suppression des valeurs par défaut Easy2Book.
+4. La sonde s'appuie sur le cache de données de Next (30 s) : après un retour arrière de 0008, jusqu'à 30 s de requêtes en erreur sont possibles sur un déploiement en cours.
+5. Les e2e ne tournent pas dans la CI (typecheck, tests unitaires et build seulement).
+
+## 11. Vérifications après déploiement du chantier 02 (propriétaire)
+1. `/admin` : Leads (les 4 leads), Pipeline, Clients, Segments, Statistiques → Entonnoir, une fiche lead s'ouvrent normalement.
+2. Un lead de test sur `/omra` apparaît en « Nouveau » ; le passer en « Perdu » (écriture de l'historique).
+3. Pages publiques `/omra`, `/summer-vibes`, `/voyages-organises`, `/c/omra-2027` : 200.
+4. Vercel : aucune nouvelle erreur d'exécution. En cas de problème : redéployer le commit précédent (`94a0159`) ; aucune migration à annuler.
+

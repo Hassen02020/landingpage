@@ -14,7 +14,12 @@ const jwt = () => {
   return `${b({ alg: "HS256", typ: "JWT" })}.${b({ exp: Math.floor(Date.now() / 1000) + 3600 })}.sig${randomUUID().slice(0, 8)}`
 }
 
-export function createFakeSupabase() {
+const E2B_ORG = "00000000-0000-4000-8000-0000000e2b01"
+const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates"]
+
+// tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
+// lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
+export function createFakeSupabase({ tenant = false } = {}) {
   const ADMIN_ID = "11111111-1111-4111-8111-111111111111"
   const AGENT_ID = "22222222-2222-4222-8222-222222222222"
   const users = [
@@ -112,6 +117,11 @@ export function createFakeSupabase() {
     landing_niche_performance: [
       { product: "omra", niche: "omra-ramadan-2027", clics_whatsapp: 41, visiteurs_contact: 33, leads: 9, reservations: 2, chiffre_affaires_tnd: 23400 },
     ],
+  }
+  const postsWithoutOrg = [] // insertions envoyées PAR LE SITE sans organization_id (mode tenant) : doit rester vide
+  if (tenant) {
+    db.organizations = [{ id: E2B_ORG, slug: "easy2book", name: "Easy2Book", status: "active" }]
+    for (const t of TENANT_TABLES) for (const r of db[t] ?? []) r.organization_id = E2B_ORG
   }
   const seq = { landing_lead_activities: 100, landing_promo_codes: 100, landing_blocklist: 100, landing_integration_changes: 100, landing_admin_log: 100 }
   // valeurs par défaut posées par la vraie base (DEFAULT des migrations)
@@ -256,7 +266,8 @@ export function createFakeSupabase() {
       }
       for (const col of UNIQUE[name] ?? []) if (row[col] != null && rows.some((r) => r[col] === row[col])) return send(res, 409, { code: "23505" })
       const base = name === "landing_leads" || name === "landing_offers" || name === "landing_categories" || name === "landing_message_templates" ? { id: randomUUID() } : { id: (seq[name] = (seq[name] ?? 0) + 1) }
-      const created = { ...base, created_at: day(0), updated_at: day(0), ...(name === "landing_leads" ? { lead_day: day(0).slice(0, 10), status: "nouveau" } : {}), ...(DEFAULTS[name] ?? {}), ...row }
+      if (tenant && TENANT_TABLES.includes(name) && row.organization_id === undefined) postsWithoutOrg.push(name)
+      const created = { ...base, created_at: day(0), updated_at: day(0), ...(tenant && TENANT_TABLES.includes(name) ? { organization_id: E2B_ORG } : {}), ...(name === "landing_leads" ? { lead_day: day(0).slice(0, 10), status: "nouveau" } : {}), ...(DEFAULTS[name] ?? {}), ...row }
       rows.push(created)
       return prefer.includes("return=minimal") ? send(res, 201) : send(res, 201, [created])
     }
@@ -272,6 +283,10 @@ export function createFakeSupabase() {
     server,
     db,
     calls,
+    tenant,
+    postsWithoutOrg,
+    E2B_ORG,
+    TENANT_TABLES,
     users,
     listen: (port) => new Promise((ok) => server.listen(port, "127.0.0.1", () => ok(server))),
     close: () => new Promise((ok) => server.close(ok)),

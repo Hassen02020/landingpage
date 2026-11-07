@@ -88,7 +88,8 @@ export function installFetchMock(opts: { dbStatus?: number } = {}) {
     db,
     meta: () => calls.filter((c) => c.url.includes("graph.facebook.com")),
     tiktok: () => calls.filter((c) => c.url.includes("business-api.tiktok.com")),
-    dbCalls: () => calls.filter((c) => c.url.startsWith(DB_URL)),
+    // accès métier à la base ; la sonde de détection du mode multi-entreprises (table organizations) est une requête interne, exclue
+    dbCalls: () => calls.filter((c) => c.url.startsWith(DB_URL) && !c.url.startsWith(`${DB_URL}/rest/v1/organizations?`)),
   }
 }
 

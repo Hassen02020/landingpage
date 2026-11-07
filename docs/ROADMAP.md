@@ -168,3 +168,4 @@ Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des do
 |---|---|
 | MULTI-TENANT-FOUNDATION-01 (chantiers 1 à 3 : organisations, rattachement d'Easy2Book, rôles, Super Admin, RLS, tests d'isolation) | **CODE ÉCRIT + TESTÉ** ; migration 0008 **appliquée en production le 07/11/2026 (postcheck 12 / 12 OK, test d'écriture réussi)** ; code de la PR #12 non fusionné ; détail : `docs/MULTI_TENANT.md` |
 | Suivants (4 à 11) | non démarrés (GO explicite requis pour chacun) |
+| TENANT-APP-SCOPING-02 (cloisonnement par organisation côté serveur, refus par défaut en mode multi) | **CODE ÉCRIT + TESTÉ** ; non fusionné ni déployé ; mode multi non exploitable avant le câblage des points d'entrée ; lecture admin par jeton (RLS) reportée ; détail : `docs/MULTI_TENANT.md` §10 |
