@@ -159,3 +159,12 @@ Complément (même jour) : la vérification en ligne après le premier déploiem
 | Seuil absent / invalide → jamais VIP ; seuil inclus (≥) ; aucun niveau sans vente ; cumul sur toutes les demandes y compris anciennes ; perdu non compté | Montant du seuil : à fixer par le propriétaire, puis variable à poser sur Vercel (action propriétaire) |
 | Niveaux affichés dans Clients et la fiche client (avec explication du calcul) ; segment VIP avec exclusion sans consentement marketing | Aucun avantage concret (remise, code, message) : non demandé, non fait |
 | Consultation en lecture seule | Rétrogradation : sans objet (cumul à vie) ; e2e sur faux Supabase avec seuil de test 10 000 TND |
+
+## Plateforme multi-entreprises (cahier des charges « Connect & Convert », 07/11/2026)
+
+Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des données Easy2Book · 3 rôles · 4 inscription · 5 formulaires adaptatifs · 6 employés + round-robin · 7 site builder · 8 OAuth Meta / TikTok / Threads · 9 WhatsApp Embedded Signup · 10 campagnes / dépenses / analytics · 11 certification.
+
+| Chantier | État |
+|---|---|
+| MULTI-TENANT-FOUNDATION-01 (chantiers 1 à 3 : organisations, rattachement d'Easy2Book, rôles, Super Admin, RLS, tests d'isolation) | **CODE ÉCRIT + TESTÉ** ; migration 0008 **non appliquée en production** ; détail et procédure : `docs/MULTI_TENANT.md` |
+| Suivants (4 à 11) | non démarrés (GO explicite requis pour chacun) |
