@@ -166,5 +166,5 @@ Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des do
 
 | Chantier | État |
 |---|---|
-| MULTI-TENANT-FOUNDATION-01 (chantiers 1 à 3 : organisations, rattachement d'Easy2Book, rôles, Super Admin, RLS, tests d'isolation) | **CODE ÉCRIT + TESTÉ** ; migration 0008 **non appliquée en production** ; détail et procédure : `docs/MULTI_TENANT.md` |
+| MULTI-TENANT-FOUNDATION-01 (chantiers 1 à 3 : organisations, rattachement d'Easy2Book, rôles, Super Admin, RLS, tests d'isolation) | **CODE ÉCRIT + TESTÉ** ; migration 0008 **appliquée en production le 07/11/2026 (postcheck 12 / 12 OK, test d'écriture réussi)** ; code de la PR #12 non fusionné ; détail : `docs/MULTI_TENANT.md` |
 | Suivants (4 à 11) | non démarrés (GO explicite requis pour chacun) |

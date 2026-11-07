@@ -1,6 +1,6 @@
 # Socle multi-entreprises — MULTI-TENANT-FOUNDATION-01
 
-**Statut : CODE ÉCRIT + TESTÉ (PostgreSQL / PGlite). Non appliqué en production. Non fusionné. Non déployé.**
+**Statut : CODE ÉCRIT + TESTÉ (PostgreSQL / PGlite). Migration 0008 APPLIQUÉE EN PRODUCTION le 07/11/2026 par le propriétaire et vérifiée (voir §9). Code de la PR #12 non fusionné, non déployé.**
 Décisions du propriétaire (07/11/2026) : dépôt conservé ; sécurité hybride (RLS avec contexte utilisateur pour les entreprises,
 `service_role` seulement pour des opérations serveur privilégiées et contrôlées, `organization_id` vérifié côté serveur, tests
 négatifs) ; OAuth standard (hors de ce chantier) ; compte propriétaire désigné `Tarhouni.Hassene@gmail.com` (existence et rôle à vérifier
@@ -99,3 +99,19 @@ Prouvé en test : aucun lead perdu, politiques d'origine rétablies, migration r
 - **Vues de performance** (`landing_campaign_performance`, `landing_niche_performance`) : agrègent encore toutes les organisations pour le serveur (elles respectent la RLS pour un compte connecté, `security_invoker`).
 - **`service_role` en lecture seule** sur les nouvelles tables : les écritures serveur (inscription d'une entreprise, invitations) seront accordées au strict nécessaire, par migration dédiée.
 - Les valeurs par défaut Easy2Book des colonnes `organization_id` sont **transitoires** : à supprimer avant d'accueillir une deuxième entreprise réelle.
+
+## 9. Application en production — journal (07/11/2026)
+
+Exécutée **par le propriétaire** (éditeur SQL du projet des landing pages), selon `docs/PLAN_APPLICATION_0008.md`. Claude n'a exécuté aucune étape de production.
+
+| Étape | Résultat |
+|---|---|
+| Sauvegarde du jour | confirmée par le propriétaire |
+| `precheck-0008.sql` | **10 / 10 OK** (0006 et 0007 appliquées, 1 membre d'équipe et 1 administrateur actif, 3 leads, 4 lignes d'historique) |
+| Migration `0008_multitenant_foundation.sql` | « Success. No rows returned » (transaction unique) |
+| `postcheck-0008.sql` | **12 / 12 OK** : 1 organisation Easy2Book active ; 3 / 3 leads et 4 / 4 historique rattachés ; `organization_id` NOT NULL sur 13 tables ; 1 membre = 1 équipe ; RLS activée et forcée sur les 4 nouvelles tables ; 7 politiques d'isolation, anciennes supprimées ; aucune écriture possible par l'API ; accès anonyme fermé ; 1 administrateur actif |
+| Test d'écriture (lead `TEST Claude` sur `/omra`) | lead créé, **rattaché à Easy2Book**, visible dans l'admin ; 4 leads au total ; aucune ligne d'historique dans une autre organisation ; message WhatsApp propre |
+| Passage du lead de test en « Perdu » | accepté par l'admin (« Statut enregistré ») : écriture de l'historique fonctionnelle avec le nouveau schéma |
+
+**Non encore fait** : rôle Super Admin (en attente du contrôle du compte `Tarhouni.Hassene@gmail.com` : existence, adresse confirmée, compte non suspendu) ; fusion de la PR #12 et déploiement du code (sans effet visible pour le CRM actuel).
+La production tourne toujours avec le code `2ca4fc0` ; seul le schéma de la base a changé, de façon compatible.

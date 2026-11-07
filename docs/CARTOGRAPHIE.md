@@ -43,7 +43,7 @@
 | 0005 | équipe gérée, modèles WhatsApp, journal admin | appliquée (02/11) |
 | 0006 | e-mail, région, canal de contact, page du formulaire, voyageurs facultatifs, effacement à l'anonymisation | **appliquée en production par le propriétaire, vérifiée le 06/11/2026** (4 colonnes présentes) |
 | 0007 | pipeline à 10 statuts (à contacter, à qualifier, devis, négociation, gagné), vues et purge mises à jour | **appliquée en production par le propriétaire, vérifiée le 06/11/2026** (contrainte de statuts et purge contiennent `gagne`) |
-| 0008 | socle multi-entreprises (organisations, membres, Super Admin, audit, `organization_id`, RLS par organisation) | **préparée dans une PR, NON appliquée** (voir `docs/MULTI_TENANT.md`) |
+| 0008 | socle multi-entreprises (organisations, membres, Super Admin, audit, `organization_id`, RLS par organisation) | **appliquée en production par le propriétaire le 07/11/2026, vérifiée (postcheck 12 / 12 OK)** — voir `docs/MULTI_TENANT.md` §9 |
 
 Règles transverses vérifiées sous PGlite : `anon`/`authenticated` sans accès aux tables sensibles ; `service_role` sans DELETE ni TRUNCATE ; historique en ajout seul ; il reste toujours un administrateur actif.
 
