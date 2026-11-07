@@ -8,7 +8,7 @@ import { createFakeSupabase, ADMIN, AGENT } from "./fake-supabase.mjs"
 const { chromium } = createRequire(import.meta.url)("playwright")
 
 const BASE = process.argv[2] || "http://localhost:3458"
-const fake = createFakeSupabase()
+const fake = createFakeSupabase({ tenant: process.env.FAKE_TENANT === "1" })
 await fake.listen(54321)
 const db = fake.db
 let failed = 0
@@ -557,6 +557,17 @@ await ctx.close()
   await mctx.close()
 }
 
+if (fake.tenant) {
+  // Mode « une organisation » (base après 0008) : le site doit avoir cloisonné TOUTES ses requêtes vers les tables d'entreprise
+  const biz = fake.calls.filter((c) => fake.TENANT_TABLES.some((t) => c.split("?")[0].endsWith(`/rest/v1/${t}`)))
+  const readsOrWrites = biz.filter((c) => !c.startsWith("POST "))
+  const unscoped = readsOrWrites.filter((c) => !c.includes(`organization_id=eq.${fake.E2B_ORG}`))
+  check(`cloisonnement : ${readsOrWrites.length} lectures / modifications de tables d'entreprise, toutes filtrées par organisation`, readsOrWrites.length > 50 && unscoped.length === 0, unscoped.slice(0, 3).join(" | "))
+  check("cloisonnement : chaque insertion envoyée par le site porte organization_id (pas seulement le défaut de la base)", fake.postsWithoutOrg.length === 0, fake.postsWithoutOrg.join(","))
+  const orgRows = fake.TENANT_TABLES.flatMap((t) => db[t] ?? [])
+  check("cloisonnement : aucune ligne créée pendant le parcours hors organisation Easy2Book", orgRows.every((r) => r.organization_id === fake.E2B_ORG))
+  check("cloisonnement : la sonde de mode n'est pas relancée à chaque requête (cache)", fake.calls.filter((c) => c.includes("/rest/v1/organizations")).length < 40, String(fake.calls.filter((c) => c.includes("/rest/v1/organizations")).length))
+}
 check("aucune erreur JavaScript dans le navigateur", errors.length === 0, errors.slice(0, 3).join(" | "))
 await browser.close()
 await fake.close()

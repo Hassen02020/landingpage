@@ -3,14 +3,11 @@
 // de raccourci pour contourner cette vérification.
 import { DbError, select } from "./db"
 import { isOrgRole, roleFromLegacyStaff, type OrgRole } from "@/lib/permissions"
+import { DEFAULT_ORG_ID, ORG_ID_RE, isOrgId } from "@/lib/org-id"
 
-/** Organisation n°1 (Easy2Book). Valeur par défaut TRANSITOIRE des colonnes organization_id (migration 0008). */
-export const DEFAULT_ORG_ID = "00000000-0000-4000-8000-0000000e2b01"
-export const ORG_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export { DEFAULT_ORG_ID, ORG_ID_RE, isOrgId }
 
 export class TenantError extends Error {}
-
-export const isOrgId = (v: unknown): v is string => typeof v === "string" && ORG_ID_RE.test(v)
 
 /** Filtre PostgREST `organization_id=eq.<uuid>` ; refuse tout identifiant mal formé (aucune valeur libre dans la requête). */
 export function orgFilter(orgId: string): string {

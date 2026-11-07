@@ -9,6 +9,8 @@ export LANDING_SUPABASE_URL=http://127.0.0.1:54321 LANDING_SUPABASE_SERVICE_ROLE
 unset META_ACCESS_TOKEN TIKTOK_ACCESS_TOKEN
 for d in /proc/[0-9]*; do a=$(tr '\0' ' ' < "$d/cmdline" 2>/dev/null | cut -c1-40); case "$a" in next-server*) kill "${d#/proc/}" 2>/dev/null ;; esac; done
 sleep 1
+# le cache de données de Next survit aux lancements : une réponse de la sonde multi-entreprises d'un test précédent fausserait celui-ci
+rm -rf .next/cache/fetch-cache
 npx next start -p "$PORT" >/dev/null 2>&1 &
 SITE=$!
 for _ in $(seq 1 40); do curl -s -o /dev/null "http://localhost:$PORT/admin/login" && break; sleep 1; done

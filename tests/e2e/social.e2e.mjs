@@ -7,7 +7,7 @@ import { createFakeSupabase, ADMIN } from "./fake-supabase.mjs"
 const { chromium } = createRequire(import.meta.url)("playwright")
 
 const BASE = process.argv[2] || "http://localhost:3458"
-const fake = createFakeSupabase()
+const fake = createFakeSupabase({ tenant: process.env.FAKE_TENANT === "1" })
 await fake.listen(54321)
 const leads = fake.db.landing_leads
 let failed = 0
