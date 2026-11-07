@@ -16,7 +16,7 @@ const STUB = `
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
   GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-  CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY, email text);
+  CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY, email text, email_confirmed_at timestamptz DEFAULT now(), banned_until timestamptz, created_at timestamptz DEFAULT now(), last_sign_in_at timestamptz);
   CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role; GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated, service_role;
   CREATE SCHEMA storage; CREATE TABLE storage.buckets (id text PRIMARY KEY, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);`
@@ -24,6 +24,7 @@ const STUB = `
 const E2B = "00000000-0000-4000-8000-0000000e2b01"
 const u = (n: number) => `00000000-0000-4000-8000-00000000000${n}`
 const [OWNER, AGENT, ALICE_ADMIN, ALICE_MGR, ALICE_EMP, BOB_ADMIN, BOB_EMP, OUTSIDER, SUPER] = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(u)
+const ALICE_EMP2 = "00000000-0000-4000-8000-0000000000a1" // collègue de ALICE_EMP
 
 let db: PGlite
 let n = 0
@@ -131,27 +132,28 @@ describe("rattachement des données historiques à Easy2Book", () => {
 
 describe("isolation entre deux entreprises (RLS, rôles réels)", () => {
   let aliceOrg: string, bobOrg: string
-  let aliceLead1: string, aliceLead2: string, bobLead: string
+  let aliceLead1: string, aliceLead2: string, aliceLeadColleague: string, bobLead: string
 
   beforeEach(async () => {
     await db.exec(M8)
     aliceOrg = u(1) // « Alice SARL »
     bobOrg = u(2)
     await db.exec(`INSERT INTO organizations (id, slug, name) VALUES ('${aliceOrg}', 'alice', 'Alice SARL'), ('${bobOrg}', 'bob', 'Bob SARL')`)
-    for (const [id, email] of [[ALICE_ADMIN, "aa@a.tn"], [ALICE_MGR, "am@a.tn"], [ALICE_EMP, "ae@a.tn"], [BOB_ADMIN, "ba@b.tn"], [BOB_EMP, "be@b.tn"], [OUTSIDER, "x@x.tn"], [SUPER, "super@e2b.tn"]])
+    for (const [id, email] of [[ALICE_ADMIN, "aa@a.tn"], [ALICE_MGR, "am@a.tn"], [ALICE_EMP, "ae@a.tn"], [ALICE_EMP2, "ae2@a.tn"], [BOB_ADMIN, "ba@b.tn"], [BOB_EMP, "be@b.tn"], [OUTSIDER, "x@x.tn"], [SUPER, "super@e2b.tn"]])
       await db.exec(`INSERT INTO auth.users VALUES ('${id}', '${email}')`)
     // équipes (landing_staff est la table de l'application ; les membres sont tenus par la synchronisation + insertion directe)
     await db.exec(`
       INSERT INTO landing_staff (user_id, email, role, organization_id) VALUES
-        ('${ALICE_EMP}', 'ae@a.tn', 'agent', '${aliceOrg}'), ('${BOB_EMP}', 'be@b.tn', 'agent', '${bobOrg}');
+        ('${ALICE_EMP}', 'ae@a.tn', 'agent', '${aliceOrg}'), ('${ALICE_EMP2}', 'ae2@a.tn', 'agent', '${aliceOrg}'), ('${BOB_EMP}', 'be@b.tn', 'agent', '${bobOrg}');
       INSERT INTO organization_members (organization_id, user_id, role) VALUES
         ('${aliceOrg}', '${ALICE_ADMIN}', 'admin'), ('${aliceOrg}', '${ALICE_MGR}', 'manager'),
         ('${bobOrg}', '${BOB_ADMIN}', 'admin');
       INSERT INTO platform_admins (user_id) VALUES ('${SUPER}');`)
     aliceLead1 = await leadRow({ organization_id: aliceOrg, assigned_to: ALICE_EMP })
     aliceLead2 = await leadRow({ organization_id: aliceOrg }) // non affecté
+    aliceLeadColleague = await leadRow({ organization_id: aliceOrg, assigned_to: ALICE_EMP2 }) // attribué à un collègue
     bobLead = await leadRow({ organization_id: bobOrg, assigned_to: BOB_EMP })
-    for (const id of [aliceLead1, aliceLead2, bobLead]) await db.query("INSERT INTO landing_lead_activities (lead_id, actor_label, type) VALUES ($1, 'api', 'note')", [id])
+    for (const id of [aliceLead1, aliceLead2, aliceLeadColleague, bobLead]) await db.query("INSERT INTO landing_lead_activities (lead_id, actor_label, type) VALUES ($1, 'api', 'note')", [id])
     await db.exec(`INSERT INTO landing_events (event_name, event_id, product, organization_id) VALUES ('Contact', 'ev-a0000001', 'omra', '${aliceOrg}'), ('Contact', 'ev-b0000001', 'omra', '${bobOrg}')`)
   })
 
@@ -159,7 +161,7 @@ describe("isolation entre deux entreprises (RLS, rôles réels)", () => {
 
   it("l'administrateur de l'entreprise A voit les leads de A et AUCUN lead de B", async () => {
     const rows = await asUser<{ id: string; organization_id: string }>(ALICE_ADMIN, "SELECT id, organization_id FROM landing_leads")
-    expect(ids(rows)).toEqual([aliceLead1, aliceLead2].sort())
+    expect(ids(rows)).toEqual([aliceLead1, aliceLead2, aliceLeadColleague].sort())
     expect(rows.every((r) => r.organization_id === aliceOrg)).toBe(true)
     expect(await asUser(ALICE_ADMIN, `SELECT id FROM landing_leads WHERE id = '${bobLead}'`)).toEqual([]) // accès direct à un lead de B
   })
@@ -168,16 +170,20 @@ describe("isolation entre deux entreprises (RLS, rôles réels)", () => {
     expect(ids(await asUser(BOB_ADMIN, "SELECT id FROM landing_leads"))).toEqual([bobLead])
   })
 
-  it("le manager de A voit tous les leads de A ; l'employé de A voit SEULEMENT ceux qui lui sont attribués", async () => {
-    expect(ids(await asUser(ALICE_MGR, "SELECT id FROM landing_leads"))).toEqual([aliceLead1, aliceLead2].sort())
+  it("le manager de A voit tous les leads de A ; l'employé voit SES leads et les NON AFFECTÉS, jamais ceux d'un collègue ni d'une autre entreprise", async () => {
+    expect(ids(await asUser(ALICE_MGR, "SELECT id FROM landing_leads"))).toEqual([aliceLead1, aliceLead2, aliceLeadColleague].sort())
+    expect(ids(await asUser(ALICE_EMP, "SELECT id FROM landing_leads"))).toEqual([aliceLead1, aliceLead2].sort())
+    expect(ids(await asUser(ALICE_EMP2, "SELECT id FROM landing_leads"))).toEqual([aliceLead2, aliceLeadColleague].sort())
+    expect(await asUser(ALICE_EMP, `SELECT id FROM landing_leads WHERE id IN ('${aliceLeadColleague}', '${bobLead}')`)).toEqual([])
+    // dès qu'un lead non affecté est attribué à un collègue, il disparaît pour les autres employés
+    await db.exec(`UPDATE landing_leads SET assigned_to = '${ALICE_EMP2}' WHERE id = '${aliceLead2}'`)
     expect(ids(await asUser(ALICE_EMP, "SELECT id FROM landing_leads"))).toEqual([aliceLead1])
-    expect(await asUser(ALICE_EMP, `SELECT id FROM landing_leads WHERE id IN ('${aliceLead2}', '${bobLead}')`)).toEqual([])
   })
 
-  it("l'historique suit la même visibilité (employé : ses leads ; admin : son organisation ; jamais l'autre)", async () => {
+  it("l'historique suit la même visibilité (employé : ses leads et les non affectés ; admin : son organisation ; jamais l'autre)", async () => {
     const adminRows = await asUser<{ lead_id: string }>(ALICE_ADMIN, "SELECT lead_id FROM landing_lead_activities")
-    expect(adminRows.map((r) => r.lead_id).sort()).toEqual([aliceLead1, aliceLead2].sort())
-    expect((await asUser<{ lead_id: string }>(ALICE_EMP, "SELECT lead_id FROM landing_lead_activities")).map((r) => r.lead_id)).toEqual([aliceLead1])
+    expect(adminRows.map((r) => r.lead_id).sort()).toEqual([aliceLead1, aliceLead2, aliceLeadColleague].sort())
+    expect((await asUser<{ lead_id: string }>(ALICE_EMP, "SELECT lead_id FROM landing_lead_activities")).map((r) => r.lead_id).sort()).toEqual([aliceLead1, aliceLead2].sort())
     expect(await asUser(ALICE_ADMIN, `SELECT 1 FROM landing_lead_activities WHERE lead_id = '${bobLead}'`)).toEqual([])
   })
 
@@ -201,12 +207,12 @@ describe("isolation entre deux entreprises (RLS, rôles réels)", () => {
     expect((await asUser<{ slug: string }>(ALICE_ADMIN, "SELECT slug FROM organizations")).map((r) => r.slug)).toEqual(["alice"])
     expect((await asUser<{ slug: string }>(BOB_EMP, "SELECT slug FROM organizations")).map((r) => r.slug)).toEqual(["bob"])
     const aliceMembers = (await asUser<{ user_id: string }>(ALICE_ADMIN, "SELECT user_id FROM organization_members")).map((r) => r.user_id).sort()
-    expect(aliceMembers).toEqual([ALICE_ADMIN, ALICE_MGR, ALICE_EMP].sort())
+    expect(aliceMembers).toEqual([ALICE_ADMIN, ALICE_MGR, ALICE_EMP, ALICE_EMP2].sort())
     // un employé ne voit que sa propre ligne de membre
     expect((await asUser<{ user_id: string }>(ALICE_EMP, "SELECT user_id FROM organization_members")).map((r) => r.user_id)).toEqual([ALICE_EMP])
     // l'équipe (landing_staff) : l'administrateur de A ne voit pas celle de B
-    const staff = (await asUser<{ user_id: string }>(ALICE_ADMIN, "SELECT user_id FROM landing_staff")).map((r) => r.user_id)
-    expect(staff).toEqual([ALICE_EMP])
+    const staff = (await asUser<{ user_id: string }>(ALICE_ADMIN, "SELECT user_id FROM landing_staff")).map((r) => r.user_id).sort()
+    expect(staff).toEqual([ALICE_EMP, ALICE_EMP2].sort())
   })
 
   it("Super Admin : voit toutes les organisations et tous les membres, mais PAS les leads ni les événements", async () => {
@@ -245,7 +251,7 @@ describe("isolation entre deux entreprises (RLS, rôles réels)", () => {
     expect(await asUser(ALICE_EMP, "SELECT 1 FROM landing_leads")).toEqual([])
     expect(ids(await asUser(BOB_ADMIN, "SELECT id FROM landing_leads"))).toEqual([bobLead]) // les autres ne sont pas touchées
     await db.exec(`UPDATE organizations SET status = 'active' WHERE id = '${aliceOrg}'`)
-    expect((await asUser(ALICE_ADMIN, "SELECT 1 FROM landing_leads")).length).toBe(2)
+    expect((await asUser(ALICE_ADMIN, "SELECT 1 FROM landing_leads")).length).toBe(3)
   })
 
   it("un membre désactivé perd l'accès immédiatement", async () => {
@@ -313,7 +319,15 @@ describe("compte Super Admin : script de provisionnement", () => {
     await db.exec(M8)
     await expect(db.exec(PROVISION)).rejects.toThrow(/aucun compte/)
     expect((await db.query("SELECT 1 FROM platform_admins")).rows.length).toBe(0)
-    await db.exec(`INSERT INTO auth.users VALUES ('${SUPER}', 'tarhouni.hassene@gmail.com')`) // casse différente : retrouvé sans tenir compte de la casse
+    // compte NON CONFIRMÉ (ex. inscription d'un tiers avec cette adresse) : refusé, aucun rôle accordé
+    await db.exec(`INSERT INTO auth.users (id, email, email_confirmed_at) VALUES ('${SUPER}', 'tarhouni.hassene@gmail.com', NULL)`) // casse différente : retrouvé sans tenir compte de la casse
+    await expect(db.exec(PROVISION)).rejects.toThrow(/CONFIRMÉ/)
+    expect((await db.query("SELECT 1 FROM platform_admins")).rows.length).toBe(0)
+    // compte suspendu : refusé
+    await db.exec(`UPDATE auth.users SET email_confirmed_at = now(), banned_until = now() + interval '1 day' WHERE id = '${SUPER}'`)
+    await expect(db.exec(PROVISION)).rejects.toThrow(/CONFIRMÉ et actif/)
+    // compte confirmé et actif : accordé, de façon idempotente
+    await db.exec(`UPDATE auth.users SET banned_until = NULL WHERE id = '${SUPER}'`)
     await db.exec(PROVISION)
     await db.exec(PROVISION)
     expect((await db.query<{ user_id: string }>("SELECT user_id FROM platform_admins")).rows).toEqual([{ user_id: SUPER }])
@@ -355,3 +369,50 @@ describe("retour arrière documenté", () => {
 function to(r: { rows: { r: unknown }[] }) {
   return r.rows[0].r
 }
+
+describe("scripts de contrôle avant / après (lecture seule)", () => {
+  const PRE = read("scripts/precheck-0008.sql")
+  const POST = read("scripts/postcheck-0008.sql")
+  const statuses = async (sql: string) => {
+    const results = (await db.exec(sql)) as unknown as { rows: { statut?: string }[] }[]
+    return results[0].rows.map((r) => r.statut)
+  }
+
+  it("avant 0008 : tous les contrôles OK sur une base saine (0007 appliquée, équipe présente), et le compte propriétaire est décrit", async () => {
+    await db.exec(`INSERT INTO auth.users (id, email) VALUES ('${OWNER}', 'o@e2b.tn'), ('${SUPER}', 'Tarhouni.Hassene@gmail.com')`)
+    await db.exec(`INSERT INTO landing_staff (user_id, email, role) VALUES ('${OWNER}', 'o@e2b.tn', 'admin')`)
+    const results = (await db.exec(PRE)) as unknown as { rows: Record<string, unknown>[] }[]
+    expect(results[0].rows.map((r) => r.statut)).toEqual(Array(10).fill("OK"))
+    expect(results[1].rows).toEqual([expect.objectContaining({ email: "Tarhouni.Hassene@gmail.com", email_confirme: true, suspendu: false })])
+  })
+
+  it("avant 0008 : signale une migration manquante ou déjà appliquée, une équipe sans administrateur et un compte non confirmé", async () => {
+    const early = new PGlite()
+    await early.exec(STUB + "CREATE TABLE landing_staff (user_id uuid, email text, role text, active boolean); CREATE TABLE landing_leads (id int); CREATE TABLE landing_lead_activities (id int);")
+    const bad = ((await early.exec(PRE)) as unknown as { rows: { statut: string }[] }[])[0].rows
+    expect(bad.some((r) => r.statut === "À CORRIGER")).toBe(true)
+    await db.exec(M8)
+    expect((await statuses(PRE)).includes("À CORRIGER")).toBe(true) // déjà appliquée
+    await db.exec(`INSERT INTO auth.users (id, email, email_confirmed_at) VALUES ('${SUPER}', 'tarhouni.hassene@gmail.com', NULL)`)
+    const acc = ((await db.exec(PRE)) as unknown as { rows: Record<string, unknown>[] }[])[1].rows
+    expect(acc[0].email_confirme).toBe(false)
+  })
+
+  it("après 0008 : les 12 contrôles sont OK ; sabotés (RLS coupée, écriture accordée), ils passent en ÉCHEC", async () => {
+    await db.exec(`INSERT INTO auth.users (id, email) VALUES ('${OWNER}', 'o@e2b.tn')`)
+    await db.exec(`INSERT INTO landing_staff (user_id, email, role) VALUES ('${OWNER}', 'o@e2b.tn', 'admin')`)
+    await leadRow()
+    await db.exec(M8)
+    const ok = await statuses(POST)
+    expect(ok).toEqual(Array(12).fill("OK"))
+    await db.exec("ALTER TABLE platform_admins NO FORCE ROW LEVEL SECURITY")
+    await db.exec("GRANT INSERT ON platform_admins TO authenticated")
+    await db.exec("GRANT SELECT ON organizations TO anon")
+    const ko = await statuses(POST)
+    expect(ko.filter((s) => s === "ÉCHEC").length).toBeGreaterThanOrEqual(3)
+  })
+
+  it("les deux scripts de contrôle sont en lecture seule (aucun INSERT / UPDATE / DELETE / DDL)", () => {
+    for (const sql of [PRE, POST]) expect(sql.replace(/--.*$/gm, "")).not.toMatch(/\b(INSERT\s+INTO|UPDATE\s+\w|DELETE\s+FROM|CREATE\s|ALTER\s|DROP\s|GRANT\s|TRUNCATE)\b/i)
+  })
+})

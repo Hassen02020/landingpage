@@ -16,6 +16,9 @@
 -- Retour arrière : supabase/rollback/0008_rollback.sql. Super Admin : supabase/scripts/.
 -- =====================================================================
 
+-- Tout ou rien : si une instruction échoue, RIEN n'est appliqué.
+BEGIN;
+
 -- ---------- 0. Garde-fous ----------
 DO $$
 BEGIN
@@ -300,11 +303,12 @@ DROP POLICY landing_events_staff_read ON public.landing_events;
 DROP POLICY landing_activities_staff_read ON public.landing_lead_activities;
 DROP POLICY landing_staff_self_or_staff ON public.landing_staff;
 
--- Leads : admin et manager de l'organisation voient tout ; un employé voit SEULEMENT les leads qui lui sont attribués.
+-- Leads : admin et manager de l'organisation voient tout ; un employé voit SES leads ET les leads non encore affectés
+-- (décision du propriétaire, 07/11/2026) ; jamais ceux attribués à un collègue.
 CREATE POLICY landing_leads_org_read ON public.landing_leads
   FOR SELECT TO authenticated
   USING (public.landing_member_role(organization_id) IN ('admin', 'manager')
-         OR (public.landing_member_role(organization_id) = 'employee' AND assigned_to = auth.uid()));
+         OR (public.landing_member_role(organization_id) = 'employee' AND (assigned_to = auth.uid() OR assigned_to IS NULL)));
 
 -- Événements de navigation (identifiants visiteurs) : admin et manager seulement.
 CREATE POLICY landing_events_org_read ON public.landing_events
@@ -316,7 +320,7 @@ CREATE POLICY landing_activities_org_read ON public.landing_lead_activities
   FOR SELECT TO authenticated
   USING (public.landing_member_role(organization_id) IN ('admin', 'manager')
          OR (public.landing_member_role(organization_id) = 'employee'
-             AND EXISTS (SELECT 1 FROM public.landing_leads l WHERE l.id = lead_id AND l.assigned_to = auth.uid())));
+             AND EXISTS (SELECT 1 FROM public.landing_leads l WHERE l.id = lead_id AND (l.assigned_to = auth.uid() OR l.assigned_to IS NULL))));
 
 CREATE POLICY landing_staff_org_read ON public.landing_staff
   FOR SELECT TO authenticated
@@ -325,3 +329,5 @@ CREATE POLICY landing_staff_org_read ON public.landing_staff
 -- Les autres tables (catalogue, codes promo, intégrations, protection, modèles, journaux) restent
 -- RÉSERVÉES au serveur (aucun droit, aucune politique pour les comptes connectés) : leur accès par
 -- organisation sera ouvert, table par table, avec les chantiers qui en ont besoin.
+
+COMMIT;

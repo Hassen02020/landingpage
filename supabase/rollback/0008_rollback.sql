@@ -4,6 +4,8 @@
 -- et SEULEMENT tant qu'Easy2Book est la seule organisation (sinon l'isolation serait perdue).
 -- Remet le schéma exactement dans l'état 0007 (politiques « équipe » d'origine comprises).
 -- =====================================================================
+BEGIN; -- tout ou rien
+
 DO $$
 BEGIN
   IF to_regclass('public.agencies') IS NOT NULL
@@ -76,3 +78,5 @@ DROP FUNCTION public.landing_org_audit_immutable();
 DROP FUNCTION public.landing_members_keep_admin();
 DROP FUNCTION public.landing_member_role(UUID);
 DROP FUNCTION public.landing_is_platform_admin();
+
+COMMIT;

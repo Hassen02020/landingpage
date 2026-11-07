@@ -15,7 +15,8 @@ en production avant attribution).
 | Attribution du rôle Super Admin (à exécuter par le propriétaire, jamais automatique) | `supabase/scripts/provision-super-admin.sql` |
 | Matrice des rôles Admin / Manager / Employé / Super Admin | `lib/permissions.ts` |
 | Contexte d'organisation côté serveur (filtre, contrôle, rôle, repli transitoire) | `lib/server/tenant.ts` |
-| Tests : 25 sur PostgreSQL (isolation, rôles, non-régression, rollback…) + 12 unitaires | `tests/migration-0008.test.ts`, `tests/tenant.test.ts` |
+| Contrôles avant / après l'application (lecture seule) et plan de production | `supabase/scripts/precheck-0008.sql`, `postcheck-0008.sql`, `docs/PLAN_APPLICATION_0008.md` |
+| Tests : 29 sur PostgreSQL (isolation, rôles, non-régression, rollback, contrôles) + 12 unitaires | `tests/migration-0008.test.ts`, `tests/tenant.test.ts` |
 
 ## 2. Modèle
 
@@ -29,7 +30,7 @@ en production avant attribution).
 
 | Données | Admin | Manager | Employé | Super Admin | Autre entreprise / sans organisation / anonyme |
 |---|---|---|---|---|---|
-| Leads et historique | tous ceux de **son** organisation | tous ceux de son organisation | **seulement ceux qui lui sont attribués** | **non** | non |
+| Leads et historique | tous ceux de **son** organisation | tous ceux de son organisation | **les siens + les non affectés** (jamais ceux d'un collègue) | **non** | non |
 | Événements de navigation | oui | oui | non | non | non |
 | Organisation, membres | la sienne | la sienne | sa propre ligne | **toutes** | non |
 | Écritures (rôles, membres, organisations, Super Admin) | **aucune par l'API** | aucune | aucune | aucune | aucune |
@@ -37,9 +38,10 @@ en production avant attribution).
 Une organisation **suspendue** ou un membre **désactivé** perd tout accès immédiatement. Les autres tables (catalogue, codes promo, intégrations, protection,
 modèles, journaux) restent réservées au serveur ; leur ouverture par organisation viendra avec les chantiers qui en ont besoin.
 
-> **Changement de comportement à connaître.** Aujourd'hui un « agent » du CRM Easy2Book voit tous les leads (le site lit avec `service_role`, la RLS ne
-> s'applique pas). Les nouvelles politiques décrivent la cible du cahier des charges : un employé ne voit que ses leads. Elles ne s'appliqueront au CRM
-> que lorsque l'admin lira avec le jeton de l'utilisateur (chantier suivant) : **décision de produit à confirmer avant ce basculement**.
+> **Règle confirmée par le propriétaire (07/11/2026).** Un employé voit **ses leads et les leads non encore affectés**, jamais ceux attribués à un collègue
+> (sinon un nouveau lead resterait invisible tant qu'il n'y a pas de répartition automatique). Aujourd'hui un « agent » du CRM Easy2Book voit tous les leads
+> (le site lit avec `service_role`, la RLS ne s'applique pas) : la nouvelle règle ne s'appliquera au CRM que lorsque l'admin lira avec le jeton de l'utilisateur
+> (chantier suivant). Un employé ne peut pas affecter un lead : seuls admin et manager le peuvent.
 
 ## 4. Stratégie progressive (rien ne casse pendant la transformation)
 
@@ -51,6 +53,9 @@ modèles, journaux) restent réservées au serveur ; leur ouverture par organisa
 4. Chantiers suivants : lecture de l'admin avec le jeton utilisateur, filtrage par organisation de toutes les requêtes serveur, unicités par organisation, puis migration « contract » qui supprime les valeurs par défaut.
 
 ## 5. Procédure pour le propriétaire (rien n'est exécuté sans vous)
+
+> Le déroulé complet, avec critères de feu vert, surveillance et conditions de retour arrière : **`docs/PLAN_APPLICATION_0008.md`**.
+> Contrôles en lecture seule : `supabase/scripts/precheck-0008.sql` (avant, 10 contrôles + compte propriétaire) et `supabase/scripts/postcheck-0008.sql` (après, 12 contrôles).
 
 1. **Sauvegarde** : Supabase → Database → Backups (sauvegarde du jour) ; en plus, export de `landing_leads` et `landing_lead_activities` si vous le souhaitez.
 2. Vérifier que vous êtes dans le projet des landing pages (`tdexdlukqciolslvjmhd`), jamais EasyV4.
@@ -66,8 +71,7 @@ select
   (select count(*) from organization_members)                                   as membres,              -- = équipe actuelle
   (select count(*) from landing_staff)                                          as equipe;
 ```
-5. **Super Admin** : d'abord vérifier que le compte existe : `select id, email from auth.users where lower(email) = lower('Tarhouni.Hassene@gmail.com');`
-   Si une ligne apparaît, exécuter `supabase/scripts/provision-super-admin.sql`. Sinon, le script s'arrête sans rien créer (le compte se crée par le parcours normal d'authentification, pas par ce script).
+5. **Super Admin** : le second tableau de `precheck-0008.sql` indique si le compte existe, si son adresse est **confirmée** et s'il n'est pas suspendu. Si oui, exécuter `supabase/scripts/provision-super-admin.sql` (il refuse un compte non confirmé ou suspendu). Sinon, il s'arrête sans rien créer (le compte se crée par le parcours normal d'authentification, pas par ce script).
 
 ## 6. Retour arrière
 
@@ -84,7 +88,7 @@ Prouvé en test : aucun lead perdu, politiques d'origine rétablies, migration r
 | Accès Super Admin sécurisés | **Prouvé en test** : organisations oui, leads non ; aucune auto-attribution ; script sans création de compte | idem |
 | Employés limités à leurs données | **Prouvé en test** (RLS) | idem |
 | Tests d'isolation entre deux entreprises | **Réussis** | idem |
-| Non-régression du CRM historique | **Réussie** : 309 tests unitaires, e2e inchangés (code applicatif existant non modifié) ; écritures `service_role` sans `organization_id` → Easy2Book | suite complète |
+| Non-régression du CRM historique | **Réussie** : 313 tests unitaires, e2e inchangés (code applicatif existant non modifié) ; écritures `service_role` sans `organization_id` → Easy2Book | suite complète |
 | Sauvegardes et retour arrière documentés | **Documentés et testés** (retour arrière) ; sauvegarde = procédure du propriétaire | §5 et §6 |
 
 ## 8. Limites et suite (honnêtement)
