@@ -19,8 +19,9 @@ describe("matrice des rôles", () => {
       expect(can("employee", p), `employé ne doit pas avoir ${p}`).toBe(false)
     }
     expect(can("manager", "leads.assign") && can("manager", "leads.view_all") && can("manager", "reports.view")).toBe(true)
-    expect(can("employee", "leads.view_all") || can("employee", "leads.assign") || can("employee", "reports.view") || can("employee", "leads.update")).toBe(false)
-    expect(can("employee", "leads.view_assigned") && can("employee", "leads.update_assigned")).toBe(true)
+    // décision du 08/11/2026 : l'employé VOIT tous les leads de son entreprise ; il n'affecte pas, ne rapporte pas, ne modifie que les siens
+    expect(can("employee", "leads.view_all") && can("employee", "leads.view_assigned") && can("employee", "leads.update_assigned")).toBe(true)
+    expect(can("employee", "leads.assign") || can("employee", "reports.view") || can("employee", "leads.update") || can("employee", "employees.view")).toBe(false)
   })
 
   it("hiérarchie stricte : les droits d'un employé ⊂ ceux d'un manager ⊂ ceux d'un admin", () => {
@@ -78,12 +79,33 @@ function mockFetch(handler: (table: string, query: string) => { status: number; 
 }
 
 describe("contexte de l'utilisateur (membre, repli, Super Admin)", () => {
+  const ORG1 = "00000000-0000-4000-8000-000000000001"
+  const ORG2 = "00000000-0000-4000-8000-000000000002"
+  const byTable = (members: { organization_id: string; role: string }[], activeOrgs: string[]) => (table: string) =>
+    table === "organization_members" ? { status: 200, body: members } : table === "organizations" ? { status: 200, body: activeOrgs.map((id) => ({ id })) } : { status: 404 }
+
   it("lit organization_members : organisation et rôle réels ; aucun membre actif → null (pas d'accès)", async () => {
     configureAll()
-    mockFetch(() => ({ status: 200, body: [{ organization_id: "00000000-0000-4000-8000-000000000001", role: "manager" }] }))
-    expect(await resolveMembership(UID, "agent")).toEqual({ organizationId: "00000000-0000-4000-8000-000000000001", role: "manager", source: "members" })
-    mockFetch(() => ({ status: 200, body: [] }))
+    mockFetch(byTable([{ organization_id: ORG1, role: "manager" }], [ORG1]))
+    expect(await resolveMembership(UID, "agent")).toEqual({ organizationId: ORG1, role: "manager", source: "members" })
+    mockFetch(byTable([], []))
     expect(await resolveMembership(UID, "admin")).toBeNull() // table présente mais compte non membre : le rôle historique ne suffit PAS
+  })
+
+  it("organisation SUSPENDUE : aucun accès, même pour un membre actif ; rôle inconnu ou identifiant mal formé ignorés", async () => {
+    configureAll()
+    mockFetch(byTable([{ organization_id: ORG1, role: "admin" }], [])) // l'organisation n'est pas dans la liste des organisations actives
+    expect(await resolveMembership(UID, "admin")).toBeNull()
+    mockFetch(byTable([{ organization_id: ORG1, role: "superuser" }, { organization_id: "pas-un-uuid", role: "admin" }], [ORG1]))
+    expect(await resolveMembership(UID, "admin")).toBeNull()
+  })
+
+  it("plusieurs organisations actives : refus (pas de choix arbitraire tant qu'il n'y a pas de sélecteur) ; une seule active parmi deux : celle-là", async () => {
+    configureAll()
+    mockFetch(byTable([{ organization_id: ORG1, role: "admin" }, { organization_id: ORG2, role: "employee" }], [ORG1, ORG2]))
+    expect(await resolveMembership(UID)).toBeNull()
+    mockFetch(byTable([{ organization_id: ORG1, role: "admin" }, { organization_id: ORG2, role: "employee" }], [ORG2]))
+    expect(await resolveMembership(UID)).toEqual({ organizationId: ORG2, role: "employee", source: "members" })
   })
 
   it("migration 0008 non appliquée (table absente) : repli sur l'équipe actuelle = Easy2Book ; sans rôle historique : erreur remontée", async () => {

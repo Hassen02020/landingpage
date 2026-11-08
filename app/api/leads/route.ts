@@ -4,7 +4,7 @@ import { clientIp, normalizePhone, randomRef } from "@/lib/server/hash"
 import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
-import { DbError, dbConfigured, insertOne, select } from "@/lib/server/db"
+import { DbError, dbConfigured, insertOne, select, withPublicOrg } from "@/lib/server/db"
 import { CONSENT_TEXT_VERSION, PRODUCTS, isProduct, WHATSAPP_NUMBER, type Product } from "@/lib/config"
 import { logActivity, tunisDay } from "@/lib/server/crm"
 import { notifyNewLead } from "@/lib/server/notify"
@@ -68,7 +68,7 @@ function degradeRow(row: Record<string, unknown>, code: string | undefined): boo
  * 4. événement "Lead" Meta / TikTok UNIQUEMENT si consentement traceurs = granted
  * Réponse : code de référence + lien WhatsApp pré-rempli.
  */
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   if (!isAllowedOrigin(request.headers)) {
     return NextResponse.json({ error: "Origine non autorisée" }, { status: 403 })
   }
@@ -317,3 +317,7 @@ export async function POST(request: NextRequest) {
   await Promise.allSettled(tasks)
   return NextResponse.json({ ok: true, ref, stored, whatsappUrl: whatsappUrlFor(ref) })
 }
+
+// Point d'entrée rattaché explicitement à l'organisation du site public (contexte passant AVANT toute session) :
+// formulaire, suivi et scripts à clé d'API travaillent pour Easy2Book, jamais pour l'organisation d'un compte qui visite le site.
+export const POST = (request: NextRequest) => withPublicOrg(() => handlePOST(request))

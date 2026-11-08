@@ -2,7 +2,9 @@
 // aucune dépendance npm. Les jetons sont gardés en cookies httpOnly ; chaque page
 // vérifie le jeton auprès de Supabase PUIS l'appartenance à landing_staff.
 import { cookies } from "next/headers"
-import { select } from "./db"
+import { runWithOrg, select } from "./db"
+import { resolveMembership } from "./tenant"
+import { roleFromLegacyStaff, type OrgRole } from "@/lib/permissions"
 
 export const AT_COOKIE = "e2b_admin_at"
 export const RT_COOKIE = "e2b_admin_rt"
@@ -12,6 +14,8 @@ export interface Staff {
   email: string
   fullName: string | null
   role: "admin" | "agent"
+  organizationId: string | null // organisation du compte (organization_members) ; null : schéma d'avant 0008
+  orgRole: OrgRole
 }
 
 function authConfig() {
@@ -74,12 +78,18 @@ export async function signOut(accessToken: string): Promise<void> {
 /** Membre actif de l'équipe pour ce compte, ou null. */
 export async function findStaff(userId: string): Promise<Staff | null> {
   if (!/^[0-9a-f-]{36}$/i.test(userId)) return null
-  const rows = await select<{ user_id: string; email: string; full_name: string | null; role: "admin" | "agent" }>(
-    "landing_staff",
-    `select=user_id,email,full_name,role&user_id=eq.${userId}&active=eq.true&limit=1`
-  ).catch(() => [])
+  // L'organisation du compte vient de organization_members (table non cloisonnée) ; la fiche d'équipe est ensuite lue DANS cette organisation.
+  const m = await resolveMembership(userId).catch(() => null)
+  const read = () =>
+    select<{ user_id: string; email: string; full_name: string | null; role: "admin" | "agent" }>(
+      "landing_staff",
+      `select=user_id,email,full_name,role&user_id=eq.${userId}&active=eq.true&limit=1`
+    )
+  const rows = await (m ? Promise.resolve(runWithOrg(m.organizationId, read)) : read()).catch(() => [])
   const s = rows[0]
-  return s ? { userId: s.user_id, email: s.email, fullName: s.full_name, role: s.role } : null
+  return s
+    ? { userId: s.user_id, email: s.email, fullName: s.full_name, role: s.role, organizationId: m?.organizationId ?? null, orgRole: m?.role ?? roleFromLegacyStaff(s.role) }
+    : null
 }
 
 /** Utilisateur connecté ET membre actif de l'équipe, d'après les cookies de la requête. */

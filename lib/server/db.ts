@@ -77,6 +77,15 @@ export function runWithOrg<T>(orgId: string, fn: () => Promise<T> | T): Promise<
 }
 export const currentOrgContext = (): string | null => orgStore.getStore()?.orgId ?? null
 
+// Chargement tardif : session-org → auth → db (évite le cycle d'import au chargement du module).
+async function sessionOrg(): Promise<string | null> {
+  try {
+    return await (await import("./session-org")).resolveSessionOrg()
+  } catch {
+    return null // en cas de doute : pas d'organisation → refus
+  }
+}
+
 type TenantMode = { kind: "off" } | { kind: "single"; orgId: string } | { kind: "multi" }
 const MODE_TTL_MS = 30_000
 let modeCache: { at: number; mode: TenantMode } | null = null
@@ -135,8 +144,10 @@ async function scopeRequest(cfg: { url: string; key: string }, path: string, ini
     if (ctx !== null && ctx !== mode.orgId) throw new TenantContextError("organisation du contexte inconnue de cette base")
     org = mode.orgId
   } else {
-    if (ctx === null) throw new TenantContextError(`contexte d'organisation manquant pour ${target} (mode multi-entreprises) : requête refusée`)
-    org = ctx
+    // multi : contexte explicite (runWithOrg / withPublicOrg) sinon organisation du COMPTE CONNECTÉ ; sinon refus
+    const resolved = ctx ?? (await sessionOrg())
+    if (resolved === null) throw new TenantContextError(`contexte d'organisation manquant pour ${target} (mode multi-entreprises) : requête refusée`)
+    org = resolved
   }
   if (mode.kind === "multi" && method !== "GET" && GLOBAL_UNIQUE_TABLES.has(target)) {
     throw new TenantContextError(`écriture dans ${target} refusée en mode multi-entreprises : unicités encore globales`)
@@ -163,6 +174,43 @@ async function scopeRequest(cfg: { url: string; key: string }, path: string, ini
   }
   const scopedQuery = explicit !== undefined ? query : query ? `${query}&organization_id=eq.${org}` : `organization_id=eq.${org}`
   return { path: `${target}?${scopedQuery}`, body }
+}
+
+const PUBLIC_ORG_SLUG = "easy2book" // le site public de cette plateforme est celui de l'organisation n°1
+let publicOrgCache: { at: number; org: string | null } | null = null
+export function resetPublicOrgCache(): void {
+  publicOrgCache = null
+}
+
+/** Organisation du site public (slug « easy2book »), ou null si introuvable / schéma d'avant 0008. */
+async function publicOrgId(): Promise<string | null> {
+  const cfg = config()
+  if (!cfg) return null
+  if (publicOrgCache && Date.now() - publicOrgCache.at < MODE_TTL_MS) return publicOrgCache.org
+  // `next.revalidate` et non `no-store` : pas de bascule en dynamique des pages statiques (/omra, /c/[slug])
+  const res = await fetch(`${cfg.url}/rest/v1/organizations?select=id&slug=eq.${PUBLIC_ORG_SLUG}&limit=1`, {
+    headers: { apikey: cfg.key, Authorization: `Bearer ${cfg.key}` },
+    next: { revalidate: MODE_TTL_MS / 1000 },
+  })
+  if (!res.ok) {
+    if (res.status === 404) return null
+    if (publicOrgCache) return publicOrgCache.org
+    throw new DbError(res.status, undefined, `Supabase ${res.status} (organisation du site public)`)
+  }
+  const rows = (await res.json().catch(() => [])) as { id?: string }[]
+  const org = Array.isArray(rows) && rows.length === 1 && isOrgId(rows[0].id) ? rows[0].id! : null
+  publicOrgCache = { at: Date.now(), org }
+  return org
+}
+
+/**
+ * Point d'entrée PUBLIC (formulaire, suivi, pages publiques) ou script à clé d'API : travaille explicitement pour l'organisation du
+ * site public. Ce contexte explicite passe AVANT toute session : un compte connecté d'une autre entreprise qui visite le site
+ * public ne peut pas y créer de lead dans sa propre organisation.
+ */
+export async function withPublicOrg<T>(fn: () => Promise<T> | T): Promise<T> {
+  const org = await publicOrgId().catch(() => null)
+  return org ? await runWithOrg(org, fn) : await fn()
 }
 
 async function request<T>(path: string, init: RequestInit & { prefer?: string } = {}): Promise<T> {

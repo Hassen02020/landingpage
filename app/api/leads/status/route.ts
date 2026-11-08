@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { obj, str } from "@/lib/server/attribution"
 import { isAdminRequest } from "@/lib/server/admin-auth"
-import { dbConfigured } from "@/lib/server/db"
+import { dbConfigured, withPublicOrg } from "@/lib/server/db"
 import { STATUSES, UUID_RE, changeStatus, getLead, getLeadByRef, isStatus } from "@/lib/server/crm"
 import { isBooking } from "@/lib/status"
 
@@ -13,7 +13,7 @@ export const runtime = "nodejs"
  * historique tracé, conversion Purchase / CompletePayment envoyée une seule fois, avec consentement.
  * Corps : { "ref": "E2B-XXXXXX" | "id": "<uuid>", "status": "...", "booking_value": 4800, "notes": "..." }
  */
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   if (!isAdminRequest(request.headers)) return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
   if (!dbConfigured()) return NextResponse.json({ error: "Base non configurée" }, { status: 503 })
 
@@ -50,3 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
   }
 }
+
+// Point d'entrée rattaché explicitement à l'organisation du site public (contexte passant AVANT toute session) :
+// formulaire, suivi et scripts à clé d'API travaillent pour Easy2Book, jamais pour l'organisation d'un compte qui visite le site.
+export const POST = (request: NextRequest) => withPublicOrg(() => handlePOST(request))

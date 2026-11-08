@@ -19,7 +19,12 @@ const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activiti
 
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
-export function createFakeSupabase({ tenant = false } = {}) {
+export const BOB_ORG = "00000000-0000-4000-8000-0000000000b0"
+export const BOB = { email: "bob@bob-sarl.tn", password: "Bob-Passw0rd!", id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }
+
+// multi: true → DEUX entreprises dans la même base (Easy2Book et « Bob SARL »), chacune avec son administrateur, ses leads et son équipe.
+export function createFakeSupabase({ tenant = false, multi = false } = {}) {
+  if (multi) tenant = true
   const ADMIN_ID = "11111111-1111-4111-8111-111111111111"
   const AGENT_ID = "22222222-2222-4222-8222-222222222222"
   const users = [
@@ -122,6 +127,22 @@ export function createFakeSupabase({ tenant = false } = {}) {
   if (tenant) {
     db.organizations = [{ id: E2B_ORG, slug: "easy2book", name: "Easy2Book", status: "active" }]
     for (const t of TENANT_TABLES) for (const r of db[t] ?? []) r.organization_id = E2B_ORG
+  }
+  if (multi) {
+    db.organizations.push({ id: BOB_ORG, slug: "bob-sarl", name: "Bob SARL", status: "active" })
+    users.push({ id: BOB.id, email: BOB.email, password: BOB.password })
+    db.organization_members = [
+      { organization_id: E2B_ORG, user_id: ADMIN_ID, role: "admin", active: true },
+      { organization_id: E2B_ORG, user_id: AGENT_ID, role: "employee", active: true },
+      { organization_id: BOB_ORG, user_id: BOB.id, role: "admin", active: true },
+    ]
+    db.landing_staff.push({ user_id: BOB.id, email: BOB.email, full_name: "Bob Directeur", role: "admin", active: true, created_at: day(30), organization_id: BOB_ORG })
+    const bobLeads = [
+      lead(901, { first_name: "Zied", last_name: "Bobclient", phone: "21690000901", product: "voyage", offer: "Circuit Bob 1", age: 1 }),
+      lead(902, { first_name: "Yosra", last_name: "Bobprospect", phone: "21690000902", product: "voyage", offer: "Circuit Bob 2", status: "contacte", age: 2 }),
+      lead(903, { first_name: "Walid", last_name: "Bobvente", phone: "21690000903", product: "hotel", offer: "Séjour Bob", status: "reserve", booking_value: 4200, booked_at: day(1), age: 3 }),
+    ]
+    for (const l of bobLeads) db.landing_leads.push({ ...l, organization_id: BOB_ORG, ref: `E2B-B${l.ref.slice(5)}`.slice(0, 10) })
   }
   const seq = { landing_lead_activities: 100, landing_promo_codes: 100, landing_blocklist: 100, landing_integration_changes: 100, landing_admin_log: 100 }
   // valeurs par défaut posées par la vraie base (DEFAULT des migrations)
@@ -284,6 +305,9 @@ export function createFakeSupabase({ tenant = false } = {}) {
     db,
     calls,
     tenant,
+    multi,
+    BOB_ORG,
+    BOB,
     postsWithoutOrg,
     E2B_ORG,
     TENANT_TABLES,

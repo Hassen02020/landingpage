@@ -44,10 +44,16 @@ export async function resolveMembership(userId: string, legacyRole?: string): Pr
   try {
     const rows = await select<{ organization_id: string; role: string }>(
       "organization_members",
-      `select=organization_id,role&user_id=eq.${userId}&active=eq.true&limit=2`
+      `select=organization_id,role&user_id=eq.${userId}&active=eq.true&limit=10`
     )
-    const m = rows.find((r) => isOrgRole(r.role))
-    return m ? { organizationId: m.organization_id, role: m.role as OrgRole, source: "members" } : null
+    const valid = rows.filter((r) => isOrgRole(r.role) && isOrgId(r.organization_id))
+    if (valid.length === 0) return null
+    // seules les organisations ACTIVES comptent (une organisation suspendue n'ouvre plus aucun accès)
+    const active = await select<{ id: string }>("organizations", `select=id&status=eq.active&id=in.(${valid.map((r) => r.organization_id).join(",")})`)
+    const live = valid.filter((r) => active.some((o) => o.id === r.organization_id))
+    // plusieurs organisations actives : pas encore de sélecteur d'organisation → refus plutôt que choix arbitraire
+    if (live.length !== 1) return null
+    return { organizationId: live[0].organization_id, role: live[0].role as OrgRole, source: "members" }
   } catch (e) {
     if (isMissingTable(e) && legacyRole) return { organizationId: DEFAULT_ORG_ID, role: roleFromLegacyStaff(legacyRole), source: "legacy_staff" }
     throw e

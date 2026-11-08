@@ -30,8 +30,9 @@ export const ROLE_PERMISSIONS: Record<OrgRole, ReadonlySet<Permission>> = {
   admin: new Set(ALL_ADMIN),
   // manager : équipes autorisées, affectation, suivi commercial, rapports ; ni profil, ni réseaux, ni site, ni gestion des comptes
   manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned"]),
-  // employé : uniquement ce qui lui est attribué
-  employee: new Set<Permission>(["leads.view_assigned", "leads.update_assigned", "sales.record_assigned"]),
+  // employé : VOIT tous les leads de son entreprise (décision du propriétaire, 08/11/2026) ; ne modifie que les siens ;
+  // jamais d'affectation, de rapports, de gestion d'équipe ni de réglages. Aucun accès aux leads d'une AUTRE entreprise.
+  employee: new Set<Permission>(["leads.view_all", "leads.view_assigned", "leads.update_assigned", "sales.record_assigned"]),
 }
 
 export const can = (role: OrgRole | null | undefined, permission: Permission): boolean =>
