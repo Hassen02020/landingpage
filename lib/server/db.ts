@@ -58,13 +58,13 @@ export const TENANT_TABLES: ReadonlySet<string> = new Set([
   "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist",
   "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates",
 ])
-// Vues sans colonne organization_id : agrègent TOUTES les organisations → refusées en mode multi.
-const UNSCOPED_VIEWS: ReadonlySet<string> = new Set(["landing_campaign_performance", "landing_niche_performance"])
-// Fonctions SQL qui agissent sur toutes les organisations → refusées en mode multi.
-const UNSCOPED_RPC: ReadonlySet<string> = new Set(["landing_redeem_promo", "landing_purge_personal_data"])
-// Tables dont une unicité est encore GLOBALE : une écriture depuis une organisation pourrait entrer en conflit
-// avec (et révéler) les données d'une autre → écritures refusées en mode multi tant que les unicités ne sont pas par organisation.
-const GLOBAL_UNIQUE_TABLES: ReadonlySet<string> = new Set(["landing_integrations", "landing_promo_codes", "landing_offers", "landing_categories", "landing_staff", "landing_protection"])
+// Vues de performance : une ligne PAR ORGANISATION (colonne organization_id, migration 0010). Filtrées en mode multi ;
+// en mode « une organisation » elles sont lues telles quelles (aucun filtre nécessaire, et le site fonctionne avant 0010).
+const VIEWS_WITH_ORG: ReadonlySet<string> = new Set(["landing_campaign_performance", "landing_niche_performance"])
+// Fonctions SQL qui agissent sur TOUTES les organisations (entretien de la base) → refusées en mode multi.
+const GLOBAL_RPC: ReadonlySet<string> = new Set(["landing_purge_personal_data"])
+// Fonctions SQL par organisation : le serveur leur passe l'organisation (p_org, fonction à 3 arguments de la migration 0010).
+const ORG_RPC: ReadonlySet<string> = new Set(["landing_redeem_promo"])
 
 export class TenantContextError extends Error {}
 
@@ -116,52 +116,70 @@ async function tenantMode(cfg: { url: string; key: string }): Promise<TenantMode
   return mode
 }
 
+/** Organisation de la requête : « single » → l'unique organisation ; « multi » → contexte explicite, sinon compte connecté, sinon REFUS. */
+async function orgFor(mode: TenantMode, target: string): Promise<string> {
+  const ctx = currentOrgContext()
+  if (mode.kind === "single") {
+    if (ctx !== null && ctx !== mode.orgId) throw new TenantContextError("organisation du contexte inconnue de cette base")
+    return mode.orgId
+  }
+  const resolved = ctx ?? (await sessionOrg())
+  if (resolved === null) throw new TenantContextError(`contexte d'organisation manquant pour ${target} (mode multi-entreprises) : requête refusée`)
+  return resolved
+}
+
 /** Applique le cloisonnement à une requête. Retourne le chemin et le corps à envoyer. */
 async function scopeRequest(cfg: { url: string; key: string }, path: string, init: RequestInit): Promise<{ path: string; body: RequestInit["body"] }> {
   const q = path.indexOf("?")
   const target = q === -1 ? path : path.slice(0, q)
   const query = q === -1 ? "" : path.slice(q + 1)
   const method = (init.method || "GET").toUpperCase()
+  const unchanged = { path, body: init.body }
 
   if (target.startsWith("rpc/")) {
-    if (!UNSCOPED_RPC.has(target.slice(4))) return { path, body: init.body }
-    if ((await tenantMode(cfg)).kind === "multi") throw new TenantContextError(`fonction ${target.slice(4)} non cloisonnée par organisation : refusée en mode multi-entreprises`)
-    return { path, body: init.body }
+    const fn = target.slice(4)
+    const isGlobal = GLOBAL_RPC.has(fn)
+    if (!isGlobal && !ORG_RPC.has(fn)) return unchanged
+    const mode = await tenantMode(cfg)
+    if (mode.kind === "off") return unchanged
+    if (isGlobal) {
+      if (mode.kind === "multi") throw new TenantContextError(`fonction ${fn} non cloisonnée par organisation : refusée en mode multi-entreprises`)
+      return unchanged
+    }
+    const org = await orgFor(mode, target)
+    const args = JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>
+    if (args.p_org !== undefined && args.p_org !== org) throw new TenantContextError("fonction appelée pour une organisation différente de celle du contexte : refusé")
+    return { path, body: JSON.stringify({ ...args, p_org: org }) }
   }
+
   const tenant = TENANT_TABLES.has(target)
-  if (!tenant && !UNSCOPED_VIEWS.has(target)) return { path, body: init.body }
-
+  const view = VIEWS_WITH_ORG.has(target)
+  if (!tenant && !view) return unchanged
   const mode = await tenantMode(cfg)
-  if (mode.kind === "off") return { path, body: init.body }
-  if (!tenant) {
-    if (mode.kind === "multi") throw new TenantContextError(`vue ${target} non cloisonnée par organisation : refusée en mode multi-entreprises`)
-    return { path, body: init.body }
-  }
-
-  const ctx = currentOrgContext()
-  let org: string
-  if (mode.kind === "single") {
-    if (ctx !== null && ctx !== mode.orgId) throw new TenantContextError("organisation du contexte inconnue de cette base")
-    org = mode.orgId
-  } else {
-    // multi : contexte explicite (runWithOrg / withPublicOrg) sinon organisation du COMPTE CONNECTÉ ; sinon refus
-    const resolved = ctx ?? (await sessionOrg())
-    if (resolved === null) throw new TenantContextError(`contexte d'organisation manquant pour ${target} (mode multi-entreprises) : requête refusée`)
-    org = resolved
-  }
-  if (mode.kind === "multi" && method !== "GET" && GLOBAL_UNIQUE_TABLES.has(target)) {
-    throw new TenantContextError(`écriture dans ${target} refusée en mode multi-entreprises : unicités encore globales`)
-  }
+  if (mode.kind === "off") return unchanged
+  if (view && mode.kind === "single") return unchanged
+  const org = await orgFor(mode, target)
 
   if (method === "POST") {
-    if (init.body === undefined || init.body === null) return { path, body: init.body }
+    if (init.body === undefined || init.body === null) return unchanged
     const parsed = JSON.parse(String(init.body)) as Record<string, unknown> | Record<string, unknown>[]
     const rows = Array.isArray(parsed) ? parsed : [parsed]
     for (const row of rows) {
       if (row.organization_id === undefined) row.organization_id = org
       else if (row.organization_id !== org) throw new TenantContextError("écriture refusée : organisation différente de celle du contexte")
     }
-    return { path, body: JSON.stringify(parsed) }
+    // « insérer ou mettre à jour » : la cible de conflit est TOUJOURS (organisation, …) : une ligne d'une autre organisation n'est jamais écrasée
+    let outPath = path
+    const params = query.split("&")
+    const at = params.findIndex((p) => p.startsWith("on_conflict="))
+    if (at >= 0) {
+      const cols = decodeURIComponent(params[at].slice("on_conflict=".length)).split(",")
+      if (!cols.includes("organization_id")) {
+        params[at] = `on_conflict=${encodeURIComponent(["organization_id", ...cols].join(","))}`
+        outPath = `${target}?${params.join("&")}`
+      }
+    }
+    return { path: outPath, body: JSON.stringify(parsed) }
   }
 
   // GET / PATCH / DELETE : filtre d'organisation ; un filtre explicite sur une AUTRE organisation est refusé
@@ -211,6 +229,38 @@ async function publicOrgId(): Promise<string | null> {
 export async function withPublicOrg<T>(fn: () => Promise<T> | T): Promise<T> {
   const org = await publicOrgId().catch(() => null)
   return org ? await runWithOrg(org, fn) : await fn()
+}
+
+/**
+ * Clé d'organisation de la requête courante, pour les CACHES MÉMOIRE : « off » avant 0008, sinon l'organisation.
+ * Jamais partagée entre deux entreprises. null : organisation indéterminée (pas de contexte ni de session en mode multi) → ne rien mettre en cache.
+ */
+export async function currentOrgKey(): Promise<string | null> {
+  try {
+    const cfg = config()
+    if (!cfg) return "off"
+    const mode = await tenantMode(cfg)
+    return mode.kind === "off" ? "off" : await orgFor(mode, "cache")
+  } catch {
+    return null
+  }
+}
+
+/**
+ * L'organisation courante est-elle celle de la PLATEFORME (site public, slug « easy2book ») ? Avant 0008 et avec une seule organisation : oui.
+ * En mode multi, seule l'organisation de la plateforme peut utiliser les variables Vercel (jeton et pixel d'Easy2Book) : une autre entreprise
+ * ne doit JAMAIS en hériter. Organisation indéterminée : non.
+ */
+export async function isPlatformOrg(): Promise<boolean> {
+  try {
+    const cfg = config()
+    if (!cfg) return true
+    const mode = await tenantMode(cfg)
+    if (mode.kind !== "multi") return true
+    return (await orgFor(mode, "plateforme")) === (await publicOrgId())
+  } catch {
+    return false
+  }
 }
 
 async function request<T>(path: string, init: RequestInit & { prefer?: string } = {}): Promise<T> {

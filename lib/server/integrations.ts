@@ -2,7 +2,7 @@
 // Priorité : réglage enregistré dans /admin (table landing_integrations) ; un champ laissé vide
 // reprend la variable Vercel correspondante. Une intégration désactivée dans /admin est coupée,
 // même si des variables Vercel existent.
-import { dbConfigured, insertQuiet, select, upsertQuiet } from "./db"
+import { currentOrgKey, dbConfigured, insertQuiet, isPlatformOrg, select, upsertQuiet } from "./db"
 import { open, seal, SecretBoxError } from "./secret-box"
 
 export type Provider = "meta" | "tiktok"
@@ -47,15 +47,26 @@ const ENV = {
 
 // ---------- lecture (avec cache court : une lecture par minute et par instance) ----------
 const TTL_MS = 60_000
-const cache = new Map<Provider, { at: number; row: IntegrationRow | null }>()
+// Cache PAR ORGANISATION : « <organisation>:<fournisseur> » (jamais partagé entre deux entreprises).
+const cache = new Map<string, { at: number; row: IntegrationRow | null }>()
 
 export function resetIntegrationCache() {
   cache.clear()
 }
 
+const cacheKey = async (provider: Provider): Promise<string | null> => {
+  const org = await currentOrgKey()
+  return org === null ? null : `${org}:${provider}`
+}
+const forget = async (provider: Provider) => {
+  const key = await cacheKey(provider)
+  if (key) cache.delete(key)
+}
+
 async function loadRow(provider: Provider): Promise<IntegrationRow | null> {
   if (!dbConfigured()) return null
-  const hit = cache.get(provider)
+  const key = await cacheKey(provider)
+  const hit = key ? cache.get(key) : undefined
   if (hit && Date.now() - hit.at < TTL_MS) return hit.row
   let row: IntegrationRow | null = null
   try {
@@ -65,13 +76,15 @@ async function loadRow(provider: Provider): Promise<IntegrationRow | null> {
     // table absente (migration 0003 non appliquée) ou base indisponible : variables Vercel
     row = null
   }
-  cache.set(provider, { at: Date.now(), row })
+  if (key) cache.set(key, { at: Date.now(), row })
   return row
 }
 
 export async function resolveIntegration(provider: Provider): Promise<ResolvedIntegration> {
   const row = await loadRow(provider)
-  const env = ENV[provider]
+  // Variables Vercel (jeton, pixel d'Easy2Book) : réservées à l'organisation de la plateforme. Une autre entreprise n'en hérite jamais.
+  const envAllowed = await isPlatformOrg()
+  const env = envAllowed ? ENV[provider] : { pixel: () => "", token: () => "", test: () => "" }
 
   let token: string | undefined
   let tokenSource: ResolvedIntegration["tokenSource"] = "none"
@@ -95,7 +108,7 @@ export async function resolveIntegration(provider: Provider): Promise<ResolvedIn
   const testEventCode = (row ? row.test_event_code : env.test()) || undefined
 
   return {
-    enabled: row ? row.enabled : true,
+    enabled: row ? row.enabled : envAllowed,
     pixelId,
     token,
     testEventCode,
@@ -164,7 +177,7 @@ export async function saveIntegration(provider: Provider, input: IntegrationInpu
   const errors = validateInput(provider, clean)
   if (Object.keys(errors).length) return { ok: false, errors }
 
-  cache.delete(provider)
+  await forget(provider)
   const before = await loadRow(provider)
   const row: Record<string, unknown> = {
     provider,
@@ -190,7 +203,7 @@ export async function saveIntegration(provider: Provider, input: IntegrationInpu
   if ((before?.test_event_code ?? "") !== clean.testEventCode) changed.push("code de test")
 
   await upsertQuiet("landing_integrations", row, "provider")
-  cache.delete(provider)
+  await forget(provider)
   await insertQuiet("landing_integration_changes", {
     provider,
     actor_id: actor.id,
@@ -202,7 +215,7 @@ export async function saveIntegration(provider: Provider, input: IntegrationInpu
 
 // ---------- test de connexion ----------
 export async function testIntegration(provider: Provider, actor: Actor): Promise<{ ok: boolean; message: string }> {
-  cache.delete(provider)
+  await forget(provider)
   const cfg = await resolveIntegration(provider)
   let result: { ok: boolean; message: string }
   if (cfg.tokenUnreadable && !cfg.token) result = { ok: false, message: "Jeton enregistré illisible : ressaisissez-le." }
@@ -222,7 +235,7 @@ export async function testIntegration(provider: Provider, actor: Actor): Promise
     actor_label: actor.label.slice(0, 320),
     summary: `test : ${result.ok ? "réussi" : "échec"}`,
   }).catch(() => undefined)
-  cache.delete(provider)
+  await forget(provider)
   return { ok: result.ok, message }
 }
 
