@@ -173,4 +173,5 @@ Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des do
 | Règle des employés (08/11/2026) : tous les leads de leur entreprise, aucun d'une autre — migration 0009 | **CODE ÉCRIT + TESTÉ** ; migration **non appliquée** ; sans effet sur le CRM actuel (lecture par le serveur) ; `docs/MULTI_TENANT.md` §14 |
 | Unicités par organisation — migrations 0010 (élargir) / 0011 (resserrer), caches par organisation, variables Vercel réservées à la plateforme (chantier 04) | **CODE ÉCRIT + TESTÉ** ; migrations **non appliquées** ; ordre : 0010 → déploiement → 0011 avant la 2ᵉ organisation ; `docs/MULTI_TENANT.md` §15 |
 | Création d'une entreprise + premier administrateur invité par e-mail, espace plateforme Super Admin (chantier 05 A) — migration 0012 | **CODE ÉCRIT + TESTÉ** ; migration **non appliquée** ; formulaires adaptatifs (05 B) à faire ; `docs/MULTI_TENANT.md` §16 |
+| Rôles et permissions : Employé / Manager / Administrateur appliqués par permission partout, rôle Manager (chantier 06) — migration 0013 | **CODE ÉCRIT + TESTÉ** ; migration **non appliquée** ; `docs/MULTI_TENANT.md` §17 |
 

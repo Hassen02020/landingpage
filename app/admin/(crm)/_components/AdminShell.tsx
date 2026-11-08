@@ -1,6 +1,7 @@
 "use client"
 
 // Cadre de l'espace équipe : menu latéral groupé (bureau), barre haute + tiroir (mobile).
+import { can, ROLE_LABELS, type OrgRole, type Permission } from "@/lib/permissions"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -39,12 +40,12 @@ interface Item {
   href: string
   label: string
   icon: IconName
+  permission?: Permission // absent : visible par tous les rôles
   plain?: boolean // lien « normal » (téléchargement) au lieu de <Link>
   match?: (path: string, params: URLSearchParams) => boolean
 }
 interface Group {
   title: string
-  adminOnly?: boolean
   items: Item[]
 }
 
@@ -70,32 +71,30 @@ const GROUPS: Group[] = [
   },
   {
     title: "Catalogue",
-    adminOnly: true,
     items: [
-      { href: "/admin/catalogue", label: "Offres et catégories", icon: "box" },
-      { href: "/admin/promos", label: "Codes promo", icon: "ticket" },
+      { href: "/admin/catalogue", label: "Offres et catégories", icon: "box", permission: "catalog.manage" },
+      { href: "/admin/promos", label: "Codes promo", icon: "ticket", permission: "promos.manage" },
     ],
   },
   {
     title: "Réglages",
-    adminOnly: true,
     items: [
-      { href: "/admin/integrations", label: "Intégrations", icon: "plug" },
-      { href: "/admin/protection", label: "Protection", icon: "shield" },
-      { href: "/admin/equipe", label: "Équipe", icon: "team" },
-      { href: "/admin/modeles", label: "Modèles WhatsApp", icon: "chat" },
-      { href: "/admin/export", label: "Export CSV", icon: "download", plain: true },
+      { href: "/admin/integrations", label: "Intégrations", icon: "plug", permission: "social.connect" },
+      { href: "/admin/protection", label: "Protection", icon: "shield", permission: "protection.manage" },
+      { href: "/admin/equipe", label: "Équipe", icon: "team", permission: "employees.view" },
+      { href: "/admin/modeles", label: "Modèles WhatsApp", icon: "chat", permission: "templates.manage" },
+      { href: "/admin/export", label: "Export CSV", icon: "download", plain: true, permission: "data.export" },
     ],
   },
 ]
 
-function Nav({ role, onNavigate }: { role: "admin" | "agent"; onNavigate: () => void }) {
+function Nav({ role, onNavigate }: { role: OrgRole; onNavigate: () => void }) {
   const path = usePathname() || "/admin"
   const params = useSearchParams()
   const isActive = (it: Item) => (it.match ? it.match(path, params) : path === it.href || path.startsWith(`${it.href}/`))
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5" aria-label="Navigation principale">
-      {GROUPS.filter((g) => !g.adminOnly || role === "admin").map((g) => (
+      {GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => !it.permission || can(role, it.permission)) })).filter((g) => g.items.length > 0).map((g) => (
         <div key={g.title}>
           <div className="px-3 mb-1.5 text-[11px] font-bold uppercase tracking-wider text-violet-300/70">{g.title}</div>
           <ul className="space-y-0.5">
@@ -119,7 +118,7 @@ function Nav({ role, onNavigate }: { role: "admin" | "agent"; onNavigate: () => 
   )
 }
 
-export function AdminShell({ email, name, role, children }: { email: string; name: string | null; role: "admin" | "agent"; children: React.ReactNode }) {
+export function AdminShell({ email, name, role, children }: { email: string; name: string | null; role: OrgRole; children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const path = usePathname()
   useEffect(() => setOpen(false), [path])
@@ -148,7 +147,7 @@ export function AdminShell({ email, name, role, children }: { email: string; nam
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500 text-sm font-black uppercase">{shown.charAt(0)}</span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold">{shown}</span>
-            <span className="block truncate text-[11px] text-violet-300">{role === "admin" ? "Administrateur" : "Agent"} · Mon compte</span>
+            <span className="block truncate text-[11px] text-violet-300">{ROLE_LABELS[role]} · Mon compte</span>
           </span>
         </Link>
         <form action={logoutAction} className="mt-2">

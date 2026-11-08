@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions"
 import Link from "next/link"
 import { currentStaff } from "@/lib/server/auth"
 import { select } from "@/lib/server/db"
@@ -12,7 +13,7 @@ const day = (d: string | null) => (d ? d.split("-").reverse().join("/") : "—")
 
 export default async function CataloguePage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   const staff = await currentStaff()
-  if (staff?.role !== "admin") return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
+  if (!can(staff?.orgRole, "catalog.manage")) return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
   const tab = ["offres", "archivees", "categories"].includes(searchParams.tab || "") ? searchParams.tab! : "offres"
 
   let offers: Offer[] = []

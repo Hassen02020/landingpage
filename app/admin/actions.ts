@@ -17,6 +17,7 @@ import {
 } from "@/lib/server/auth"
 import { isPlatformAdmin } from "@/lib/server/tenant"
 import { rateLimited } from "@/lib/server/guard"
+import { canAssignLead, canModifyLead } from "@/lib/permissions"
 import { STATUSES, isBooking } from "@/lib/status"
 import {
   addNote,
@@ -78,6 +79,15 @@ export async function logoutAction(): Promise<void> {
   redirect("/admin/login")
 }
 
+const FORBIDDEN_LEAD = "Ce lead est affecté à un collègue : seul un manager ou un administrateur peut le modifier."
+
+/** Lead à MODIFIER : un employé ne touche que ses leads et les leads non affectés (décision du propriétaire, 08/11/2026). */
+async function leadForEdit(fd: FormData, staff: Staff) {
+  const lead = await leadOr404(fd)
+  if (!canModifyLead(staff.orgRole, staff.userId, lead)) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(FORBIDDEN_LEAD)}`)
+  return lead
+}
+
 async function leadOr404(fd: FormData) {
   const lead = await getLead(field(fd, "id"))
   if (!lead) redirect("/admin?erreur=introuvable")
@@ -86,7 +96,7 @@ async function leadOr404(fd: FormData) {
 
 export async function changeStatusAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const status = field(fd, "status")
   if (!isStatus(status)) redirect(`/admin/leads/${lead.id}?erreur=statut`)
   const raw = field(fd, "booking_value")
@@ -101,7 +111,7 @@ export async function changeStatusAction(fd: FormData): Promise<void> {
 
 export async function addNoteAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const result = await addNote(lead, field(fd, "body"), actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
@@ -110,7 +120,7 @@ export async function addNoteAction(fd: FormData): Promise<void> {
 
 export async function followUpAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const result = await setFollowUp(lead, field(fd, "follow_up") || null, actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
@@ -120,7 +130,9 @@ export async function followUpAction(fd: FormData): Promise<void> {
 export async function assignAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadOr404(fd)
-  const result = await assignLead(lead, field(fd, "assigned_to") || null, actorOf(staff))
+  const target = field(fd, "assigned_to") || null
+  if (!canAssignLead(staff.orgRole, staff.userId, lead, target)) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(FORBIDDEN_LEAD)}`)
+  const result = await assignLead(lead, target, actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=Assignation+enregistr%C3%A9e`)
@@ -128,7 +140,7 @@ export async function assignAction(fd: FormData): Promise<void> {
 
 export async function qualifyAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const input: Record<string, string> = {}
   for (const k of ["region", "email", "budget", "adults", "children", "travel_period", "contact_channel"]) {
     if (fd.has(k)) input[k] = field(fd, k)
@@ -141,7 +153,7 @@ export async function qualifyAction(fd: FormData): Promise<void> {
 
 export async function whatsappLogAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const direction = field(fd, "direction") === "out" ? "out" : "in"
   const result = await logWhatsApp(lead, direction, field(fd, "text"), actorOf(staff)).catch(() => ({ ok: false as const, error: "Enregistrement impossible (migration 0006 appliquée ?)" }))
   revalidatePath(`/admin/leads/${lead.id}`)
@@ -151,7 +163,7 @@ export async function whatsappLogAction(fd: FormData): Promise<void> {
 
 export async function withdrawMarketingAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const result = await withdrawMarketing(lead, actorOf(staff))
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
@@ -204,6 +216,11 @@ export async function bulkAction(fd: FormData): Promise<void> {
       continue
     }
     let ok = false
+    const target = action === "assign:none" ? null : action === "assign:me" ? staff.userId : action.startsWith("assign:") ? action.slice(7) : undefined
+    if (target !== undefined ? !canAssignLead(staff.orgRole, staff.userId, lead, target) : !canModifyLead(staff.orgRole, staff.userId, lead)) {
+      failed++
+      continue
+    }
     if (action.startsWith("status:")) {
       const st = action.slice(7)
       if ((QUICK_STATUSES as readonly string[]).includes(st) && lead.status !== st) ok = (await changeStatus(lead, st as (typeof QUICK_STATUSES)[number], actorOf(staff))).ok
@@ -222,7 +239,7 @@ export async function bulkAction(fd: FormData): Promise<void> {
 /** Pipeline : déplacer un lead d'une colonne (hors « réservé », qui demande le montant sur la fiche). */
 export async function moveLeadAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const status = field(fd, "status")
   if ((QUICK_STATUSES as readonly string[]).includes(status)) await changeStatus(lead, status as (typeof QUICK_STATUSES)[number], actorOf(staff)).catch(() => undefined)
   revalidatePath("/admin/pipeline")
@@ -232,7 +249,7 @@ export async function moveLeadAction(fd: FormData): Promise<void> {
 /** Fiche : marquer comme doublon d'un autre lead (statut « perdu » + note traçable). */
 export async function markDuplicateAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadOr404(fd)
+  const lead = await leadForEdit(fd, staff)
   const of = field(fd, "of").toUpperCase()
   if (!/^E2B-[A-Z0-9]{6}$/.test(of)) redirect(`/admin/leads/${lead.id}?erreur=R%C3%A9f%C3%A9rence+invalide`)
   const res = await changeStatus(lead, "perdu", actorOf(staff), { notes: `Doublon de ${of}` })

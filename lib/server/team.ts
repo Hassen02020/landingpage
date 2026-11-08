@@ -8,7 +8,7 @@ export interface StaffMember {
   user_id: string
   email: string
   full_name: string | null
-  role: "admin" | "agent"
+  role: "admin" | "manager" | "agent"
   active: boolean
   created_at: string
 }
@@ -16,6 +16,8 @@ export interface StaffMember {
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i
 const UUID = /^[0-9a-f-]{36}$/i
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+
+const normalizeRole = (r: string): "admin" | "manager" | "agent" => (r === "admin" ? "admin" : r === "manager" ? "manager" : "agent")
 
 export function tempPassword(length = 14): string {
   let s = ""
@@ -59,7 +61,7 @@ export type AddResult = { ok: true; email: string; password: string | null } | {
 export async function addMember(input: { email: string; fullName: string; role: string }, actor: { id: string; label: string }): Promise<AddResult> {
   const email = input.email.trim().toLowerCase()
   if (!EMAIL.test(email)) return { ok: false, error: "Adresse e-mail invalide." }
-  const role = input.role === "admin" ? "admin" : "agent"
+  const role = normalizeRole(input.role)
   const fullName = input.fullName.trim().slice(0, 120) || null
   const existing = await select<StaffMember>("landing_staff", `select=user_id&email=eq.${encodeURIComponent(email)}&limit=1`)
   if (existing.length) return { ok: false, error: "Ce membre fait déjà partie de l'équipe." }
@@ -93,11 +95,11 @@ export async function updateMember(
   actor: { id: string; label: string }
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!UUID.test(userId)) return { ok: false, error: "Membre introuvable." }
-  if (userId === actor.id && (patch.active === false || patch.role === "agent")) {
+  if (userId === actor.id && (patch.active === false || (patch.role !== undefined && patch.role !== "admin"))) {
     return { ok: false, error: "Vous ne pouvez pas retirer vos propres droits." }
   }
   const row: Record<string, unknown> = {}
-  if (patch.role) row.role = patch.role === "admin" ? "admin" : "agent"
+  if (patch.role) row.role = normalizeRole(patch.role)
   if (patch.active !== undefined) row.active = patch.active
   if (patch.fullName !== undefined) row.full_name = patch.fullName.trim().slice(0, 120) || null
   try {

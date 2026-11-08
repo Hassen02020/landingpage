@@ -4,7 +4,7 @@ import { verifyCaptcha } from "@/lib/server/captcha"
 import { __resetGuards } from "@/lib/server/guard"
 import { configureAll, installFetchMock, post } from "./helpers"
 
-const staffMock = vi.hoisted(() => ({ current: null as null | { userId: string; email: string; fullName: null; role: "admin" | "agent" } }))
+const staffMock = vi.hoisted(() => ({ current: null as null | { userId: string; email: string; fullName: null; role: "admin" | "agent"; orgRole: "admin" | "manager" | "employee" } }))
 vi.mock("@/lib/server/auth", () => ({ currentStaff: async () => staffMock.current }))
 
 beforeEach(() => {
@@ -20,13 +20,13 @@ describe("GET /admin/export", () => {
     installFetchMock()
     staffMock.current = null
     expect((await call()).status).toBe(401)
-    staffMock.current = { userId: "u", email: "agent@x.tn", fullName: null, role: "agent" }
+    staffMock.current = { userId: "u", email: "agent@x.tn", fullName: null, role: "agent", orgRole: "employee" }
     expect((await call()).status).toBe(403)
   })
 
   it("autorisé pour un administrateur, en CSV", async () => {
     installFetchMock()
-    staffMock.current = { userId: "u", email: "admin@x.tn", fullName: null, role: "admin" }
+    staffMock.current = { userId: "u", email: "admin@x.tn", fullName: null, role: "admin", orgRole: "admin" }
     const res = await call()
     expect(res.status).toBe(200)
     expect(res.headers.get("content-type")).toContain("text/csv")

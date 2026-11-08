@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions"
 import Link from "next/link"
 import { currentStaff } from "@/lib/server/auth"
 import { PRODUCTS, type Product } from "@/lib/config"
@@ -19,7 +20,7 @@ const day = (d: string | null) => (d ? d.split("-").reverse().join("/") : "…")
 
 export default async function PromosPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   const staff = await currentStaff()
-  if (staff?.role !== "admin") return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
+  if (!can(staff?.orgRole, "promos.manage")) return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
   const all = await listPromos()
   const q = (searchParams.q || "").trim().toUpperCase()
   const st = searchParams.status as PromoStatus | undefined

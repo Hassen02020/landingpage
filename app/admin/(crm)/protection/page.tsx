@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions"
 import { currentStaff } from "@/lib/server/auth"
 import { COUNTRIES, protectionView } from "@/lib/server/protection"
 import { unblockAction } from "../../settings-actions"
@@ -9,7 +10,7 @@ const fmt = (iso: string) => new Intl.DateTimeFormat("fr-FR", { dateStyle: "shor
 
 export default async function ProtectionPage() {
   const staff = await currentStaff()
-  if (staff?.role !== "admin") return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
+  if (!can(staff?.orgRole, "protection.manage")) return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
   const v = await protectionView()
   const phones = v.blocks.filter((b) => b.kind === "phone")
   const ips = v.blocks.filter((b) => b.kind === "ip")

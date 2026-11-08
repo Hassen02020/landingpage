@@ -3,6 +3,7 @@
 // Actions des écrans Protection et Codes promo — rôle « admin » revérifié à chaque appel.
 import { revalidatePath } from "next/cache"
 import { currentStaff } from "@/lib/server/auth"
+import { can } from "@/lib/permissions"
 import { rateLimited } from "@/lib/server/guard"
 import { block, setAllowedCountries, unblock, type BlockKind } from "@/lib/server/protection"
 import { createPromo, setPromoActive } from "@/lib/server/promo"
@@ -17,7 +18,7 @@ const field = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim()
 
 async function requireAdmin() {
   const staff = await currentStaff()
-  if (!staff || staff.role !== "admin") return null
+  if (!staff || !can(staff.orgRole, "protection.manage")) return null
   if (rateLimited(`settings:${staff.userId}`, 60, 10 * 60 * 1000)) return null
   return staff
 }

@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions"
 import { currentStaff } from "@/lib/server/auth"
 import { integrationViews } from "@/lib/server/integrations"
 import { SITE_URL } from "@/lib/config"
@@ -14,7 +15,7 @@ const URL_PARAMS = {
 
 export default async function IntegrationsPage() {
   const staff = await currentStaff()
-  if (staff?.role !== "admin") {
+  if (!can(staff?.orgRole, "social.connect")) {
     return <p className="bg-white rounded-2xl p-6 text-gray-700">Cette page est réservée aux administrateurs.</p>
   }
   const views = await integrationViews()
