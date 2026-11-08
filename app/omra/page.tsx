@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { dbConfigured } from "@/lib/server/db"
+import { dbConfigured, withPublicOrg } from "@/lib/server/db"
 import { publicCategory, seatsLeft, type PublicOffer } from "@/lib/server/catalog"
 import { arDate } from "@/lib/dates-ar"
 import OmraView from "./OmraView"
@@ -7,6 +7,9 @@ import { DEFAULT_PACKAGES, type OmraPackage } from "./packages"
 
 // Offres lues dans le catalogue (/admin/catalogue, catégorie « omra-2027 »), rafraîchies chaque minute.
 // Catalogue vide ou indisponible : offres intégrées (la page ne casse jamais).
+// Page publique : lecture du catalogue dans le contexte explicite de l'organisation du site public.
+const loadPackages = () => withPublicOrg(loadPackagesUnscoped)
+
 export const revalidate = 60
 const CATEGORY_SLUG = "omra-2027"
 const ACCENTS = ["emerald", "amber", "violet"]
@@ -30,7 +33,7 @@ function toPackage(o: PublicOffer, i: number): OmraPackage {
   }
 }
 
-async function loadPackages(): Promise<{ packages: OmraPackage[]; seo?: { title?: string | null; description?: string | null } }> {
+async function loadPackagesUnscoped(): Promise<{ packages: OmraPackage[]; seo?: { title?: string | null; description?: string | null } }> {
   if (!dbConfigured()) return { packages: DEFAULT_PACKAGES }
   try {
     const data = await publicCategory(CATEGORY_SLUG)

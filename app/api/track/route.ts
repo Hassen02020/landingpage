@@ -5,7 +5,7 @@ import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
 import { ALLOWED_EVENTS, LOGGED_EVENTS } from "@/lib/server/events"
-import { dbConfigured, insertQuiet } from "@/lib/server/db"
+import { dbConfigured, insertQuiet, withPublicOrg } from "@/lib/server/db"
 import { isProduct } from "@/lib/config"
 
 export const runtime = "nodejs"
@@ -15,7 +15,7 @@ export const runtime = "nodejs"
  * des événements du pixel navigateur, avec le même event_id (déduplication).
  * N'envoie rien sans consentement explicite aux traceurs.
  */
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   if (!isAllowedOrigin(request.headers)) {
     return NextResponse.json({ error: "Origine non autorisée" }, { status: 403 })
   }
@@ -99,3 +99,7 @@ export async function POST(request: NextRequest) {
   await Promise.allSettled(tasks)
   return NextResponse.json({ ok: true, forwarded: true })
 }
+
+// Point d'entrée rattaché explicitement à l'organisation du site public (contexte passant AVANT toute session) :
+// formulaire, suivi et scripts à clé d'API travaillent pour Easy2Book, jamais pour l'organisation d'un compte qui visite le site.
+export const POST = (request: NextRequest) => withPublicOrg(() => handlePOST(request))

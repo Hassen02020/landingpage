@@ -1,14 +1,17 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
-import { dbConfigured } from "@/lib/server/db"
+import { dbConfigured, withPublicOrg } from "@/lib/server/db"
 import { publicCategory } from "@/lib/server/catalog"
 import { SITE_URL } from "@/lib/config"
 import { CategoryView } from "./CategoryView"
 
 // Page publique d'une catégorie créée dans /admin/catalogue (bannières, SEO, offres, formulaire).
+// Page publique : lecture du catalogue dans le contexte explicite de l'organisation du site public.
+const load = (slug: string) => withPublicOrg(() => loadUnscoped(slug))
+
 export const revalidate = 60
 
-async function load(slug: string) {
+async function loadUnscoped(slug: string) {
   if (!dbConfigured()) return null
   try {
     return await publicCategory(slug)

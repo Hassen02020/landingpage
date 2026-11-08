@@ -153,3 +153,41 @@ la sonde n'utilise pas `no-store` (sinon les pages statiques à rafraîchissemen
 3. Pages publiques `/omra`, `/summer-vibes`, `/voyages-organises`, `/c/omra-2027` : 200.
 4. Vercel : aucune nouvelle erreur d'exécution. En cas de problème : redéployer le commit précédent (`94a0159`) ; aucune migration à annuler.
 
+## 12. Chantier 03 — contexte d'organisation aux points d'entrée (TENANT-ENTRYPOINTS-03)
+
+**Statut : CODE ÉCRIT + TESTÉ. Non fusionné, non déployé.** Le mode multi-entreprises devient **exploitable en lecture et en écriture sur les leads** :
+chaque entreprise se connecte à son espace, ne voit que ses données, et le site public reste celui d'Easy2Book.
+
+**Conception (pourquoi pas de `enterWith`)** : `AsyncLocalStorage.enterWith` peut fuir d'une requête à l'autre sur une connexion persistante ; on n'emploie donc que `run`.
+- **Admin (pages, actions, routes avec cookie)** : en mode multi sans contexte explicite, `db.ts` demande l'organisation du **compte connecté** (`lib/server/session-org.ts`) :
+  cookie de session → jeton vérifié auprès de Supabase → `organization_members` → organisation **active** (suspendue = refus ; plusieurs organisations actives = refus, pas de choix arbitraire). Mémorisation 30 s par jeton.
+  La fiche d'équipe est lue **dans** l'organisation du compte, y compris à la connexion (avant même l'existence du cookie).
+- **Public (formulaire, suivi, pixels, scripts à clé d'API, pages `/omra` et `/c/[slug]`)** : `withPublicOrg` pose un contexte **explicite** « site Easy2Book » (slug `easy2book`), qui passe **avant** la session :
+  un compte connecté chez une autre entreprise qui visite le site public n'y crée pas de lead dans sa propre organisation.
+- **Sans compte et sans contexte : refus.** Les anciens points d'entrée oubliés échouent au lieu de lire au hasard.
+- Les recherches d'organisation (sonde, site public) utilisent le cache de données de Next (30 s), jamais `no-store` (pages statiques à rafraîchissement).
+
+**Preuves :**
+- Unitaires : `tests/tenant-entry.test.ts` (11) et `tests/tenant.test.ts` (14) : organisation du compte, jeton invalide, compte sans organisation, organisation suspendue, membre désactivé, plusieurs organisations, mémorisation, contexte public prioritaire, schéma d'avant 0008 ; **3 sabotages détectés** (session avant contexte public ; suspendue qui garde l'accès ; fiche d'équipe lue hors organisation).
+- **E2E « deux entreprises » (`tests/e2e/multi-tenant.e2e.mjs`, 43 contrôles, navigateur réel)** : Easy2Book et « Bob SARL » dans la même base, chacune avec son administrateur. Chaque administrateur ne voit que ses leads, clients, pipeline, segments, statistiques, équipe, export CSV ;
+  l'ouverture directe d'un lead de l'autre entreprise renvoie **404** ; la clé d'API ne modifie pas un lead de l'autre entreprise (404) ; un lead créé par le site public depuis une session « Bob » appartient à **Easy2Book** ;
+  leads manuels et changements de statut de Bob restent chez Bob (historique compris) ; **106 requêtes d'entreprise toutes filtrées**, chaque insertion portant `organization_id`. **2 sabotages de l'isolation détectés** (9 et 6 échecs).
+- Non-régression : 342 tests unitaires ; e2e admin (single 132, off 128), réseaux (25 / 25 dans les deux modes), WhatsApp, collecte, Omra, consentement.
+
+**Limites (chantiers suivants) :**
+1. **Unicités encore globales** : en mode multi, les **écritures** dans `landing_staff`, `landing_integrations`, `landing_promo_codes`, `landing_offers`, `landing_categories`, `landing_protection` sont refusées
+   (gestion d'équipe, intégrations, codes promo, catalogue, protection : **inutilisables pour une 2ᵉ entreprise** tant que les unicités ne sont pas par organisation).
+2. **Vues agrégées et fonctions SQL globales refusées en mode multi** : statistiques « Niches », performance par campagne, **utilisation d'un code promo** (`landing_redeem_promo`) — un lead soumis avec un code promo n'est pas exploitable en mode multi.
+3. **Un seul site public** (celui d'Easy2Book) : pas de domaine ni de site par entreprise (Site Builder) ; la clé d'API de script est celle de la plateforme (Easy2Book).
+4. **Pas de sélecteur d'organisation** : un compte rattaché à plusieurs organisations actives est refusé. Pas d'écrans d'administration de la plateforme (création / suspension d'organisation, Super Admin) : c'est l'étape « inscription ».
+5. **Lecture de l'admin par jeton utilisateur (RLS)** : toujours non faite ; la règle « un employé voit ses leads et les non affectés » n'est donc pas appliquée par l'application (elle l'est en base pour les accès par jeton).
+6. Coût : chaque requête admin résout l'organisation (2 requêtes de plus, plus la vérification du jeton) ; sans mémorisation pour l'instant côté connexion.
+7. Les e2e (faux Supabase) ne tournent pas dans la CI.
+
+## 13. Vérifications après déploiement du chantier 03 (propriétaire)
+La production est en mode « single » : le code ajoute, à chaque requête admin, la résolution de l'organisation du compte (organisation_members), et, sur les routes publiques, une recherche d'organisation mise en cache 30 s.
+1. `/admin` : Leads (4 leads), Pipeline, Clients, Segments, Entonnoir, une fiche lead, **Équipe**, Modèles, Intégrations s'ouvrent normalement.
+2. Un lead de test sur `/omra` apparaît en « Nouveau » ; le passer en « Perdu ».
+3. Pages publiques `/omra`, `/summer-vibes`, `/voyages-organises`, `/c/omra-2027` : 200 ; aucune nouvelle erreur Vercel.
+4. Retour arrière : redéployer le commit précédent (`cb7b6c0`) ; aucune migration à annuler.
+
