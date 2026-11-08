@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Espace équipe — Easy2Book",
+  title: "Espace équipe",
   robots: { index: false, follow: false },
 }
 
