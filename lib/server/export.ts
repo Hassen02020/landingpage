@@ -2,14 +2,16 @@
 import { NextResponse } from "next/server"
 import { DbError, select } from "./db"
 import { STATUSES } from "@/lib/status"
+import { loadFormConfig } from "./org-public"
 
 const COLUMNS = [
   "created_at", "ref", "visitor_ref", "status", "first_name", "last_name", "phone", "product", "offer", "niche",
   "destination", "travel_date", "travel_period", "adults", "children", "region", "email", "contact_channel", "budget", "message",
   "marketing_consent", "channel", "utm_source", "utm_medium", "utm_campaign", "utm_content", "ad_id",
   "landing_page", "form_page", "source", "next_follow_up_at", "marketing_withdrawn_at", "booking_value", "booked_at",
+  "custom_fields",
 ]
-const NEW_COLUMNS = ["region", "email", "contact_channel", "form_page"] // migration 0006
+const NEW_COLUMNS = ["region", "email", "contact_channel", "form_page", "custom_fields"] // migrations 0006 et 0014
 const FILTERS: Record<string, RegExp> = {
   product: /^(omra|voyage|hotel|autre)$/,
   status: new RegExp(`^(${STATUSES.join("|")})$`),
@@ -49,7 +51,11 @@ export async function exportLeads(p: URLSearchParams): Promise<NextResponse> {
       if (!(e instanceof DbError) || e.status !== 400) throw e
       raw = await select<Record<string, unknown>>("landing_leads", [`select=${COLUMNS.filter((c) => !NEW_COLUMNS.includes(c)).join(",")}`, ...q].join("&"))
     }
-    const rows = raw.map((r) => Object.fromEntries(COLUMNS.map((c) => [c, r[c] ?? null])))
+    // réponses aux champs personnalisés de l'entreprise : « Ville: Sfax ; Société: X » (intitulés de SA configuration)
+    const labels = new Map((await loadFormConfig().catch(() => null))?.custom.map((c) => [c.key, c.label]) ?? [])
+    const flat = (v: unknown) =>
+      v && typeof v === "object" ? Object.entries(v as Record<string, unknown>).map(([k, x]) => `${labels.get(k) ?? k}: ${String(x)}`).join(" ; ") : null
+    const rows = raw.map((r) => Object.fromEntries(COLUMNS.map((c) => [c, c === "custom_fields" ? flat(r[c]) : r[c] ?? null])))
     if (p.get("format") === "csv") {
       const csv = [COLUMNS.join(","), ...rows.map((r) => COLUMNS.map((c) => csvCell(r[c])).join(","))].join("\n")
       return new NextResponse("﻿" + csv, {

@@ -273,6 +273,10 @@ const B = await session(BOB.email, BOB.password)
   const lid = nl?.id
   const lp = await open(B.page, `/admin/leads/${lid}`)
   check("CRM de Bob SARL : la fiche affiche la réponse au champ personnalisé (Ville : Sfax)", lp.status === 200 && lp.text.includes("Ville") && lp.text.includes("Sfax"), lp.text.slice(0, 100))
+  const bcsv = await (await B.ctx.request.get(`${BASE}/admin/export?format=csv`)).text()
+  check("export CSV de Bob SARL : la réponse « Ville: Sfax » est exportée avec l'intitulé de sa configuration", bcsv.includes("custom_fields") && bcsv.includes("Ville: Sfax"), bcsv.slice(0, 80))
+  const ecsv = await (await A.ctx.request.get(`${BASE}/admin/export?format=csv`)).text()
+  check("export CSV d'Easy2Book : aucune réponse ni lead de Bob SARL", !ecsv.includes("Sfax") && !ecsv.includes("Visiteuse"))
   const ep = await open(A.page, `/admin/leads/${lid}`)
   check("CRM d'Easy2Book : ce lead est introuvable (404) et rien n'est affiché", ep.status === 404 && !ep.text.includes("Sfax"))
 
