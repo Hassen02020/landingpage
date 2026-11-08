@@ -4,7 +4,7 @@ import { clientIp, normalizePhone, randomRef } from "@/lib/server/hash"
 import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
-import { DbError, dbConfigured, insertOne, select, withPublicOrg } from "@/lib/server/db"
+import { DbError, currentOrgKey, dbConfigured, insertOne, select, withPublicOrg } from "@/lib/server/db"
 import { CONSENT_TEXT_VERSION, PRODUCTS, isProduct, WHATSAPP_NUMBER, type Product } from "@/lib/config"
 import { logActivity, tunisDay } from "@/lib/server/crm"
 import { notifyNewLead } from "@/lib/server/notify"
@@ -153,9 +153,10 @@ async function handlePOST(request: NextRequest) {
   }
 
   // Anti-doublon : double clic (même event_id) ou nouvel envoi identique en 10 min
+  const orgKey = (await currentOrgKey()) ?? "none"
   const already =
-    rememberOnce(["event", eventId], ref, DUPLICATE_WINDOW_MS) ??
-    rememberOnce(["lead", phone!, product], ref, DUPLICATE_WINDOW_MS)
+    rememberOnce(["event", orgKey, eventId], ref, DUPLICATE_WINDOW_MS) ??
+    rememberOnce(["lead", orgKey, phone!, product], ref, DUPLICATE_WINDOW_MS)
   if (already) {
     return NextResponse.json({ ok: true, duplicate: true, ref: already, stored: false, whatsappUrl: whatsappUrlFor(already) })
   }

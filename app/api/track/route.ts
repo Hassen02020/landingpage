@@ -5,7 +5,7 @@ import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
 import { ALLOWED_EVENTS, LOGGED_EVENTS } from "@/lib/server/events"
-import { dbConfigured, insertQuiet, withPublicOrg } from "@/lib/server/db"
+import { currentOrgKey, dbConfigured, insertQuiet, withPublicOrg } from "@/lib/server/db"
 import { isProduct } from "@/lib/config"
 
 export const runtime = "nodejs"
@@ -41,7 +41,7 @@ async function handlePOST(request: NextRequest) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 })
   }
   // un même event_id n'est relayé qu'une fois
-  if (rememberOnce(["track", eventId], "1", 60 * 60 * 1000)) {
+  if (rememberOnce(["track", (await currentOrgKey()) ?? "none", eventId], "1", 60 * 60 * 1000)) {
     return NextResponse.json({ ok: true, forwarded: false, duplicate: true })
   }
 

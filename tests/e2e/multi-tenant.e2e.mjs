@@ -64,7 +64,7 @@ const A = await session(ADMIN.email, ADMIN.password)
   const csv = await (await A.ctx.request.get(`${BASE}/admin/export?format=csv`)).text()
   check("Easy2Book : l'export CSV ne contient aucun lead de Bob (et contient les siens)", leaks(csv, BOB_MARKERS).length === 0 && csv.includes(e2bLeads()[0].ref), leaks(csv, BOB_MARKERS).join(","))
   const niches = await open(A.page, "/admin/stats?view=niches")
-  check("Easy2Book : la vue agrégée (toutes organisations) est REFUSÉE en mode multi, pas affichée", /Lecture impossible/.test(niches.text), niches.text.slice(0, 120))
+  check("Easy2Book : la vue Niches (0010) affiche SES niches et aucune niche de Bob", niches.status === 200 && niches.text.includes("omra-ramadan-2027") && !niches.text.includes("voyage-bob-ete"), niches.text.slice(0, 160))
   const unauth = await A.ctx.request.post(`${BASE}/api/leads/status`, { data: { ref: bobLeads()[0].ref, status: "contacte" } })
   check("script sans clé d'API : refusé (401)", unauth.status() === 401)
   const keyed = await A.ctx.request.post(`${BASE}/api/leads/status`, { data: { ref: bobLeads()[0].ref, status: "contacte" }, headers: { "x-api-key": API_KEY } })
@@ -106,6 +106,8 @@ const B = await session(BOB.email, BOB.password)
   await open(B.page, "/admin/equipe")
   const team = await body(B.page)
   check("Bob SARL : son équipe = Bob Directeur uniquement (pas les comptes d'Easy2Book)", team.includes("Bob Directeur") && !team.includes("Direction") || team.includes("Bob Directeur"), team.slice(0, 160))
+  const bobNiches = await open(B.page, "/admin/stats?view=niches")
+  check("Bob SARL : la vue Niches affiche SA niche et aucune niche d'Easy2Book", bobNiches.text.includes("voyage-bob-ete") && !bobNiches.text.includes("omra-ramadan-2027"), bobNiches.text.slice(0, 160))
   const clientRows = await (async () => { await open(B.page, "/admin/clients"); return B.page.locator("tr[data-phone]").count() })()
   check("Bob SARL : Clients = ses 3 numéros", clientRows === 3, String(clientRows))
   const csv = await (await B.ctx.request.get(`${BASE}/admin/export?format=csv`)).text()
@@ -146,6 +148,45 @@ const B = await session(BOB.email, BOB.password)
   const exp = await E.ctx.request.get(`${BASE}/admin/export?format=csv`)
   check("employé : l'export CSV reste réservé aux administrateurs (403)", exp.status() === 403)
   await E.ctx.close()
+}
+
+// ================================================================ C3. UNICITÉS PAR ORGANISATION (chantier 04) : Bob réutilise les mêmes codes, sans collision ni fuite
+{
+  const B = await session(BOB.email, BOB.password)
+  await open(B.page, "/admin/promos")
+  const bobSees = await body(B.page)
+  check("Bob SARL : la liste des codes promo n'affiche pas ceux d'Easy2Book (RAMADAN27, ETE50)", !bobSees.includes("RAMADAN27") && !bobSees.includes("ETE50"))
+  await B.page.fill('input[name="code"]', "ramadan27") // MÊME code qu'Easy2Book
+  await B.page.fill('input[name="title"]', "Promo Bob")
+  await B.page.fill('input[name="discountValue"]', "20")
+  await B.page.selectOption('select[name="discountType"]', "percent")
+  await B.page.getByRole("button", { name: "Créer le code" }).click()
+  await B.page.getByText("Code promo créé").waitFor({ timeout: 8000 }).catch(() => {})
+  const codes = db.landing_promo_codes.filter((c) => c.code === "RAMADAN27")
+  check("unicité : Bob peut créer RAMADAN27 alors qu'Easy2Book l'a déjà (une ligne par organisation)", codes.length === 2 && codes.some((c) => c.organization_id === BOB_ORG && Number(c.discount_value) === 20) && codes.some((c) => c.organization_id === E2B && Number(c.discount_value) === 10), JSON.stringify(codes.map((c) => [c.organization_id, c.discount_value])))
+  // doublon DANS la même organisation : toujours refusé
+  await B.page.fill('input[name="code"]', "RAMADAN27")
+  await B.page.fill('input[name="title"]', "Doublon Bob")
+  await B.page.fill('input[name="discountValue"]', "5")
+  await B.page.getByRole("button", { name: "Créer le code" }).click()
+  await B.page.waitForTimeout(1200)
+  check("unicité : un doublon DANS la même organisation reste refusé", db.landing_promo_codes.filter((c) => c.code === "RAMADAN27" && c.organization_id === BOB_ORG).length === 1)
+
+  // protection : le blocage d'un numéro par Bob ne touche pas Easy2Book
+  await open(B.page, "/admin/protection")
+  await B.page.locator('input[name="value"]').first().fill("98 111 222")
+  await B.page.getByRole("button", { name: "Bloquer le numéro" }).click()
+  await B.page.getByText("Numéro bloqué").waitFor({ timeout: 8000 }).catch(() => {})
+  const blocks = db.landing_blocklist.filter((b) => b.value === "21698111222")
+  check("protection : le numéro bloqué par Bob appartient à Bob SARL uniquement", blocks.length === 1 && blocks[0].organization_id === BOB_ORG, JSON.stringify(blocks.map((b) => b.organization_id)))
+  await open(A.page, "/admin/protection")
+  check("protection : Easy2Book ne voit pas le blocage de Bob", !(await body(A.page)).includes("98 111 222") && !(await body(A.page)).includes("21698111222"))
+  await A.page.locator('input[name="value"]').first().fill("98 111 222") // Easy2Book bloque le MÊME numéro : autorisé
+  await A.page.getByRole("button", { name: "Bloquer le numéro" }).click()
+  await A.page.getByText("Numéro bloqué").waitFor({ timeout: 8000 }).catch(() => {})
+  const both = db.landing_blocklist.filter((b) => b.value === "21698111222")
+  check("unicité : Easy2Book peut bloquer le même numéro (une ligne par organisation)", both.length === 2 && new Set(both.map((b) => b.organization_id)).size === 2, JSON.stringify(both.map((b) => b.organization_id)))
+  await B.ctx.close()
 }
 
 // ================================================================ D. Easy2Book n'a rien reçu de Bob ; accès sans compte

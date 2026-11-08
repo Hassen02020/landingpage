@@ -1,6 +1,6 @@
 // Protection des formulaires : numéros / IP bloqués et pays autorisés (réglés dans /admin/protection).
 // En cas d'indisponibilité de la base, les leads sont ACCEPTÉS (on ne perd pas un vrai client).
-import { select, update, upsertQuiet } from "./db"
+import { currentOrgKey, select, update, upsertQuiet } from "./db"
 import { normalizePhone } from "./hash"
 
 export type BlockKind = "phone" | "ip"
@@ -23,14 +23,17 @@ interface Settings {
 }
 
 const TTL_MS = 60_000
-let cached: { at: number; settings: Settings | null } | null = null
+// Cache PAR ORGANISATION (pays autorisés et liste de blocage d'une entreprise ne s'appliquent jamais à une autre).
+const cached = new Map<string, { at: number; settings: Settings | null }>()
 
 export function resetProtectionCache() {
-  cached = null
+  cached.clear()
 }
 
 async function loadSettings(): Promise<Settings | null> {
-  if (cached && Date.now() - cached.at < TTL_MS) return cached.settings
+  const key = await currentOrgKey()
+  const hit = key ? cached.get(key) : undefined
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.settings
   let settings: Settings | null = null
   try {
     const [blocks, prot] = await Promise.all([
@@ -45,7 +48,7 @@ async function loadSettings(): Promise<Settings | null> {
   } catch {
     settings = null // migration 0003 non appliquée ou base indisponible : aucune restriction
   }
-  cached = { at: Date.now(), settings }
+  if (key) cached.set(key, { at: Date.now(), settings })
   return settings
 }
 

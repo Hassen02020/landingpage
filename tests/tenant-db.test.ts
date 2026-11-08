@@ -71,7 +71,7 @@ describe("mode « single » : une seule organisation (Easy2Book aujourd'hui) →
     expect(m.last().body.organization_id).toBe(DEFAULT_ORG_ID)
     await upsertQuiet("landing_integrations", { provider: "meta" }, "provider")
     expect(m.last().body.organization_id).toBe(DEFAULT_ORG_ID)
-    expect(m.last().url).toContain("on_conflict=provider")
+    expect(m.last().url).toContain("on_conflict=organization_id,provider") // la cible de conflit est TOUJOURS (organisation, …)
     await insertQuiet("landing_leads", { ref: "E2B-BBBBBB", organization_id: DEFAULT_ORG_ID }) // valeur identique : acceptée
     const before = m.data.length
     await expect(insertQuiet("landing_leads", { ref: "E2B-CCCCCC", organization_id: B })).rejects.toThrow(TenantContextError)
@@ -142,15 +142,69 @@ describe("mode « multi » : plusieurs organisations → contexte obligatoire, r
     expect([org("1"), org("2"), org("3"), org("4")]).toEqual([A, A, B, B])
   })
 
-  it("vues sans organisation, fonctions globales et écritures sur unicités globales : refusées (lectures de ces tables permises avec contexte)", async () => {
+  it("vues : une ligne par organisation, FILTRÉES par le contexte (refusées sans contexte) ; en mode « une organisation » elles restent lues telles quelles", async () => {
     const m = mockDb(multi)
-    await expect(runWithOrg(A, () => select("landing_niche_performance", "select=*")) as Promise<unknown>).rejects.toThrow(/vue .* non cloisonnée/)
-    await expect(runWithOrg(A, () => rpc("landing_redeem_promo", { p_code: "X" })) as Promise<unknown>).rejects.toThrow(/non cloisonnée/)
-    await expect(runWithOrg(A, () => insertQuiet("landing_promo_codes", { code: "X" })) as Promise<unknown>).rejects.toThrow(/unicités encore globales/)
-    await expect(runWithOrg(A, () => upsertQuiet("landing_integrations", { provider: "meta" }, "provider")) as Promise<unknown>).rejects.toThrow(/unicités encore globales/)
+    await runWithOrg(A, () => select("landing_niche_performance", "select=*&order=leads.desc"))
+    expect(m.last().url).toBe(`${DB_URL}/rest/v1/landing_niche_performance?select=*&order=leads.desc&organization_id=eq.${A}`)
+    await runWithOrg(B, () => select("landing_campaign_performance", "select=*"))
+    expect(m.last().url).toContain(`organization_id=eq.${B}`)
+    const before = m.data.length
+    await expect(select("landing_niche_performance", "select=*")).rejects.toBeInstanceOf(TenantContextError)
+    expect(m.data.length).toBe(before)
+    resetTenantModeCache()
+    const single = mockDb({ status: 200, rows: [{ id: DEFAULT_ORG_ID }] })
+    await select("landing_niche_performance", "select=*")
+    expect(single.last().url).toBe(`${DB_URL}/rest/v1/landing_niche_performance?select=*`) // fonctionne avant 0010
+  })
+
+  it("code promo : la fonction reçoit l'organisation (p_org) du contexte ; une autre organisation est refusée ; avant 0008 (mode off) l'appel ne change pas", async () => {
+    const m = mockDb(multi)
+    await runWithOrg(B, () => rpc("landing_redeem_promo", { p_code: "RAMADAN27", p_product: "omra" }))
+    expect(m.last().body).toEqual({ p_code: "RAMADAN27", p_product: "omra", p_org: B })
+    await expect(Promise.resolve(runWithOrg(A, () => rpc("landing_redeem_promo", { p_code: "X", p_product: "omra", p_org: B })))).rejects.toThrow(/organisation différente/)
+    await expect(rpc("landing_redeem_promo", { p_code: "X", p_product: "omra" })).rejects.toBeInstanceOf(TenantContextError) // sans contexte : refus
+    resetTenantModeCache()
+    const single = mockDb({ status: 200, rows: [{ id: DEFAULT_ORG_ID }] })
+    await rpc("landing_redeem_promo", { p_code: "X", p_product: "omra" })
+    expect(single.last().body).toEqual({ p_code: "X", p_product: "omra", p_org: DEFAULT_ORG_ID })
+    resetTenantModeCache()
+    const off = mockDb({ status: 404 })
+    await rpc("landing_redeem_promo", { p_code: "X", p_product: "omra" })
+    expect(off.last().body).toEqual({ p_code: "X", p_product: "omra" })
+  })
+
+  it("fonction d'entretien globale (purge des données personnelles) : refusée en mode multi", async () => {
+    const m = mockDb(multi)
+    await expect(Promise.resolve(runWithOrg(A, () => rpc("landing_purge_personal_data", {})))).rejects.toThrow(/non cloisonnée/)
     expect(m.data.length).toBe(0)
-    await runWithOrg(A, () => select("landing_promo_codes", "select=*")) // lecture : permise, filtrée
-    expect(m.last().url).toContain(`organization_id=eq.${A}`)
+  })
+
+  it("écritures sur intégrations, codes promo, offres, catégories, équipe, protection, blocage : AUTORISÉES en mode multi, toujours dans l'organisation du contexte ; « insérer ou mettre à jour » = (organisation, …)", async () => {
+    const m = mockDb(multi)
+    await runWithOrg(A, () => upsertQuiet("landing_integrations", { provider: "meta", enabled: true }, "provider"))
+    expect(m.last().url).toContain("on_conflict=organization_id,provider")
+    expect(m.last().body.organization_id).toBe(A)
+    await runWithOrg(B, () => upsertQuiet("landing_blocklist", { kind: "phone", value: "21698000999" }, "kind,value"))
+    expect(m.last().url).toContain("on_conflict=organization_id,kind,value")
+    expect(m.last().body.organization_id).toBe(B)
+    await runWithOrg(A, () => upsertQuiet("landing_integrations", { provider: "tiktok" }, "organization_id,provider")) // déjà complète : pas de doublon de colonne
+    expect(m.last().url.match(/organization_id/g)!.length).toBe(1)
+    for (const table of ["landing_promo_codes", "landing_offers", "landing_categories", "landing_staff", "landing_integrations"]) {
+      await runWithOrg(B, () => insertQuiet(table, { x: 1 }))
+      expect(m.last().body.organization_id, table).toBe(B)
+    }
+    await runWithOrg(A, () => update("landing_protection", "id=eq.1", { allowed_countries: ["TN"] }))
+    expect(m.last().url).toBe(`${DB_URL}/rest/v1/landing_protection?id=eq.1&organization_id=eq.${A}`)
+  })
+
+  it("deux organisations qui enregistrent EN MÊME TEMPS le même réglage : chacune écrit dans la sienne, sans mélange", async () => {
+    const m = mockDb(multi)
+    await Promise.all([
+      runWithOrg(A, async () => { await new Promise((r) => setTimeout(r, 4)); await upsertQuiet("landing_integrations", { provider: "meta", pixel_id: "AAAAA11111" }, "provider") }),
+      runWithOrg(B, async () => { await upsertQuiet("landing_integrations", { provider: "meta", pixel_id: "BBBBB22222" }, "provider") }),
+    ])
+    const sent = m.data.filter((c) => c.method === "POST").map((c) => `${c.body.pixel_id}:${c.body.organization_id}`).sort()
+    expect(sent).toEqual([`AAAAA11111:${A}`, `BBBBB22222:${B}`])
   })
 
   it("un identifiant d'organisation mal formé est refusé", () => {

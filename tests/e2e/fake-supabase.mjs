@@ -127,6 +127,8 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
   if (tenant) {
     db.organizations = [{ id: E2B_ORG, slug: "easy2book", name: "Easy2Book", status: "active" }]
     for (const t of TENANT_TABLES) for (const r of db[t] ?? []) r.organization_id = E2B_ORG
+    // vues statistiques : depuis 0010 elles exposent organization_id
+    for (const v of ["landing_campaign_performance", "landing_niche_performance"]) for (const r of db[v] ?? []) r.organization_id = E2B_ORG
   }
   if (multi) {
     db.organizations.push({ id: BOB_ORG, slug: "bob-sarl", name: "Bob SARL", status: "active" })
@@ -136,6 +138,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
       { organization_id: E2B_ORG, user_id: AGENT_ID, role: "employee", active: true },
       { organization_id: BOB_ORG, user_id: BOB.id, role: "admin", active: true },
     ]
+    db.landing_niche_performance.push({ product: "voyage", niche: "voyage-bob-ete", clics_whatsapp: 5, visiteurs_contact: 4, leads: 3, reservations: 1, chiffre_affaires_tnd: 4200, organization_id: BOB_ORG })
     db.landing_staff.push({ user_id: BOB.id, email: BOB.email, full_name: "Bob Directeur", role: "admin", active: true, created_at: day(30), organization_id: BOB_ORG })
     const bobLeads = [
       lead(901, { first_name: "Zied", last_name: "Bobclient", phone: "21690000901", product: "voyage", offer: "Circuit Bob 1", age: 1 }),
@@ -250,7 +253,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     const rpc = /^\/rest\/v1\/rpc\/(\w+)$/.exec(p)
     if (rpc) {
       if (rpc[1] === "landing_redeem_promo") {
-        const promo = db.landing_promo_codes.find((c) => c.code === String(json.p_code).toUpperCase() && c.active)
+        const promo = db.landing_promo_codes.find((c) => c.code === String(json.p_code).toUpperCase() && c.active && (!tenant || c.organization_id === json.p_org))
         if (!promo) return send(res, 200, [])
         promo.used_count++
         return send(res, 200, [{ code: promo.code }])
@@ -285,7 +288,11 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
         else rows.push({ id: ++seq[name] ?? randomUUID(), created_at: day(0), ...row })
         return send(res, 201)
       }
-      for (const col of UNIQUE[name] ?? []) if (row[col] != null && rows.some((r) => r[col] === row[col])) return send(res, 409, { code: "23505" })
+      const GLOBAL_COLS = new Set(["ref", "email"]) // restent uniques sur toute la base (0010/0011)
+      for (const col of UNIQUE[name] ?? []) {
+        const sameScope = (r) => GLOBAL_COLS.has(col) || !tenant || r.organization_id === row.organization_id
+        if (row[col] != null && rows.some((r) => r[col] === row[col] && sameScope(r))) return send(res, 409, { code: "23505" })
+      }
       const base = name === "landing_leads" || name === "landing_offers" || name === "landing_categories" || name === "landing_message_templates" ? { id: randomUUID() } : { id: (seq[name] = (seq[name] ?? 0) + 1) }
       if (tenant && TENANT_TABLES.includes(name) && row.organization_id === undefined) postsWithoutOrg.push(name)
       const created = { ...base, created_at: day(0), updated_at: day(0), ...(tenant && TENANT_TABLES.includes(name) ? { organization_id: E2B_ORG } : {}), ...(name === "landing_leads" ? { lead_day: day(0).slice(0, 10), status: "nouveau" } : {}), ...(DEFAULTS[name] ?? {}), ...row }

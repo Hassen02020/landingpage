@@ -205,3 +205,25 @@ E2E : un employé d'Easy2Book voit tous les leads d'Easy2Book, aucun de Bob SARL
 2. Exécuter `supabase/scripts/postcheck-0009.sql` : **5 lignes OK**.
 3. Retour arrière si besoin : `supabase/rollback/0009_rollback.sql` (rétablit la règle de 0008, aucune donnée touchée).
 
+
+## 15. Chantier 04 — unicités par organisation (TENANT-UNIQUENESS-04)
+
+**Statut : CODE ÉCRIT + TESTÉ (PostgreSQL réel via PGlite, faux Supabase de bout en bout). Migrations 0010 et 0011 NON appliquées en production** (action du propriétaire, après décision de fusion de la PR).
+
+**Problème.** Avec une seule entreprise, des clés uniques globales suffisent. Dès qu'une 2ᵉ entreprise existe, elles bloquent ses écritures : deux entreprises ne peuvent pas avoir le même code promo, la même catégorie, le même SKU, le même numéro bloqué, la même clé d'idempotence, ni chacune sa ligne « intégration Meta » ou « protection ».
+
+**Solution — « élargir puis resserrer »** (jamais de moment où la base accepte des doublons à tort ou refuse un cas légitime) :
+- `0010_per_org_uniqueness_expand.sql` : ajoute les index uniques **par organisation** (leads : idempotence, téléphone/produit/jour ; événements ; intégrations ; blocklist ; protection ; codes promo ; catégories ; offres), la fonction `landing_redeem_promo(code, produit, organisation)` (réservée au `service_role`), les vues statistiques avec `organization_id`, et un **verrou** : tant que 0011 n'est pas appliquée, la base **refuse de créer une 2ᵉ organisation**. Les anciennes contraintes globales restent : aucun comportement actuel ne change.
+- `0011_per_org_uniqueness_contract.sql` : retire les contraintes globales, remplace les clés primaires `landing_integrations(provider)` et `landing_protection(id)` par `(organization_id, …)`, supprime l'ancienne fonction promo et les valeurs par défaut `organization_id` (une insertion sans organisation est désormais refusée). Exige 0010. Refusable en retour arrière s'il existe plusieurs organisations.
+- Retours arrière : `supabase/rollback/0010_rollback.sql`, `0011_rollback.sql` (refusés si cela corromprait des données). Contrôles en lecture seule : `supabase/scripts/postcheck-0010.sql` (7), `postcheck-0011.sql` (7).
+- Reste volontairement **global** : `landing_leads.ref` (référence WhatsApp lisible par le client) et l'e-mail du personnel.
+
+**Code (aucune fuite entre entreprises).**
+- `lib/server/db.ts` : les écritures `upsert` portent l'organisation dans `on_conflict` ; la fonction promo reçoit `p_org` ; les vues sont filtrées par organisation en mode multi ; la purge RGPD globale est refusée en mode multi.
+- Trois fuites supplémentaires trouvées et corrigées pendant ce chantier : **cache des intégrations** et **cache de protection** étaient partagés entre entreprises (désormais clés `organisation:fournisseur`) ; **le jeton et le pixel Meta/TikTok des variables Vercel** (ceux d'Easy2Book) étaient proposés à toute organisation sans réglage (désormais réservés à l'organisation de la plateforme, `isPlatformOrg()`) ; les clés anti-doublon en mémoire (`/api/leads`, `/api/track`) incluent maintenant l'organisation.
+
+**Preuves.** `tests/migration-0010.test.ts` (18, dont 4 sabotages détectés), `tests/tenant-caches.test.ts` (4, 3 sabotages détectés), `tests/tenant-db.test.ts` (mis à jour, 3 sabotages détectés) ; e2e `multi-tenant` : 58 contrôles dont Bob SARL crée le même code promo `RAMADAN27`, bloque le même numéro, voit sa propre vue Niches et aucune donnée d'Easy2Book ; les doublons **dans** une même organisation restent refusés.
+
+**Ordre d'application obligatoire (propriétaire, après fusion — rien ne doit être fait avant votre GO) :**
+1. Sauvegarde du jour. 2. Exécuter `0010` puis `postcheck-0010.sql`. 3. Déployer le code de cette PR (le code et 0010 sont compatibles dans les deux sens). 4. **Seulement avant de créer une 2ᵉ organisation** : `0011` puis `postcheck-0011.sql`.
+Le code de cette PR **ne doit pas** être déployé avant 0010 (il envoie `p_org` et des `on_conflict` par organisation, que seule 0010 fournit).
