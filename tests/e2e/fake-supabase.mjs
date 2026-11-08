@@ -20,6 +20,7 @@ const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activiti
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
 export const BOB_ORG = "00000000-0000-4000-8000-0000000000b0"
+export const SUPER = { email: "tarhouni.hassene@gmail.com", password: "Super-Passw0rd!", id: "99999999-9999-4999-8999-999999999999" }
 export const BOB = { email: "bob@bob-sarl.tn", password: "Bob-Passw0rd!", id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }
 
 // multi: true → DEUX entreprises dans la même base (Easy2Book et « Bob SARL »), chacune avec son administrateur, ses leads et son équipe.
@@ -133,6 +134,8 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
   if (multi) {
     db.organizations.push({ id: BOB_ORG, slug: "bob-sarl", name: "Bob SARL", status: "active" })
     users.push({ id: BOB.id, email: BOB.email, password: BOB.password })
+    users.push({ id: SUPER.id, email: SUPER.email, password: SUPER.password })
+    db.platform_admins = [{ user_id: SUPER.id }]
     db.organization_members = [
       { organization_id: E2B_ORG, user_id: ADMIN_ID, role: "admin", active: true },
       { organization_id: E2B_ORG, user_id: AGENT_ID, role: "employee", active: true },
@@ -192,6 +195,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     for await (const c of req) chunks.push(c)
     return Buffer.concat(chunks)
   }
+  const invites = [] // invitations envoyées par e-mail (faux) : { email, token, redirectTo }
   const send = (res, status, json) => {
     res.writeHead(status, { "Content-Type": "application/json" })
     res.end(json === undefined ? "" : JSON.stringify(json))
@@ -231,6 +235,15 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
       return send(res, 200, { id: user.id, email: user.email })
     }
     if (p === "/auth/v1/logout") return send(res, 204)
+    if (p === "/auth/v1/invite" && req.method === "POST") {
+      if (users.some((u) => u.email === json.email)) return send(res, 422, { msg: "exists" })
+      const u = { id: randomUUID(), email: json.email, password: undefined }
+      users.push(u)
+      const token = jwt()
+      sessions.set(token, u.id)
+      invites.push({ email: json.email, token, redirectTo: url.searchParams.get("redirect_to") })
+      return send(res, 200, { id: u.id, email: u.email })
+    }
     if (p === "/auth/v1/admin/users" && req.method === "POST") {
       if (users.some((u) => u.email === json.email)) return send(res, 422, { msg: "exists" })
       const u = { id: randomUUID(), email: json.email, password: json.password }
@@ -252,6 +265,26 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     // ---------------- REST
     const rpc = /^\/rest\/v1\/rpc\/(\w+)$/.exec(p)
     if (rpc) {
+      if (rpc[1] === "landing_create_organization") {
+        const a = json
+        const fail = (code, message) => send(res, 400, { code, message })
+        if (!(db.platform_admins ?? []).some((x) => x.user_id === a.p_actor)) return fail("42501", "Réservé au Super Admin de la plateforme")
+        if (!users.some((u) => u.id === a.p_admin_user)) return fail("23503", "Compte du premier administrateur introuvable")
+        if (db.organization_members.some((m) => m.user_id === a.p_admin_user)) return fail("23505", "Ce compte est déjà rattaché à une entreprise")
+        if (db.organizations.some((o) => o.slug === a.p_slug)) return fail("23505", "slug")
+        const id = randomUUID()
+        db.organizations.push({ id, slug: a.p_slug, name: a.p_name, status: "active", sector: a.p_sector || null })
+        db.landing_staff.push({ user_id: a.p_admin_user, email: String(a.p_admin_email).toLowerCase(), full_name: a.p_admin_name || null, role: "admin", active: true, created_at: day(0), organization_id: id })
+        db.organization_members.push({ organization_id: id, user_id: a.p_admin_user, role: "admin", active: true })
+        return send(res, 200, id)
+      }
+      if (rpc[1] === "landing_set_organization_status") {
+        const o = db.organizations.find((x) => x.id === json.p_org)
+        if (!o) return send(res, 400, { code: "P0002", message: "Organisation introuvable" })
+        if (o.slug === "easy2book" && json.p_status === "suspended") return send(res, 400, { code: "42501", message: "L'organisation de la plateforme ne peut pas être suspendue" })
+        o.status = json.p_status
+        return send(res, 204)
+      }
       if (rpc[1] === "landing_redeem_promo") {
         const promo = db.landing_promo_codes.find((c) => c.code === String(json.p_code).toUpperCase() && c.active && (!tenant || c.organization_id === json.p_org))
         if (!promo) return send(res, 200, [])
@@ -319,6 +352,8 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     E2B_ORG,
     TENANT_TABLES,
     users,
+    invites,
+    SUPER,
     listen: (port) => new Promise((ok) => server.listen(port, "127.0.0.1", () => ok(server))),
     close: () => new Promise((ok) => server.close(ok)),
   }

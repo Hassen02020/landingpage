@@ -26,7 +26,8 @@ function toLogin(request: NextRequest) {
 }
 
 export async function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/admin/login")) return NextResponse.next()
+  // pages publiques de l'espace : connexion, et acceptation d'une invitation (le jeton d'invitation est dans le fragment d'URL)
+  if (request.nextUrl.pathname.startsWith("/admin/login") || request.nextUrl.pathname.startsWith("/admin/invitation")) return NextResponse.next()
 
   const at = request.cookies.get(AT)?.value
   const rt = request.cookies.get(RT)?.value

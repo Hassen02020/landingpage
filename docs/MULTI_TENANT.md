@@ -227,3 +227,24 @@ E2E : un employé d'Easy2Book voit tous les leads d'Easy2Book, aucun de Bob SARL
 **Ordre d'application obligatoire (propriétaire, après fusion — rien ne doit être fait avant votre GO) :**
 1. Sauvegarde du jour. 2. Exécuter `0010` puis `postcheck-0010.sql`. 3. Déployer le code de cette PR (le code et 0010 sont compatibles dans les deux sens). 4. **Seulement avant de créer une 2ᵉ organisation** : `0011` puis `postcheck-0011.sql`.
 Le code de cette PR **ne doit pas** être déployé avant 0010 (il envoie `p_org` et des `on_conflict` par organisation, que seule 0010 fournit).
+
+## 16. Chantier 05 (partie A) — création d'une entreprise et de son premier administrateur
+
+**Statut : CODE ÉCRIT + TESTÉ (PostgreSQL réel, e2e à trois entreprises). Migration 0012 NON appliquée en production.** Les formulaires adaptatifs (partie B du chantier 05) ne sont **pas** dans cette PR : voir « Reste à faire ».
+
+**Ce qui existe.**
+- **Espace plateforme `/admin/plateforme`** : réservé au Super Admin (jeton vérifié auprès de Supabase puis présence dans `platform_admins`). Liste des entreprises (membres, administrateurs, statut), création, suspension / réactivation. Aucun lead n'y apparaît, nulle part : le Super Admin n'a toujours aucune fiche d'équipe, donc aucun accès au CRM d'une entreprise.
+- **Connexion** : un Super Admin sans fiche d'équipe arrive sur `/admin/plateforme` ; un administrateur d'entreprise qui tape `/admin/plateforme` est renvoyé à la connexion.
+- **Création** (`lib/server/platform.ts`) : validation (nom, identifiant, e-mail, identifiants réservés) → identifiant libre ? → **invitation par e-mail** du premier administrateur (Supabase Auth) → fonction SQL `landing_create_organization` (migration 0012) qui crée **en une seule transaction** l'organisation, la fiche d'équipe administrateur (le membre suit par le déclencheur de 0008) et la trace d'audit. Aucun mot de passe ne passe par le serveur ni par vous.
+- **Acceptation** `/admin/invitation` : le jeton d'invitation est lu dans le fragment d'URL (jamais dans les journaux), vérifié auprès de Supabase ; l'invité choisit son mot de passe (10 caractères minimum) puis se connecte.
+- **Migration 0012** : deux fonctions SQL, exécutables par `service_role` uniquement (ni anon, ni authenticated, ni PUBLIC), qui vérifient que l'acteur est dans `platform_admins` ; `service_role` n'obtient **aucun** droit d'écriture direct sur les tables d'organisation. L'organisation de la plateforme (`easy2book`) ne peut pas être suspendue. Un compte appartient à **une seule** entreprise.
+- **Retour arrière** `supabase/rollback/0012_rollback.sql` (retire les fonctions, ne touche aucune organisation créée) ; **contrôle** `supabase/scripts/postcheck-0012.sql` (4 lignes OK).
+
+**Preuves.** `tests/migration-0012.test.ts` (9, rôles réels : création atomique, refus d'un non Super Admin, compte inconnu ou déjà rattaché, identifiant en double sans résidu, verrou de 0010 avant 0011, anon/authenticated refusés, l'administrateur créé ne lit que SES leads, suspension tracée et plateforme protégée, retour arrière) ; `tests/platform.test.ts` (10, dont l'ordre invitation → création et l'absence de mot de passe) ; e2e `multi-tenant` : **82 contrôles** (dont 24 nouveaux : connexion Super Admin, aucun accès aux leads via `/admin`, fiche d'un lead, clients, export, création, invitation émise, acceptation, jeton invalide refusé, CRM vide de la nouvelle entreprise, 404 sur un lead d'Easy2Book, même code promo `RAMADAN27` accepté, espace plateforme fermé aux administrateurs d'entreprise, suspension et réactivation). **Sabotage** : si l'espace plateforme acceptait tout compte connecté, 2 contrôles e2e échouent.
+
+**À régler côté Supabase par le propriétaire AVANT la première création réelle :**
+1. Authentication → URL Configuration → *Redirect URLs* : ajouter `https://landingpage-easy2book.vercel.app/admin/invitation` (sinon le lien de l'e-mail est refusé).
+2. Authentication → SMTP : configurer un expéditeur propre (l'envoi par défaut de Supabase est très limité et marqué comme test).
+3. Appliquer **0011** (verrou de 0010 contre une 2ᵉ organisation) puis **0012**, dans cet ordre, après sauvegarde.
+
+**Reste à faire (partie B, chantier 05) :** formulaires adaptatifs par entreprise (champs, produits, obligatoires), qui supposent une page publique par entreprise (chantier 07, constructeur de site) ; sans elle, une 2ᵉ entreprise n'a pas encore de formulaire public. **Limites actuelles :** une seule entreprise publique (Easy2Book) ; un compte = une entreprise ; pas de sélecteur d'organisation ; le Super Admin ne peut pas encore changer l'administrateur d'une entreprise.
