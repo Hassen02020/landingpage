@@ -221,6 +221,76 @@ const B = await session(BOB.email, BOB.password)
   check("administrateur : voit le formulaire d'ajout et peut changer les rôles", (await body(A.page)).includes("Ajouter un membre") && (await A.page.locator('select[name="role"]:not([disabled])').count()) > 0)
 }
 
+// ================================================================ C6. FORMULAIRE D'ENTREPRISE (chantier 05 B) : page publique /o/<identifiant>, formulaire configuré, lead chez elle seule
+{
+  const B = await session(BOB.email, BOB.password)
+  const bf = await open(B.page, "/admin/formulaire")
+  check("formulaire : l'administrateur de Bob SARL voit l'éditeur et l'adresse publique /o/bob-sarl", bf.text.includes("Formulaire de collecte") && bf.text.includes("/o/bob-sarl"), bf.text.slice(0, 100))
+  await B.page.check('input[name="f_email_enabled"]'); await B.page.check('input[name="f_email_required"]')
+  await B.page.check('input[name="f_offer_enabled"]')
+  await B.page.fill('input[name="custom_1_label"]', "Ville"); await B.page.check('input[name="custom_1_required"]')
+  await B.page.fill('input[name="title"]', "Réservez avec Bob")
+  await B.page.fill('textarea[name="thanks"]', "Bob vous rappelle sous 24 h.")
+  await B.page.getByRole("button", { name: "Enregistrer le formulaire" }).click()
+  await B.page.getByText("Formulaire enregistré").waitFor({ timeout: 8000 }).catch(() => {})
+  const cfgRow = db.landing_form_configs.find((r) => r.organization_id === BOB_ORG)
+  check("formulaire : la configuration est enregistrée chez Bob SARL uniquement", !!cfgRow && db.landing_form_configs.length === 1 && cfgRow.config.custom?.[0]?.label === "Ville", JSON.stringify(db.landing_form_configs))
+
+  // Easy2Book : son éditeur ne parle pas des pages d'entreprise, sa configuration n'est pas celle de Bob
+  const ef = await open(A.page, "/admin/formulaire")
+  check("formulaire : Easy2Book ne voit ni la configuration ni les champs de Bob SARL", ef.text.includes("Easy2Book utilise ses propres pages") && !ef.text.includes("Réservez avec Bob") && !ef.text.includes("Ville"))
+
+  // visiteur anonyme
+  const vctx = await browser.newContext()
+  // visiteur qui a DÉJÀ accepté les traceurs sur le site d'Easy2Book : ses pixels ne doivent pas le suivre chez Bob SARL
+  await vctx.addInitScript(() => window.localStorage.setItem("e2b_consent", "granted"))
+  const vp = await vctx.newPage()
+  const outgoing = []
+  vp.on("request", (r) => outgoing.push(r.url()))
+  const pg = await vp.goto(`${BASE}/o/bob-sarl`, { waitUntil: "networkidle" })
+  check("page publique : AUCUN pixel ni script Meta / TikTok d'Easy2Book, même pour un visiteur ayant déjà accepté les traceurs", !outgoing.some((u) => /facebook|fbcdn|tiktok|\/api\/pixels/.test(u)) && (await vp.getByText(/traceurs/i).count()) === 0, outgoing.filter((u) => /facebook|tiktok|pixels/.test(u)).join(","))
+  const vt = await body(vp)
+  check("page publique : /o/bob-sarl s'affiche avec le titre et les champs configurés (e-mail, Ville), sans WhatsApp d'Easy2Book", pg?.status() === 200 && vt.includes("Réservez avec Bob") && (await vp.locator('input[name="email"]').count()) === 1 && (await vp.locator('input[name="custom_c1"]').count()) === 1 && (await vp.locator('textarea[name="message"]').count()) === 1 && !/Easy2Book|wa\.me/.test(vt + (await vp.content())), ((vt + (await vp.content())).match(/.{40}(Easy2Book|wa\.me).{40}/g) || []).slice(0, 3).join(" | "))
+  await vp.fill('input[name="name"]', "Visiteuse Bob"); await vp.fill('input[name="phone"]', "97 123 456")
+  await vp.check('input[name="consent"]')
+  await vp.getByRole("button", { name: "Envoyer ma demande" }).click()
+  await vp.getByText("E-mail requis").waitFor({ timeout: 8000 }).catch(() => {})
+  const vt2 = await body(vp)
+  check("page publique : e-mail et Ville obligatoires dans la configuration de Bob → refus avec message par champ, rien enregistré", vt2.includes("E-mail requis") && vt2.includes("Ville requis") && !db.landing_leads.some((l) => l.first_name === "Visiteuse"))
+  const before = e2bLeads().length
+  await vp.fill('input[name="email"]', "visiteuse@bob.tn"); await vp.fill('input[name="custom_c1"]', "Sfax")
+  await vp.getByRole("button", { name: "Envoyer ma demande" }).click()
+  await vp.getByText("Bob vous rappelle sous 24 h.").waitFor({ timeout: 10000 }).catch(() => {})
+  const vt3 = await body(vp)
+  const nl = db.landing_leads.find((l) => l.first_name === "Visiteuse")
+  check("page publique : le lead est enregistré chez Bob SARL, avec e-mail et réponse « Ville », produit neutre", !!nl && nl.organization_id === BOB_ORG && nl.email === "visiteuse@bob.tn" && nl.custom_fields?.c1 === "Sfax" && nl.product === "autre", JSON.stringify(nl))
+  check("page publique : le message de remerciement est celui de Bob et ne propose AUCUN WhatsApp d'Easy2Book", vt3.includes("Bob vous rappelle sous 24 h.") && !/wa\.me/.test(await vp.content()))
+  check("isolation : Easy2Book n'a reçu aucun lead par la page de Bob", e2bLeads().length === before && !db.landing_leads.some((l) => l.first_name === "Visiteuse" && l.organization_id === E2B))
+  await vctx.close()
+
+  // l'administrateur de Bob voit le lead et sa réponse personnalisée ; Easy2Book non
+  await open(B.page, "/admin")
+  const lid = nl?.id
+  const lp = await open(B.page, `/admin/leads/${lid}`)
+  check("CRM de Bob SARL : la fiche affiche la réponse au champ personnalisé (Ville : Sfax)", lp.status === 200 && lp.text.includes("Ville") && lp.text.includes("Sfax"), lp.text.slice(0, 100))
+  const ep = await open(A.page, `/admin/leads/${lid}`)
+  check("CRM d'Easy2Book : ce lead est introuvable (404) et rien n'est affiché", ep.status === 404 && !ep.text.includes("Sfax"))
+
+  // accès à l'API et pages : entreprise inconnue, plateforme, suspendue
+  const api = (slug, payload) => fetch(`${BASE}/api/o/${slug}/leads`, { method: "POST", headers: { "Content-Type": "application/json", origin: BASE }, body: JSON.stringify(payload) })
+  const full = { name: "Test Nom", phone: "97 654 000", email: "t@t.tn", custom: { c1: "Tunis" }, contactConsent: true }
+  check("entreprise inconnue : page et API répondent 404", (await fetch(`${BASE}/o/inconnue`)).status === 404 && (await api("inconnue", full)).status === 404)
+  check("Easy2Book garde ses propres pages : /api/o/easy2book/leads est refusé (404)", (await api("easy2book", full)).status === 404)
+  const bobOrg = db.organizations.find((o) => o.id === BOB_ORG)
+  bobOrg.status = "suspended"
+  const susp = [(await fetch(`${BASE}/o/bob-sarl`)).status, (await api("bob-sarl", { ...full, phone: "97 654 111" })).status]
+  bobOrg.status = "active"
+  check("entreprise suspendue : sa page publique et son API répondent 404 (aucun lead accepté)", susp[0] === 404 && susp[1] === 404 && !db.landing_leads.some((l) => l.phone === "21697654111"), JSON.stringify(susp))
+  const hp = await api("bob-sarl", { ...full, phone: "97 654 222", website: "robot" })
+  check("robot (champ piège rempli) : réponse neutre, rien enregistré", hp.status === 200 && !db.landing_leads.some((l) => l.phone === "21697654222"))
+  await B.ctx.close()
+}
+
 // ================================================================ C3. UNICITÉS PAR ORGANISATION (chantier 04) : Bob réutilise les mêmes codes, sans collision ni fuite
 {
   const B = await session(BOB.email, BOB.password)

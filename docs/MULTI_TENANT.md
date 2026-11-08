@@ -285,3 +285,25 @@ Points relevés, non bloquants : un échec entre l'invitation et la création la
 **Correction.** La fiche du membre porte le nom et l'identifiant de son entreprise (`organizations`, table non cloisonnée) ; le menu affiche le **nom de l'entreprise connectée** ; le logo d'Easy2Book n'est montré qu'à l'organisation de la plateforme (les autres ont une pastille avec l'initiale) ; la page de connexion est **neutre** (aucune entreprise nommée) ; « Mon compte » indique l'entreprise. Aucune migration.
 **Preuves** : e2e `multi-tenant` **113 contrôles** (+4 : Easy2Book garde nom et logo, Bob SARL et la nouvelle entreprise voient leur nom et jamais « Easy2Book », connexion neutre) ; sabotage (nom codé en dur) : 2 contrôles échouent.
 **Reste** : logo et couleurs propres à chaque entreprise (chantier 07, constructeur de site) ; identifiant d'entreprise non modifiable.
+
+## 19. Chantier 05 (B) — page publique et formulaire configurable par entreprise
+
+**Statut : CODE ÉCRIT + TESTÉ (PostgreSQL réel, e2e à trois entreprises). Migration 0014 NON appliquée en production.**
+Décisions du propriétaire (08/11/2026) : adresse publique **`/o/<identifiant>`** ; l'entreprise configure **ses champs et ses offres** (pas de constructeur libre).
+
+**Ce qui existe.**
+- **Page publique `/o/<identifiant>`** : titre, introduction, formulaire et liste de **ses** offres visibles. Une entreprise inconnue ou **suspendue** renvoie 404 (rien n'est dévoilé). `/o/easy2book` renvoie vers le site d'Easy2Book, qui garde ses propres pages et son flux `/api/leads` inchangés.
+- **Collecte `/api/o/<identifiant>/leads`** : l'entreprise vient de l'identifiant **public** de l'adresse et fixe le contexte d'organisation ; le lead est enregistré chez elle, jamais chez Easy2Book. Mêmes protections que le site (origine, champ piège, anti-doublon, captcha, limitation de débit **par entreprise**, protection par numéro / IP / pays de **l'entreprise**). Logique partagée : `lib/server/lead-intake.ts`.
+- **Éditeur `/admin/formulaire`** (administrateur) : champs standard affichables / obligatoires (e-mail, message, offre, budget), jusqu'à **5 champs personnalisés**, titre, introduction, message de remerciement. Toujours exigés : nom, téléphone, accord de recontact. Un champ **désactivé est ignoré** même si un visiteur l'envoie. Réponses personnalisées affichées sur la fiche du lead.
+- **Migration 0014** : table `landing_form_configs` (une ligne par organisation, RLS forcée, écriture serveur uniquement, aucune suppression) ; colonne `landing_leads.custom_fields` (objet JSON borné à 4 000 caractères) ; **l'anonymisation efface aussi `custom_fields`** (données personnelles). Retour arrière refusé tant que des réponses existent ; postcheck 5 contrôles.
+
+**Fuites évitées (trouvées par les tests).**
+- Le gabarit racine ajoutait le **bandeau de consentement et les pixels Meta / TikTok d'Easy2Book** à toutes les pages : un visiteur de l'entreprise B aurait été suivi par le pixel d'Easy2Book. Désormais **aucun traceur, aucun suivi d'attribution** sur `/o/…`, même pour un visiteur qui avait déjà accepté les traceurs sur Easy2Book (e2e : aucune requête Meta / TikTok / `/api/pixels`).
+- Le **numéro WhatsApp** et la **notification d'équipe** d'Easy2Book ne sont jamais utilisés pour le lead d'une autre entreprise (le visiteur ne reçoit aucun lien WhatsApp ; test unitaire).
+- L'identifiant de page Facebook d'Easy2Book hérité du gabarit est neutralisé sur la page d'entreprise.
+
+**Preuves.** `tests/migration-0014.test.ts` (8, dont sabotage), `tests/form-config.test.ts` (8), `tests/org-intake.test.ts` (5) ; e2e `multi-tenant` **128 contrôles** (+15 : éditeur, configuration chez Bob seulement, page publique avec champs configurés, refus des champs obligatoires, lead chez Bob avec réponse « Ville », aucun lead chez Easy2Book, fiche Bob affiche la réponse, 404 chez Easy2Book, entreprise inconnue / suspendue / plateforme, robot, **aucun pixel**). Sabotage (pixel non bloqué) : détecté. Tous les autres e2e inchangés et verts.
+
+**Limites (honnêtes).** Pas de pixel ni de mesure publicitaire propres à l'entreprise sur sa page (à venir avec les intégrations par entreprise) ; pas de notification d'équipe pour l'entreprise (elle voit ses leads dans son CRM) ; les offres sont en texte libre (pas de produit historique d'Easy2Book) ; l'export CSV n'inclut pas encore les champs personnalisés ; le titre de l'onglet des pages d'administration reste « Easy2Book » ; un domaine propre par entreprise n'existe pas encore.
+
+**Mise en service (propriétaire, après fusion et déploiement) :** appliquer **0014** puis `postcheck-0014.sql` (5 OK). Avant 0014 le code reste sans danger : la configuration retombe sur la valeur par défaut et la colonne manquante est retirée de l'enregistrement (aucun lead perdu).

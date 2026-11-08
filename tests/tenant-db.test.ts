@@ -52,7 +52,7 @@ describe("mode « single » : une seule organisation (Easy2Book aujourd'hui) →
 
   it("lectures et modifications reçoivent le filtre d'organisation, sur les 13 tables", async () => {
     const m = mockDb(single)
-    const tables = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates"]
+    const tables = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs"]
     for (const t of tables) {
       await select(t, "select=*&limit=5")
       expect(m.last().url).toBe(`${DB_URL}/rest/v1/${t}?select=*&limit=5&organization_id=eq.${DEFAULT_ORG_ID}`)

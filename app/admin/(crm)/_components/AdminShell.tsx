@@ -80,6 +80,7 @@ const GROUPS: Group[] = [
     title: "Réglages",
     items: [
       { href: "/admin/integrations", label: "Intégrations", icon: "plug", permission: "social.connect" },
+      { href: "/admin/formulaire", label: "Formulaire", icon: "chat", permission: "site.manage" },
       { href: "/admin/protection", label: "Protection", icon: "shield", permission: "protection.manage" },
       { href: "/admin/equipe", label: "Équipe", icon: "team", permission: "employees.view" },
       { href: "/admin/modeles", label: "Modèles WhatsApp", icon: "chat", permission: "templates.manage" },

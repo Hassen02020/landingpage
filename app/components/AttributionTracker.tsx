@@ -8,7 +8,7 @@ import { captureAttribution } from "@/lib/attribution"
 export function AttributionTracker() {
   const pathname = usePathname()
   useEffect(() => {
-    if (pathname?.startsWith("/admin")) return
+    if (pathname?.startsWith("/admin") || pathname?.startsWith("/o/")) return
     try {
       captureAttribution()
     } catch {

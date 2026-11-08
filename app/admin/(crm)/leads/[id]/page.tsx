@@ -10,6 +10,7 @@ import { STATUS_COLORS, formatDate } from "../../../format"
 import { blockLeadPhoneAction } from "../../../settings-actions"
 import { currentStaff } from "@/lib/server/auth"
 import { waText } from "@/lib/wa-text"
+import { loadFormConfig } from "@/lib/server/org-public"
 
 export const dynamic = "force-dynamic"
 
@@ -30,6 +31,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default async function LeadPage({ params, searchParams }: { params: { id: string }; searchParams: { ok?: string; erreur?: string } }) {
   const lead = await getLead(params.id)
+  const formConfig = await loadFormConfig()
   if (!lead) notFound()
   const [activities, staff, me, templates, duplicates] = await Promise.all([
     getActivities(lead.id),
@@ -129,6 +131,9 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <Row label="Canal préféré" value={lead.contact_channel ? CONTACT_CHANNEL_LABELS[lead.contact_channel] : null} />
           <Row label="Budget déclaré" value={lead.budget} />
           <Row label="Message" value={lead.message} />
+          {Object.entries(lead.custom_fields ?? {}).map(([k, v]) => (
+            <Row key={k} label={formConfig.custom.find((c) => c.key === k)?.label ?? k} value={String(v)} />
+          ))}
           <Row label="Code promo" value={lead.promo_code ?? null} />
           <Row label="Source" value={lead.source ? SOURCE_LABELS[lead.source as Source] : null} />
           <Row label="Reçu le" value={formatDate(lead.created_at)} />

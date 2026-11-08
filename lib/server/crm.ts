@@ -31,6 +31,7 @@ export interface Actor {
 }
 
 export interface LeadRow {
+  custom_fields?: Record<string, string> | null // réponses aux champs personnalisés de l'entreprise (clés c1…c5)
   id: string
   created_at: string
   updated_at?: string
