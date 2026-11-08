@@ -13,7 +13,7 @@ landing pages, `tdexdlukqciolslvjmhd`, jamais EasyV4). Claude lit les résultats
 | # | Critère | Qui |
 |---|---|---|
 | 1 | PR #12 relue ; CI verte | propriétaire / Claude |
-| 2 | Règle de visibilité des employés confirmée : **leurs leads + les non affectés** (fait, 07/11/2026) | propriétaire |
+| 2 | Règle de visibilité des employés confirmée (07/11/2026 : leurs leads + les non affectés ; **remplacée le 08/11/2026 par : tous les leads de leur entreprise**, migration 0009) | propriétaire |
 | 3 | Sauvegarde faite et vérifiée (§2) | propriétaire |
 | 4 | Contrôle `precheck-0008.sql` : **10 lignes OK** | propriétaire → Claude relit |
 | 5 | Compte `Tarhouni.Hassene@gmail.com` : existe, **adresse confirmée**, non suspendu (2ᵉ tableau du contrôle) | propriétaire → Claude relit |

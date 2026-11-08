@@ -170,4 +170,5 @@ Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des do
 | Suivants (4 à 11) | non démarrés (GO explicite requis pour chacun) |
 | TENANT-APP-SCOPING-02 (cloisonnement par organisation côté serveur, refus par défaut en mode multi) | **CODE ÉCRIT + TESTÉ** ; non fusionné ni déployé ; mode multi non exploitable avant le câblage des points d'entrée ; lecture admin par jeton (RLS) reportée ; détail : `docs/MULTI_TENANT.md` §10 |
 | TENANT-ENTRYPOINTS-03 (organisation du compte connecté pour l'admin, site public rattaché à Easy2Book, e2e à deux entreprises) | **CODE ÉCRIT + TESTÉ** ; non fusionné ni déployé ; écritures sur unicités globales encore refusées en mode multi ; détail : `docs/MULTI_TENANT.md` §12-13 |
+| Règle des employés (08/11/2026) : tous les leads de leur entreprise, aucun d'une autre — migration 0009 | **CODE ÉCRIT + TESTÉ** ; migration **non appliquée** ; sans effet sur le CRM actuel (lecture par le serveur) ; `docs/MULTI_TENANT.md` §14 |
 

@@ -2,7 +2,7 @@
 // Preuve que chaque entreprise ne voit, ne lit et n'écrit QUE chez elle, et que le site public reste celui d'Easy2Book.
 //   LANDING_ADMIN_API_KEY=<32+ caractères> bash tests/e2e/run-fake.sh tests/e2e/multi-tenant.e2e.mjs   (ou : bash tests/e2e/run-multi.sh)
 import { createRequire } from "node:module"
-import { createFakeSupabase, ADMIN, BOB, BOB_ORG } from "./fake-supabase.mjs"
+import { createFakeSupabase, ADMIN, AGENT, BOB, BOB_ORG } from "./fake-supabase.mjs"
 const { chromium } = createRequire(import.meta.url)("playwright")
 
 const BASE = process.argv[2] || "http://localhost:3458"
@@ -126,6 +126,26 @@ const B = await session(BOB.email, BOB.password)
   check("Bob SARL : changer le statut de SON lead fonctionne", db.landing_leads.find((l) => l.id === mine.id).status === "a_contacter")
   const acts = db.landing_lead_activities.filter((a) => a.lead_id === mine.id)
   check("Bob SARL : l'historique de ce lead appartient à Bob SARL", acts.length > 0 && acts.every((a) => a.organization_id === BOB_ORG), JSON.stringify(acts.map((a) => a.organization_id)))
+}
+
+// ================================================================ C2. RÈGLE DU PROPRIÉTAIRE : un EMPLOYÉ voit TOUS les leads de SON entreprise, aucun lead d'une autre
+{
+  const E = await session(AGENT.email, AGENT.password)
+  const home = await open(E.page, "/admin")
+  const seen = await E.page.locator('input[name="ids"]').count()
+  const mineAll = e2bLeads().length
+  const assignedToOthers = e2bLeads().filter((l) => l.assigned_to && l.assigned_to !== "22222222-2222-4222-8222-222222222222").length
+  check("employé d'Easy2Book : voit TOUS les leads d'Easy2Book (les siens, ceux d'un collègue, les non affectés)", seen === mineAll && assignedToOthers > 0, `${seen} / ${mineAll} (dont ${assignedToOthers} attribués à d'autres)`)
+  check("employé d'Easy2Book : ne voit AUCUN lead de Bob SARL", leaks(home.text, BOB_MARKERS).length === 0, leaks(home.text, BOB_MARKERS).join(","))
+  const direct = await open(E.page, `/admin/leads/${bobLeads()[0].id}`)
+  check("employé d'Easy2Book : ouvrir DIRECTEMENT un lead de Bob → 404, rien affiché", direct.status === 404 && leaks(direct.text, BOB_MARKERS).length === 0, `${direct.status}`)
+  for (const [label, path] of [["pipeline", "/admin/pipeline"], ["clients", "/admin/clients"], ["segments", "/admin/segments"], ["relances", "/admin?followUp=due"]]) {
+    const r = await open(E.page, path)
+    check(`employé d'Easy2Book : ${label} — aucune donnée de Bob SARL`, r.status === 200 && leaks(r.text, BOB_MARKERS).length === 0, `${r.status} ${leaks(r.text, BOB_MARKERS)}`)
+  }
+  const exp = await E.ctx.request.get(`${BASE}/admin/export?format=csv`)
+  check("employé : l'export CSV reste réservé aux administrateurs (403)", exp.status() === 403)
+  await E.ctx.close()
 }
 
 // ================================================================ D. Easy2Book n'a rien reçu de Bob ; accès sans compte

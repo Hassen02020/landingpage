@@ -29,8 +29,16 @@ describe("chiffrement des jetons", () => {
     expect(sealed).not.toContain("EAA")
     expect(seal(META_TOKEN)).not.toBe(sealed) // IV aléatoire
     expect(open(sealed)).toBe(META_TOKEN)
-    const tampered = sealed.slice(0, -2) + (sealed.endsWith("A") ? "B" : "A") + sealed.slice(-1)
+    // altération GARANTIE : un caractère du texte chiffré est remplacé par un caractère DIFFÉRENT (l'ancien test remplaçait par « A » ou « B »
+    // sans vérifier que le caractère changeait : environ 1 fois sur 64 le jeton restait intact et le test échouait au hasard)
+    const [version, iv, tag, data] = sealed.split(":")
+    const flipped = (data[0] === "A" ? "B" : "A") + data.slice(1)
+    const tampered = [version, iv, tag, flipped].join(":")
+    expect(tampered).not.toBe(sealed)
     expect(() => open(tampered)).toThrow(/illisible/)
+    // idem pour le sceau d'authentification (tag) et le vecteur d'initialisation
+    expect(() => open([version, iv, (tag[0] === "A" ? "B" : "A") + tag.slice(1), data].join(":"))).toThrow(/illisible/)
+    expect(() => open([version, (iv[0] === "A" ? "B" : "A") + iv.slice(1), tag, data].join(":"))).toThrow(/illisible/)
     vi.stubEnv("LANDING_SUPABASE_SERVICE_ROLE_KEY", "autre-cle-serveur-9876543210")
     expect(() => open(sealed)).toThrow(/illisible/)
   })
