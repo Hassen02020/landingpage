@@ -9,7 +9,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
   const staff = await currentStaff()
   if (!staff) redirect((await currentPlatformAdmin()) ? "/admin/plateforme" : "/admin/login")
   return (
-    <AdminShell email={staff.email} name={staff.fullName} role={staff.orgRole}>
+    <AdminShell email={staff.email} name={staff.fullName} role={staff.orgRole} orgName={staff.organizationName} orgSlug={staff.organizationSlug}>
       {children}
     </AdminShell>
   )

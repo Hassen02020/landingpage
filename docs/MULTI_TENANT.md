@@ -278,3 +278,10 @@ Points relevés, non bloquants : un échec entre l'invitation et la création la
 **Preuves.** `tests/migration-0013.test.ts` (7, dont sabotage) ; `tests/roles.test.ts` (18 : matrice, qui modifie, qui affecte) ; e2e `multi-tenant` : **109 contrôles** dont 26 pour les rôles (employé : menu réduit, lead d'un collègue refusé en statut et en affectation, ses leads et les non affectés acceptés, 6 pages fermées, export 403 ; manager : équipe en lecture seule, 5 pages fermées, export 403, modifie et réaffecte les leads d'un collègue ; administrateur : ajout et changement de rôle). **Sabotage** : sans la protection des leads d'un collègue dans l'action, 2 contrôles e2e échouent.
 
 **Limites.** L'application des droits est faite côté serveur ; la base (RLS) laisse encore tous les rôles de l'entreprise lire tous les leads (c'est voulu) mais ne distingue pas encore qui peut modifier quoi, puisque le site écrit avec le serveur. Les statistiques restent visibles par tous les rôles (comme avant). Un Manager est créé depuis l'écran Équipe par un administrateur.
+
+## 18. Image de marque par entreprise (chantier 05 C) — 08/11/2026
+
+**Constat** (test de la 2ᵉ organisation en production) : le menu et la page de connexion affichaient « Easy2Book » et son logo pour toutes les entreprises.
+**Correction.** La fiche du membre porte le nom et l'identifiant de son entreprise (`organizations`, table non cloisonnée) ; le menu affiche le **nom de l'entreprise connectée** ; le logo d'Easy2Book n'est montré qu'à l'organisation de la plateforme (les autres ont une pastille avec l'initiale) ; la page de connexion est **neutre** (aucune entreprise nommée) ; « Mon compte » indique l'entreprise. Aucune migration.
+**Preuves** : e2e `multi-tenant` **113 contrôles** (+4 : Easy2Book garde nom et logo, Bob SARL et la nouvelle entreprise voient leur nom et jamais « Easy2Book », connexion neutre) ; sabotage (nom codé en dur) : 2 contrôles échouent.
+**Reste** : logo et couleurs propres à chaque entreprise (chantier 07, constructeur de site) ; identifiant d'entreprise non modifiable.

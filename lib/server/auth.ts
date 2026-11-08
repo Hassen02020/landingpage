@@ -14,6 +14,8 @@ export interface Staff {
   email: string
   fullName: string | null
   role: "admin" | "manager" | "agent"
+  organizationName: string | null // nom et identifiant de l'organisation du compte (image de marque de l'espace)
+  organizationSlug: string | null
   organizationId: string | null // organisation du compte (organization_members) ; null : schéma d'avant 0008
   orgRole: OrgRole
 }
@@ -87,9 +89,16 @@ export async function findStaff(userId: string): Promise<Staff | null> {
     )
   const rows = await (m ? Promise.resolve(runWithOrg(m.organizationId, read)) : read()).catch(() => [])
   const s = rows[0]
-  return s
-    ? { userId: s.user_id, email: s.email, fullName: s.full_name, role: s.role, organizationId: m?.organizationId ?? null, orgRole: m?.role ?? roleFromLegacyStaff(s.role) }
-    : null
+  if (!s) return null
+  // nom et identifiant de l'entreprise (table non cloisonnée) ; absents avant 0008 : repli sur Easy2Book
+  const org = m
+    ? (await select<{ name: string; slug: string }>("organizations", `select=name,slug&id=eq.${m.organizationId}&limit=1`).catch(() => []))[0]
+    : undefined
+  return {
+    userId: s.user_id, email: s.email, fullName: s.full_name, role: s.role,
+    organizationName: org?.name ?? null, organizationSlug: org?.slug ?? null,
+    organizationId: m?.organizationId ?? null, orgRole: m?.role ?? roleFromLegacyStaff(s.role),
+  }
 }
 
 /** Utilisateur connecté ET membre actif de l'équipe, d'après les cookies de la requête. */
