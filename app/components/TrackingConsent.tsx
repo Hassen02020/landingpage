@@ -18,6 +18,8 @@ export function TrackingConsent() {
   const [pixels, setPixels] = useState<{ meta: string | null; tiktok: string | null } | null>(null)
   const pathname = usePathname()
   const isArabic = pathname?.startsWith("/omra")
+  // Pages d'une entreprise cliente (/o/<identifiant>) : ni bandeau, ni pixels, ni suivi d'Easy2Book pour leurs visiteurs
+  const isOrgPage = pathname?.startsWith("/o/") ?? false
 
   useEffect(() => {
     setState(getConsent())
@@ -28,7 +30,7 @@ export function TrackingConsent() {
   }, [])
 
   useEffect(() => {
-    if (consent !== "granted" || pixels) return
+    if (isOrgPage || consent !== "granted" || pixels) return
     let cancelled = false
     fetch("/api/pixels")
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
@@ -58,7 +60,7 @@ export function TrackingConsent() {
   }
 
   // espace équipe : ni traceurs publicitaires ni bandeau
-  if (pathname?.startsWith("/admin")) return null
+  if (pathname?.startsWith("/admin") || isOrgPage) return null
 
   return (
     <>

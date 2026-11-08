@@ -15,7 +15,7 @@ const jwt = () => {
 }
 
 const E2B_ORG = "00000000-0000-4000-8000-0000000e2b01"
-const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates"]
+const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs"]
 
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
@@ -116,6 +116,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     landing_integrations: [],
     landing_integration_changes: [],
     landing_admin_log: [],
+    landing_form_configs: [],
     landing_message_templates: [
       { id: "dddddddd-0000-4000-8000-000000000001", title: "Premier contact (Omra)", body: "السلام عليكم {prenom} 🌙 وصلنا طلبك ({ref}) بخصوص {offre}.", product: "omra", position: 1, active: true },
       { id: "dddddddd-0000-4000-8000-000000000002", title: "Relance", body: "Bonjour {prenom}, nous revenons vers vous au sujet de {offre} ({ref}).", product: null, position: 2, active: true },
