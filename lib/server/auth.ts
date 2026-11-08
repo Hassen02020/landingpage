@@ -13,7 +13,7 @@ export interface Staff {
   userId: string
   email: string
   fullName: string | null
-  role: "admin" | "agent"
+  role: "admin" | "manager" | "agent"
   organizationId: string | null // organisation du compte (organization_members) ; null : schéma d'avant 0008
   orgRole: OrgRole
 }
@@ -81,7 +81,7 @@ export async function findStaff(userId: string): Promise<Staff | null> {
   // L'organisation du compte vient de organization_members (table non cloisonnée) ; la fiche d'équipe est ensuite lue DANS cette organisation.
   const m = await resolveMembership(userId).catch(() => null)
   const read = () =>
-    select<{ user_id: string; email: string; full_name: string | null; role: "admin" | "agent" }>(
+    select<{ user_id: string; email: string; full_name: string | null; role: "admin" | "manager" | "agent" }>(
       "landing_staff",
       `select=user_id,email,full_name,role&user_id=eq.${userId}&active=eq.true&limit=1`
     )

@@ -3,6 +3,7 @@
 // Actions de l'écran /admin/integrations — réservées au rôle « admin », revérifié à chaque appel.
 import { revalidatePath } from "next/cache"
 import { currentStaff } from "@/lib/server/auth"
+import { can } from "@/lib/permissions"
 import { rateLimited } from "@/lib/server/guard"
 import { PROVIDERS, saveIntegration, testIntegration, type Provider } from "@/lib/server/integrations"
 
@@ -14,7 +15,7 @@ export interface IntegrationFormState {
 
 async function requireAdmin() {
   const staff = await currentStaff()
-  if (!staff || staff.role !== "admin") return null
+  if (!staff || !can(staff.orgRole, "social.connect")) return null
   return staff
 }
 

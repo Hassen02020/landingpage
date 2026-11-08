@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { currentStaff } from "@/lib/server/auth"
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic"
 
 export default async function OfferPage({ params, searchParams }: { params: { id: string }; searchParams: { ok?: string } }) {
   const staff = await currentStaff()
-  if (staff?.role !== "admin") return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
+  if (!can(staff?.orgRole, "catalog.manage")) return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
   const isNew = params.id === "new"
   const [offer, categories] = await Promise.all([isNew ? null : getOffer(params.id).catch(() => null), listCategories().catch(() => [])])
   if (!isNew && !offer) notFound()

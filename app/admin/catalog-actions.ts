@@ -4,6 +4,7 @@
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { currentStaff } from "@/lib/server/auth"
+import { can } from "@/lib/permissions"
 import { rateLimited } from "@/lib/server/guard"
 import { archiveOffer, duplicateOffer, saveCategory, saveOffer, uploadImage } from "@/lib/server/catalog"
 
@@ -15,7 +16,7 @@ export interface CatalogFormState {
 
 async function requireAdmin() {
   const staff = await currentStaff()
-  if (!staff || staff.role !== "admin") return null
+  if (!staff || !(can(staff.orgRole, "catalog.manage") && can(staff.orgRole, "promos.manage"))) return null
   if (rateLimited(`catalog:${staff.userId}`, 120, 10 * 60 * 1000)) return null
   return staff
 }

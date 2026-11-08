@@ -2,7 +2,7 @@
 // Preuve que chaque entreprise ne voit, ne lit et n'écrit QUE chez elle, et que le site public reste celui d'Easy2Book.
 //   LANDING_ADMIN_API_KEY=<32+ caractères> bash tests/e2e/run-fake.sh tests/e2e/multi-tenant.e2e.mjs   (ou : bash tests/e2e/run-multi.sh)
 import { createRequire } from "node:module"
-import { createFakeSupabase, ADMIN, AGENT, BOB, BOB_ORG, SUPER } from "./fake-supabase.mjs"
+import { createFakeSupabase, ADMIN, AGENT, BOB, BOB_ORG, MANAGER, SUPER } from "./fake-supabase.mjs"
 const { chromium } = createRequire(import.meta.url)("playwright")
 
 const BASE = process.argv[2] || "http://localhost:3458"
@@ -148,6 +148,73 @@ const B = await session(BOB.email, BOB.password)
   const exp = await E.ctx.request.get(`${BASE}/admin/export?format=csv`)
   check("employé : l'export CSV reste réservé aux administrateurs (403)", exp.status() === 403)
   await E.ctx.close()
+}
+
+// ================================================================ C5. RÔLES (chantier 06) : employé, manager, administrateur
+{
+  const AGENT_ID = "22222222-2222-4222-8222-222222222222"
+  const ADMIN_ID = "11111111-1111-4111-8111-111111111111"
+  const leadOf = (pred) => e2bLeads().find(pred)
+  const theirs = leadOf((l) => l.assigned_to === ADMIN_ID)
+  const mine = leadOf((l) => l.assigned_to === AGENT_ID && l.status === "contacte")
+  const free = leadOf((l) => !l.assigned_to && l.status === "nouveau")
+  const free2 = e2bLeads().filter((l) => !l.assigned_to && l.status === "nouveau")[1]
+  const setStatus = async (page, id, status) => {
+    await open(page, `/admin/leads/${id}`)
+    await page.selectOption('select[name="status"]', status)
+    await page.getByRole("button", { name: "Enregistrer", exact: true }).click()
+    await page.waitForTimeout(1500)
+  }
+  const E = await session(AGENT.email, AGENT.password)
+  const eh = await open(E.page, "/admin")
+  check("employé : le menu n'affiche ni Équipe, ni Codes promo, ni Offres, ni Intégrations, ni Protection, ni Modèles, ni Export", !/(Équipe|Codes promo|Offres et catégories|Intégrations|Protection|Modèles WhatsApp|Export CSV)/.test(eh.text), eh.text.slice(0, 200))
+  const before = theirs.status
+  await setStatus(E.page, theirs.id, before === "contacte" ? "perdu" : "contacte")
+  check("employé : modifier le statut d'un lead AFFECTÉ À UN COLLÈGUE est refusé (statut inchangé, message clair)", db.landing_leads.find((l) => l.id === theirs.id).status === before && (await body(E.page)).includes("affecté à un collègue"), `${db.landing_leads.find((l) => l.id === theirs.id).status}`)
+  await setStatus(E.page, mine.id, "qualifie")
+  check("employé : modifier un de SES leads fonctionne", db.landing_leads.find((l) => l.id === mine.id).status === "qualifie")
+  await setStatus(E.page, free.id, "a_contacter")
+  check("employé : modifier un lead NON AFFECTÉ fonctionne", db.landing_leads.find((l) => l.id === free.id).status === "a_contacter")
+  // affectation : voler le lead d'un collègue refusé ; prendre un lead libre accepté
+  await open(E.page, `/admin/leads/${theirs.id}`)
+  await E.page.selectOption('select[name="assigned_to"]', AGENT_ID)
+  await E.page.locator('form:has(select[name="assigned_to"]) button').click()
+  await E.page.waitForTimeout(1500)
+  check("employé : prendre le lead d'un collègue est refusé (affectation inchangée)", db.landing_leads.find((l) => l.id === theirs.id).assigned_to === ADMIN_ID)
+  await open(E.page, `/admin/leads/${free2.id}`)
+  await E.page.selectOption('select[name="assigned_to"]', AGENT_ID)
+  await E.page.locator('form:has(select[name="assigned_to"]) button').click()
+  await E.page.waitForTimeout(1500)
+  check("employé : prendre un lead libre est accepté", db.landing_leads.find((l) => l.id === free2.id).assigned_to === AGENT_ID)
+  for (const path of ["/admin/equipe", "/admin/promos", "/admin/catalogue", "/admin/protection", "/admin/integrations", "/admin/modeles"]) {
+    const r = await open(E.page, path)
+    check(`employé : ${path} est fermé`, /réservée|réservé/.test(r.text) && !/Ajouter un membre|Nouveau code/.test(r.text), r.text.slice(0, 80))
+  }
+  check("employé : l'export CSV est refusé (403)", (await E.ctx.request.get(`${BASE}/admin/export?format=csv`)).status() === 403)
+  await E.ctx.close()
+
+  const M = await session(MANAGER.email, MANAGER.password)
+  const mh = await open(M.page, "/admin")
+  check("manager : le menu affiche l'Équipe mais ni Codes promo, ni Offres, ni Intégrations, ni Protection, ni Modèles, ni Export", /Équipe/.test(mh.text) && !/(Codes promo|Offres et catégories|Intégrations|Protection|Modèles WhatsApp|Export CSV)/.test(mh.text), mh.text.slice(0, 200))
+  check("manager : voit tous les leads d'Easy2Book et aucun lead de Bob SARL", (await M.page.locator('input[name="ids"]').count()) === e2bLeads().length && leaks(mh.text, BOB_MARKERS).length === 0)
+  const mteam = await open(M.page, "/admin/equipe")
+  check("manager : voit l'équipe mais sans formulaire d'ajout ni changement de rôle", mteam.text.includes("Manager Leila") && !mteam.text.includes("Ajouter un membre") && (await M.page.locator('select[name="role"]:not([disabled])').count()) === 0, mteam.text.slice(0, 120))
+  for (const path of ["/admin/promos", "/admin/catalogue", "/admin/protection", "/admin/integrations", "/admin/modeles"]) {
+    const r = await open(M.page, path)
+    check(`manager : ${path} est fermé`, /réservée|réservé/.test(r.text), r.text.slice(0, 80))
+  }
+  check("manager : l'export CSV est refusé (403)", (await M.ctx.request.get(`${BASE}/admin/export?format=csv`)).status() === 403)
+  await setStatus(M.page, theirs.id, theirs.status === "contacte" ? "qualifie" : "contacte")
+  check("manager : modifie le statut d'un lead affecté à un collègue", db.landing_leads.find((l) => l.id === theirs.id).status !== before)
+  await open(M.page, `/admin/leads/${theirs.id}`)
+  await M.page.selectOption('select[name="assigned_to"]', AGENT_ID)
+  await M.page.locator('form:has(select[name="assigned_to"]) button').click()
+  await M.page.waitForTimeout(1500)
+  check("manager : réaffecte le lead d'un collègue", db.landing_leads.find((l) => l.id === theirs.id).assigned_to === AGENT_ID)
+  check("manager : le rôle est enregistré comme manager dans l'organisation d'Easy2Book", db.organization_members.some((m) => m.user_id === MANAGER.id && m.organization_id === E2B && m.role === "manager"))
+  await M.ctx.close()
+  await open(A.page, "/admin/equipe")
+  check("administrateur : voit le formulaire d'ajout et peut changer les rôles", (await body(A.page)).includes("Ajouter un membre") && (await A.page.locator('select[name="role"]:not([disabled])').count()) > 0)
 }
 
 // ================================================================ C3. UNICITÉS PAR ORGANISATION (chantier 04) : Bob réutilise les mêmes codes, sans collision ni fuite

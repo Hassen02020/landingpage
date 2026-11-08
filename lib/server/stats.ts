@@ -167,7 +167,7 @@ export interface StaffRow {
   user_id: string
   email: string
   full_name: string | null
-  role: "admin" | "agent"
+  role: "admin" | "manager" | "agent"
   active: boolean
 }
 

@@ -253,3 +253,28 @@ Le code de cette PR **ne doit pas** être déployé avant 0010 (il envoie `p_org
 1. *Un compte Super Admin pouvait être rattaché comme administrateur d'une entreprise* (et donc lire ses leads, contre la règle). La fonction 0012 le refuse ; test PostgreSQL et test e2e.
 2. *Les messages d'erreur précis de la base n'arrivaient pas à l'écran* : `DbError` ne portait pas le texte PostgreSQL (verrou 0011, compte déjà rattaché…), l'écran aurait affiché un message générique. `DbError.pgMessage` (texte de nos propres fonctions, jamais dans les journaux) ; 5 tests.
 Points relevés, non bloquants : un échec entre l'invitation et la création laisse un compte invité sans entreprise (sans accès ; une nouvelle tentative le réutilise) ; les erreurs de suspension / réactivation ne sont pas affichées à l'écran ; l'envoi d'e-mails dépend du SMTP (voir `docs/PLAN_ONBOARDING_PROD.md`).
+
+## 17. Chantier 06 — rôles et permissions (Super Admin, Administrateur, Manager, Employé)
+
+**Statut : CODE ÉCRIT + TESTÉ (PostgreSQL réel, e2e à trois entreprises). Migration 0013 NON appliquée en production.**
+
+**Constat d'audit.** La matrice des rôles (`lib/permissions.ts`, chantier 01) n'était appliquée **nulle part** : toutes les pages et actions décidaient avec l'ancien couple `admin` / `agent`, et le rôle Manager n'existait pas dans l'équipe. Désormais **chaque page, action et le menu décident par permission** (`can(orgRole, permission)`).
+
+**Décisions du propriétaire (08/11/2026).** (1) Un employé voit tous les leads de son entreprise (déjà appliqué, migration 0009) et **modifie ses leads et les leads non affectés**, jamais ceux affectés à un collègue. (2) Le rôle **Manager** est créé maintenant.
+
+| Droit | Employé | Manager | Administrateur | Super Admin |
+|---|---|---|---|---|
+| Voir tous les leads de son entreprise | oui | oui | oui | **jamais** |
+| Modifier statut, notes, relance, vente | ses leads + non affectés | tous | tous | non |
+| Affecter un lead | prendre un lead libre, rendre le sien | à n'importe qui | à n'importe qui | non |
+| Statistiques, pipeline, clients, segments | oui | oui | oui | non |
+| Voir l'équipe | non | oui | oui | non |
+| Ajouter, désactiver, changer un rôle | non | non | oui | non |
+| Offres/catégories, codes promo, protection, intégrations, modèles WhatsApp, export CSV | non | non | oui | non |
+| Créer / suspendre une entreprise | non | non | non | oui |
+
+**Migration 0013** : `landing_staff.role` accepte `manager` ; la recopie vers `organization_members` traduit admin → admin, manager → manager, agent → employee ; « il reste toujours un administrateur » inchangé. Retour arrière `supabase/rollback/0013_rollback.sql` (refusé tant qu'un manager existe) ; contrôle `supabase/scripts/postcheck-0013.sql` (2 OK).
+
+**Preuves.** `tests/migration-0013.test.ts` (7, dont sabotage) ; `tests/roles.test.ts` (18 : matrice, qui modifie, qui affecte) ; e2e `multi-tenant` : **109 contrôles** dont 26 pour les rôles (employé : menu réduit, lead d'un collègue refusé en statut et en affectation, ses leads et les non affectés acceptés, 6 pages fermées, export 403 ; manager : équipe en lecture seule, 5 pages fermées, export 403, modifie et réaffecte les leads d'un collègue ; administrateur : ajout et changement de rôle). **Sabotage** : sans la protection des leads d'un collègue dans l'action, 2 contrôles e2e échouent.
+
+**Limites.** L'application des droits est faite côté serveur ; la base (RLS) laisse encore tous les rôles de l'entreprise lire tous les leads (c'est voulu) mais ne distingue pas encore qui peut modifier quoi, puisque le site écrit avec le serveur. Les statistiques restent visibles par tous les rôles (comme avant). Un Manager est créé depuis l'écran Équipe par un administrateur.

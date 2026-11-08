@@ -20,6 +20,7 @@ const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activiti
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
 export const BOB_ORG = "00000000-0000-4000-8000-0000000000b0"
+export const MANAGER = { email: "manager@easy2book.tn", password: "Manager-Passw0rd!", id: "55555555-5555-4555-8555-555555555555" }
 export const SUPER = { email: "tarhouni.hassene@gmail.com", password: "Super-Passw0rd!", id: "99999999-9999-4999-8999-999999999999" }
 export const BOB = { email: "bob@bob-sarl.tn", password: "Bob-Passw0rd!", id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }
 
@@ -135,10 +136,13 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     db.organizations.push({ id: BOB_ORG, slug: "bob-sarl", name: "Bob SARL", status: "active" })
     users.push({ id: BOB.id, email: BOB.email, password: BOB.password })
     users.push({ id: SUPER.id, email: SUPER.email, password: SUPER.password })
+    users.push({ id: MANAGER.id, email: MANAGER.email, password: MANAGER.password })
+    db.landing_staff.push({ user_id: MANAGER.id, email: MANAGER.email, full_name: "Manager Leila", role: "manager", active: true, created_at: day(10), organization_id: E2B_ORG })
     db.platform_admins = [{ user_id: SUPER.id }]
     db.organization_members = [
       { organization_id: E2B_ORG, user_id: ADMIN_ID, role: "admin", active: true },
       { organization_id: E2B_ORG, user_id: AGENT_ID, role: "employee", active: true },
+      { organization_id: E2B_ORG, user_id: MANAGER.id, role: "manager", active: true },
       { organization_id: BOB_ORG, user_id: BOB.id, role: "admin", active: true },
     ]
     db.landing_niche_performance.push({ product: "voyage", niche: "voyage-bob-ete", clics_whatsapp: 5, visiteurs_contact: 4, leads: 3, reservations: 1, chiffre_affaires_tnd: 4200, organization_id: BOB_ORG })
@@ -355,6 +359,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     users,
     invites,
     SUPER,
+    MANAGER,
     listen: (port) => new Promise((ok) => server.listen(port, "127.0.0.1", () => ok(server))),
     close: () => new Promise((ok) => server.close(ok)),
   }

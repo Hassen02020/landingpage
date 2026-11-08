@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
@@ -132,7 +133,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <Row label="Source" value={lead.source ? SOURCE_LABELS[lead.source as Source] : null} />
           <Row label="Reçu le" value={formatDate(lead.created_at)} />
           <Row label="Montant réservé" value={lead.booking_value !== null ? `${lead.booking_value} TND` : null} />
-          {me?.role === "admin" && lead.phone && !locked && (
+          {can(me?.orgRole, "data.export") && lead.phone && !locked && (
             <form action={blockLeadPhoneAction} className="mt-3">
               <input type="hidden" name="phone" value={lead.phone} />
               <input type="hidden" name="ref" value={lead.ref} />

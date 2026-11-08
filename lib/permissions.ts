@@ -19,11 +19,16 @@ export type Permission =
   | "leads.update_assigned" // idem, sur SES leads
   | "sales.record" // enregistrer une vente sur n'importe quel lead de l'organisation
   | "sales.record_assigned" // sur ses leads (selon permissions : accordé par défaut, comme aujourd'hui chez Easy2Book)
+  | "catalog.manage" // offres et catégories
+  | "promos.manage" // codes promo
+  | "protection.manage" // blocage de numéros / IP, pays autorisés
+  | "templates.manage" // modèles de messages WhatsApp
+  | "data.export" // export CSV, blocage d'un numéro depuis une fiche
 
 const ALL_ADMIN: Permission[] = [
   "org.profile.edit", "social.connect", "employees.manage", "employees.view", "site.manage", "campaigns.manage",
   "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned",
-  "sales.record", "sales.record_assigned",
+  "sales.record", "sales.record_assigned", "catalog.manage", "promos.manage", "protection.manage", "templates.manage", "data.export",
 ]
 
 export const ROLE_PERMISSIONS: Record<OrgRole, ReadonlySet<Permission>> = {
@@ -47,4 +52,26 @@ export const PLATFORM_PERMISSIONS: ReadonlySet<PlatformPermission> = new Set<Pla
 export const canPlatform = (isSuperAdmin: boolean, permission: PlatformPermission): boolean => isSuperAdmin && PLATFORM_PERMISSIONS.has(permission)
 
 /** Correspondance avec l'équipe actuelle (landing_staff) : admin → admin, agent → employee. */
-export const roleFromLegacyStaff = (role: string): OrgRole => (role === "admin" ? "admin" : "employee")
+export const roleFromLegacyStaff = (role: string): OrgRole => (role === "admin" ? "admin" : role === "manager" ? "manager" : "employee")
+
+export const ROLE_LABELS: Record<OrgRole, string> = { admin: "Administrateur", manager: "Manager", employee: "Employé" }
+
+/**
+ * Qui peut MODIFIER un lead (statut, notes, relance, vente) ? Décision du propriétaire (08/11/2026) :
+ *  - administrateur et manager : tous les leads de leur entreprise ;
+ *  - employé : SES leads et les leads NON affectés ; jamais ceux affectés à un collègue.
+ * Voir tous les leads de son entreprise reste permis à tous les rôles ; une autre entreprise n'est jamais accessible.
+ */
+export function canModifyLead(role: OrgRole | null | undefined, userId: string, lead: { assigned_to?: string | null }): boolean {
+  if (can(role, "leads.update")) return true
+  if (!can(role, "leads.update_assigned")) return false
+  return !lead.assigned_to || lead.assigned_to === userId
+}
+
+/** Affecter un lead : admin et manager à n'importe qui ; un employé seulement pour PRENDRE un lead libre (ou se l'enlever). */
+export function canAssignLead(role: OrgRole | null | undefined, userId: string, lead: { assigned_to?: string | null }, target: string | null): boolean {
+  if (can(role, "leads.assign")) return true
+  if (!can(role, "leads.update_assigned")) return false
+  if (target === userId) return !lead.assigned_to || lead.assigned_to === userId // prendre un lead libre
+  return target === null && lead.assigned_to === userId // rendre SON lead
+}

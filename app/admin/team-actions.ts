@@ -4,6 +4,7 @@
 import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 import { AT_COOKIE, currentStaff } from "@/lib/server/auth"
+import { can } from "@/lib/permissions"
 import { rateLimited } from "@/lib/server/guard"
 import { addMember, changeOwnPassword, resetMemberPassword, updateMember } from "@/lib/server/team"
 import { saveTemplate } from "@/lib/server/templates"
@@ -19,7 +20,7 @@ const field = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim()
 
 async function requireAdmin() {
   const staff = await currentStaff()
-  if (!staff || staff.role !== "admin") return null
+  if (!staff || !can(staff.orgRole, "employees.manage")) return null
   if (rateLimited(`team:${staff.userId}`, 60, 10 * 60 * 1000)) return null
   return { staff, actor: { id: staff.userId, label: staff.email } }
 }

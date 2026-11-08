@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions"
 import { currentStaff } from "@/lib/server/auth"
 import { listTemplates } from "@/lib/server/templates"
 import { TemplateForm } from "./TemplateForm"
@@ -6,7 +7,7 @@ export const dynamic = "force-dynamic"
 
 export default async function TemplatesPage() {
   const me = await currentStaff()
-  if (me?.role !== "admin") return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
+  if (!can(me?.orgRole, "templates.manage")) return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux administrateurs.</p>
   const templates = await listTemplates().catch(() => null)
   return (
     <div className="space-y-6">
