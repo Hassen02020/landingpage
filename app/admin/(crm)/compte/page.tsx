@@ -11,6 +11,7 @@ export default async function AccountPage() {
       <h1 className="text-2xl font-black">Mon compte</h1>
       <section className="bg-white rounded-2xl border p-5 text-sm space-y-1">
         <div>E-mail : <strong dir="ltr">{me?.email}</strong></div>
+        <div>Entreprise : <strong>{me?.organizationName ?? "Easy2Book"}</strong></div>
         <div>Rôle : <strong>{me ? ROLE_LABELS[me.orgRole] : ""}</strong></div>
       </section>
       <section className="bg-white rounded-2xl border p-5 space-y-3">

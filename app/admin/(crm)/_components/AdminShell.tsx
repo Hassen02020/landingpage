@@ -118,7 +118,7 @@ function Nav({ role, onNavigate }: { role: OrgRole; onNavigate: () => void }) {
   )
 }
 
-export function AdminShell({ email, name, role, children }: { email: string; name: string | null; role: OrgRole; children: React.ReactNode }) {
+export function AdminShell({ email, name, role, orgName, orgSlug, children }: { email: string; name: string | null; role: OrgRole; orgName: string | null; orgSlug: string | null; children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const path = usePathname()
   useEffect(() => setOpen(false), [path])
@@ -129,13 +129,20 @@ export function AdminShell({ email, name, role, children }: { email: string; nam
     }
   }, [open])
   const shown = name || email.split("@")[0]
+  // image de marque : le nom de L'ENTREPRISE connectée ; le logo d'Easy2Book n'est montré qu'à l'organisation de la plateforme
+  const brand = orgName || "Easy2Book"
+  const isPlatform = !orgSlug || orgSlug === "easy2book"
 
   const Sidebar = (
     <div className="flex h-full flex-col bg-gradient-to-b from-violet-950 via-violet-900 to-violet-950 text-white">
       <Link href="/admin" className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
-        <Image src="/logo.png" alt="" width={36} height={36} className="rounded-full bg-white" />
-        <div>
-          <div className="font-black leading-tight">Easy2Book</div>
+        {isPlatform ? (
+          <Image src="/logo.png" alt="" width={36} height={36} className="rounded-full bg-white" />
+        ) : (
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black uppercase text-violet-900">{brand.charAt(0)}</span>
+        )}
+        <div className="min-w-0">
+          <div className="truncate font-black leading-tight">{brand}</div>
           <div className="text-[11px] text-violet-300">Espace équipe</div>
         </div>
       </Link>

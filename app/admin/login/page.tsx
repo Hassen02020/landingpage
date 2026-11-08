@@ -11,7 +11,7 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
         <div className="mb-6 flex flex-col items-center text-white">
           <Image src="/logo.png" alt="Easy2Book" width={56} height={56} className="rounded-full bg-white" priority />
           <h1 className="mt-3 text-2xl font-black">Espace équipe</h1>
-          <p className="text-sm text-violet-200">Easy2Book · leads, catalogue et statistiques</p>
+          <p className="text-sm text-violet-200">Leads, catalogue et statistiques</p>
         </div>
         <div className="bg-white rounded-3xl shadow-2xl p-6">
           {authConfigured() ? (
@@ -20,7 +20,7 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
             <p className="text-sm text-red-700">Connexion non configurée (LANDING_SUPABASE_URL / LANDING_SUPABASE_PUBLISHABLE_KEY).</p>
           )}
         </div>
-        <p className="mt-4 text-center text-xs text-violet-300">Accès réservé à l&apos;équipe Easy2Book.</p>
+        <p className="mt-4 text-center text-xs text-violet-300">Accès réservé aux équipes invitées.</p>
       </div>
     </main>
   )
