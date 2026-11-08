@@ -15,6 +15,7 @@ import {
   signOut,
   type Staff,
 } from "@/lib/server/auth"
+import { isPlatformAdmin } from "@/lib/server/tenant"
 import { rateLimited } from "@/lib/server/guard"
 import { STATUSES, isBooking } from "@/lib/status"
 import {
@@ -58,13 +59,15 @@ export async function loginAction(_prev: { error?: string } | undefined, fd: For
   const session = await signInWithPassword(email, password)
   if (!session?.user?.id) return { error: "Identifiants invalides." }
   const staff = await findStaff(session.user.id)
-  if (!staff) {
+  // Super Admin de la plateforme (sans fiche d'équipe) : accès à l'espace plateforme uniquement, jamais aux leads d'une entreprise
+  const superAdmin = !staff && (await isPlatformAdmin(session.user.id).catch(() => false))
+  if (!staff && !superAdmin) {
     await signOut(session.access_token)
     return { error: "Ce compte n'a pas accès à l'espace équipe." }
   }
   cookies().set(AT_COOKIE, session.access_token, cookieOptions(session.expires_in))
   cookies().set(RT_COOKIE, session.refresh_token, cookieOptions(60 * 60 * 24 * 30))
-  redirect(safeNext(field(fd, "next")))
+  redirect(superAdmin ? "/admin/plateforme" : safeNext(field(fd, "next")))
 }
 
 export async function logoutAction(): Promise<void> {

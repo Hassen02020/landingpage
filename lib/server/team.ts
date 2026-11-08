@@ -23,14 +23,14 @@ export function tempPassword(length = 14): string {
   return s
 }
 
-function adminCfg() {
+export function adminCfg() {
   const url = process.env.LANDING_SUPABASE_URL?.replace(/\/$/, "")
   const key = process.env.LANDING_SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error("Base non configurée")
   return { url, headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" } }
 }
 
-async function findAuthUserId(email: string): Promise<string | null> {
+export async function findAuthUserId(email: string): Promise<string | null> {
   const { url, headers } = adminCfg()
   for (let page = 1; page <= 10; page++) {
     const res = await fetch(`${url}/auth/v1/admin/users?page=${page}&per_page=200`, { headers, cache: "no-store" })

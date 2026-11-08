@@ -2,7 +2,7 @@
 // Preuve que chaque entreprise ne voit, ne lit et n'écrit QUE chez elle, et que le site public reste celui d'Easy2Book.
 //   LANDING_ADMIN_API_KEY=<32+ caractères> bash tests/e2e/run-fake.sh tests/e2e/multi-tenant.e2e.mjs   (ou : bash tests/e2e/run-multi.sh)
 import { createRequire } from "node:module"
-import { createFakeSupabase, ADMIN, AGENT, BOB, BOB_ORG } from "./fake-supabase.mjs"
+import { createFakeSupabase, ADMIN, AGENT, BOB, BOB_ORG, SUPER } from "./fake-supabase.mjs"
 const { chromium } = createRequire(import.meta.url)("playwright")
 
 const BASE = process.argv[2] || "http://localhost:3458"
@@ -189,6 +189,122 @@ const B = await session(BOB.email, BOB.password)
   await B.ctx.close()
 }
 
+// ================================================================ C4. ONBOARDING (chantier 05) : le Super Admin crée une entreprise ; son administrateur, invité par e-mail, entre chez lui seulement
+let CAROL_ORG = null
+{
+  const S = await session(SUPER.email, SUPER.password)
+  check("Super Admin : la connexion mène à l'espace plateforme (pas au CRM d'une entreprise)", /\/admin\/plateforme/.test(S.page.url()), S.page.url())
+  const home = await body(S.page)
+  check("Super Admin : voit la liste des entreprises, AUCUN lead d'aucune entreprise", home.includes("Entreprises") && home.includes("Bob SARL") && leaks(home, [...E2B_MARKERS, ...BOB_MARKERS.filter((m) => m !== "bob-sarl" && m !== "Bob Directeur")]).length === 0, leaks(home, E2B_MARKERS).join(","))
+  for (const path of ["/admin", `/admin/leads/${e2bLeads()[0].id}`, "/admin/clients", "/admin/export?format=csv"]) {
+    const r = await S.page.goto(`${BASE}${path}`, { waitUntil: "networkidle" })
+    const t = await body(S.page)
+    check(`Super Admin : ${path} ne donne accès à aucun lead`, (/\/admin\/(plateforme|login)/.test(S.page.url()) || [401, 403].includes(r?.status() ?? 0)) && leaks(t, [...E2B_MARKERS, "Bobclient"]).length === 0 && !t.includes(e2bLeads()[0].ref), `${S.page.url()} ${r?.status()}`)
+  }
+  await open(S.page, "/admin/plateforme")
+  check("plateforme : l'organisation de la plateforme ne peut pas être suspendue (pas de bouton)", (await S.page.getByRole("row", { name: /Easy2Book/ }).getByRole("button", { name: "Suspendre" }).count()) === 0)
+
+  // création d'une entreprise
+  await S.page.fill('input[name="name"]', "Carol Voyages")
+  await S.page.fill('input[name="admin_email"]', "Carol@Carol.tn")
+  await S.page.fill('input[name="admin_name"]', "Carol Directrice")
+  await S.page.getByRole("button", { name: /Créer l'entreprise/ }).click()
+  await S.page.getByText(/Une invitation a été envoyée/).waitFor({ timeout: 10000 }).catch(() => {})
+  const carol = db.organizations.find((o) => o.slug === "carol-voyages")
+  CAROL_ORG = carol?.id
+  check("création : l'entreprise existe (identifiant tiré du nom), active", carol?.status === "active", JSON.stringify(carol))
+  const cs = db.landing_staff.find((x) => x.email === "carol@carol.tn")
+  check("création : son premier administrateur est rattaché à CETTE entreprise, rôle administrateur", cs?.organization_id === CAROL_ORG && cs?.role === "admin" && db.organization_members.some((m) => m.user_id === cs.user_id && m.organization_id === CAROL_ORG && m.role === "admin"))
+  const invite = fake.invites.find((i) => i.email === "carol@carol.tn")
+  check("création : une invitation par e-mail est émise, qui renvoie vers /admin/invitation (aucun mot de passe transmis)", !!invite && /\/admin\/invitation$/.test(decodeURIComponent(invite.redirectTo ?? "")) && !JSON.stringify(db).includes("Carol-Passw0rd"))
+  await open(S.page, "/admin/plateforme")
+  check("plateforme : la nouvelle entreprise apparaît avec 1 membre et 1 administrateur", /Carol Voyages/.test(await body(S.page)))
+
+  // refus : identifiant déjà pris, adresse déjà rattachée
+  await S.page.fill('input[name="name"]', "Bob SARL")
+  await S.page.fill('input[name="admin_email"]', "autre@x.tn")
+  await S.page.getByRole("button", { name: /Créer l'entreprise/ }).click()
+  await S.page.getByText(/déjà utilisé/).waitFor({ timeout: 8000 }).catch(() => {})
+  check("refus : un identifiant d'entreprise déjà pris est refusé", (await body(S.page)).includes("déjà utilisé") && db.organizations.filter((o) => o.slug === "bob-sarl").length === 1)
+  await S.page.fill('input[name="name"]', "Dave Tours")
+  await S.page.fill('input[name="admin_email"]', "bob@bob-sarl.tn")
+  await S.page.getByRole("button", { name: /Créer l'entreprise/ }).click()
+  await S.page.waitForTimeout(1500)
+  check("refus : un compte déjà rattaché à une entreprise ne devient pas administrateur d'une autre", !db.organizations.some((o) => o.slug === "dave-tours"))
+
+  await S.page.fill('input[name="name"]', "Eve Holding")
+  await S.page.fill('input[name="admin_email"]', SUPER.email)
+  await S.page.getByRole("button", { name: /Créer l'entreprise/ }).click()
+  await S.page.getByText(/Super Admin ne peut pas/).waitFor({ timeout: 8000 }).catch(() => {})
+  check("refus : le compte Super Admin ne peut pas être l'administrateur d'une entreprise (il lirait ses leads)", !db.organizations.some((o) => o.slug === "eve-holding") && (await body(S.page)).includes("Super Admin ne peut pas"))
+
+  // le premier administrateur accepte l'invitation
+  const ictx = await browser.newContext()
+  const ip = await ictx.newPage()
+  await ip.goto(`${BASE}/admin/invitation#access_token=${invite.token}`, { waitUntil: "networkidle" })
+  await ip.fill('input[name="password"]', "Carol-Passw0rd!")
+  await ip.fill('input[name="again"]', "Carol-Passw0rd!")
+  await Promise.all([ip.waitForURL(/\/admin\/login/, { timeout: 15000 }), ip.getByRole("button", { name: "Choisir mon mot de passe" }).click()])
+  check("invitation : le premier administrateur choisit son mot de passe puis arrive sur la connexion", /\/admin\/login/.test(ip.url()))
+  await ictx.close()
+  const bad = await browser.newContext()
+  const bp = await bad.newPage()
+  await bp.goto(`${BASE}/admin/invitation#access_token=jeton-invalide`, { waitUntil: "networkidle" })
+  await bp.fill('input[name="password"]', "Carol-Passw0rd!2")
+  await bp.fill('input[name="again"]', "Carol-Passw0rd!2")
+  await bp.getByRole("button", { name: "Choisir mon mot de passe" }).click()
+  await bp.getByText(/invalide ou expiré/).waitFor({ timeout: 8000 }).catch(() => {})
+  check("invitation : un jeton invalide ne permet de choisir aucun mot de passe", (await body(bp)).includes("invalide ou expiré") && !fake.users.some((u) => u.password === "Carol-Passw0rd!2"))
+  await bad.close()
+  await open(bp.context().pages()[0] ? S.page : S.page, "/admin/plateforme")
+
+  // l'administrateur de la nouvelle entreprise : CRM vide, rien des autres, écritures chez lui
+  const C = await session("carol@carol.tn", "Carol-Passw0rd!")
+  const ch = await open(C.page, "/admin")
+  check("nouvelle entreprise : son CRM est vide et n'affiche aucune donnée d'Easy2Book ni de Bob SARL", ch.status === 200 && leaks(ch.text, [...E2B_MARKERS, ...BOB_MARKERS]).length === 0 && (await C.page.locator('input[name="ids"]').count()) === 0, leaks(ch.text, E2B_MARKERS).join(","))
+  const cdirect = await open(C.page, `/admin/leads/${e2bLeads()[0].id}`)
+  check("nouvelle entreprise : ouvrir DIRECTEMENT un lead d'Easy2Book → 404", cdirect.status === 404)
+  const cteam = await open(C.page, "/admin/equipe")
+  check("nouvelle entreprise : son équipe = son administrateur uniquement", cteam.text.includes("Carol Directrice") && !cteam.text.includes("Direction") && !cteam.text.includes("Bob Directeur"), cteam.text.slice(0, 120))
+  const plat = await open(C.page, "/admin/plateforme")
+  check("nouvelle entreprise : l'espace plateforme lui est fermé", !plat.text.includes("Nouvelle entreprise") && /\/admin\/login/.test(C.page.url()), C.page.url())
+  const C2 = await session("carol@carol.tn", "Carol-Passw0rd!")
+  await open(C2.page, "/admin/promos")
+  await C2.page.fill('input[name="code"]', "RAMADAN27")
+  await C2.page.fill('input[name="title"]', "Promo Carol")
+  await C2.page.fill('input[name="discountValue"]', "12")
+  await C2.page.selectOption('select[name="discountType"]', "percent")
+  await C2.page.getByRole("button", { name: "Créer le code" }).click()
+  await C2.page.getByText("Code promo créé").waitFor({ timeout: 8000 }).catch(() => {})
+  check("nouvelle entreprise : peut créer RAMADAN27 (même code qu'Easy2Book et Bob), rattaché à elle seule", db.landing_promo_codes.filter((c) => c.code === "RAMADAN27" && c.organization_id === CAROL_ORG).length === 1)
+  await C.ctx.close(); await C2.ctx.close()
+
+  // un administrateur d'entreprise n'est pas Super Admin
+  const B = await session(BOB.email, BOB.password)
+  const bp2 = await open(B.page, "/admin/plateforme")
+  check("administrateur d'une entreprise : l'espace plateforme lui est fermé (renvoi vers la connexion)", !bp2.text.includes("Nouvelle entreprise") && /\/admin\/login/.test(B.page.url()), B.page.url())
+  await B.ctx.close()
+
+  // suspension : l'administrateur suspendu n'entre plus
+  await open(S.page, "/admin/plateforme")
+  await S.page.getByRole("row", { name: /Carol Voyages/ }).getByRole("button", { name: "Suspendre" }).click()
+  await S.page.waitForTimeout(1500)
+  check("suspension : l'entreprise passe à « suspendue »", db.organizations.find((o) => o.id === CAROL_ORG)?.status === "suspended")
+  const sctx = await browser.newContext()
+  const sp = await sctx.newPage()
+  await sp.goto(`${BASE}/admin/login`)
+  await sp.fill("input[name=email]", "carol@carol.tn")
+  await sp.fill("input[name=password]", "Carol-Passw0rd!")
+  await sp.click("button[type=submit]")
+  await sp.getByText(/n'a pas accès/).waitFor({ timeout: 10000 }).catch(() => {})
+  check("suspension : l'administrateur de l'entreprise suspendue ne peut plus se connecter", /\/admin\/login/.test(sp.url()) && (await body(sp)).includes("n'a pas accès"))
+  await sctx.close()
+  await S.page.getByRole("row", { name: /Carol Voyages/ }).getByRole("button", { name: "Réactiver" }).click()
+  await S.page.waitForTimeout(1500)
+  check("réactivation : l'entreprise redevient active", db.organizations.find((o) => o.id === CAROL_ORG)?.status === "active")
+  await S.ctx.close()
+}
+
 // ================================================================ D. Easy2Book n'a rien reçu de Bob ; accès sans compte
 {
   const home = await open(A.page, "/admin")
@@ -209,10 +325,11 @@ const B = await session(BOB.email, BOB.password)
 {
   const biz = fake.calls.filter((c) => fake.TENANT_TABLES.some((t) => c.split("?")[0].endsWith(`/rest/v1/${t}`)))
   const reads = biz.filter((c) => !c.startsWith("POST "))
-  const unscoped = reads.filter((c) => !c.includes(`organization_id=eq.${E2B}`) && !c.includes(`organization_id=eq.${BOB_ORG}`))
+  const knownOrgs = db.organizations.map((o) => o.id)
+  const unscoped = reads.filter((c) => !knownOrgs.some((id) => c.includes(`organization_id=eq.${id}`)))
   check(`isolation : ${reads.length} lectures / modifications de tables d'entreprise, TOUTES filtrées par une organisation (aucune sans filtre)`, reads.length > 100 && unscoped.length === 0, unscoped.slice(0, 3).join(" | "))
   check("isolation : chaque insertion envoyée par le site porte organization_id", fake.postsWithoutOrg.length === 0, fake.postsWithoutOrg.join(","))
-  const otherOrg = fake.TENANT_TABLES.flatMap((t) => db[t] ?? []).filter((r) => r.organization_id !== E2B && r.organization_id !== BOB_ORG)
+  const otherOrg = fake.TENANT_TABLES.flatMap((t) => db[t] ?? []).filter((r) => !db.organizations.some((o) => o.id === r.organization_id))
   check("isolation : aucune ligne dans une organisation inconnue", otherOrg.length === 0)
   const mixedActs = db.landing_lead_activities.filter((a) => db.landing_leads.find((l) => l.id === a.lead_id)?.organization_id !== a.organization_id)
   check("isolation : toute ligne d'historique appartient à l'organisation de son lead", mixedActs.length === 0, String(mixedActs.length))
