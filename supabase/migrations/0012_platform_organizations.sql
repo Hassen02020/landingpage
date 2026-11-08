@@ -39,6 +39,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_admin_user) THEN
     RAISE EXCEPTION 'Compte du premier administrateur introuvable' USING ERRCODE = '23503';
   END IF;
+  -- le Super Admin ne lit aucun lead : son compte ne peut jamais être administrateur d'une entreprise
+  IF EXISTS (SELECT 1 FROM public.platform_admins WHERE user_id = p_admin_user) THEN
+    RAISE EXCEPTION 'Un compte Super Admin ne peut pas être administrateur d''une entreprise' USING ERRCODE = '42501';
+  END IF;
   -- un compte appartient à UNE seule entreprise (pas encore de sélecteur d'organisation)
   IF EXISTS (SELECT 1 FROM public.organization_members WHERE user_id = p_admin_user)
      OR EXISTS (SELECT 1 FROM public.landing_staff WHERE user_id = p_admin_user) THEN

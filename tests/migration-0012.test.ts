@@ -95,6 +95,14 @@ describe("création d'une entreprise", () => {
     expect((await db.query<{ n: number }>("SELECT count(*)::int AS n FROM organizations")).rows[0].n).toBe(2)
   })
 
+  it("un compte Super Admin ne peut pas devenir administrateur d'une entreprise (il lirait ses leads)", async () => {
+    await exec(M11)
+    await expect(asService(() => call(SUPER, SUPER, "moi"))).rejects.toThrow(/Super Admin ne peut pas/)
+    await exec("ROLLBACK").catch(() => undefined)
+    expect((await db.query<{ n: number }>("SELECT count(*)::int AS n FROM organizations")).rows[0].n).toBe(1)
+    expect((await db.query<{ n: number }>("SELECT count(*)::int AS n FROM landing_staff WHERE user_id = $1", [SUPER])).rows[0].n).toBe(0)
+  })
+
   it("anon et authenticated ne peuvent pas appeler les fonctions", async () => {
     await exec(M11)
     for (const role of ["anon", "authenticated"]) {

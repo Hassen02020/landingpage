@@ -269,6 +269,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
         const a = json
         const fail = (code, message) => send(res, 400, { code, message })
         if (!(db.platform_admins ?? []).some((x) => x.user_id === a.p_actor)) return fail("42501", "Réservé au Super Admin de la plateforme")
+        if ((db.platform_admins ?? []).some((x) => x.user_id === a.p_admin_user)) return fail("42501", "Un compte Super Admin ne peut pas être administrateur d'une entreprise")
         if (!users.some((u) => u.id === a.p_admin_user)) return fail("23503", "Compte du premier administrateur introuvable")
         if (db.organization_members.some((m) => m.user_id === a.p_admin_user)) return fail("23505", "Ce compte est déjà rattaché à une entreprise")
         if (db.organizations.some((o) => o.slug === a.p_slug)) return fail("23505", "slug")

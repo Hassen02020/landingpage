@@ -248,3 +248,8 @@ Le code de cette PR **ne doit pas** être déployé avant 0010 (il envoie `p_org
 3. Appliquer **0011** (verrou de 0010 contre une 2ᵉ organisation) puis **0012**, dans cet ordre, après sauvegarde.
 
 **Reste à faire (partie B, chantier 05) :** formulaires adaptatifs par entreprise (champs, produits, obligatoires), qui supposent une page publique par entreprise (chantier 07, constructeur de site) ; sans elle, une 2ᵉ entreprise n'a pas encore de formulaire public. **Limites actuelles :** une seule entreprise publique (Easy2Book) ; un compte = une entreprise ; pas de sélecteur d'organisation ; le Super Admin ne peut pas encore changer l'administrateur d'une entreprise.
+
+**Audit de la PR 16 (08/11/2026) — deux défauts trouvés et corrigés avant validation.**
+1. *Un compte Super Admin pouvait être rattaché comme administrateur d'une entreprise* (et donc lire ses leads, contre la règle). La fonction 0012 le refuse ; test PostgreSQL et test e2e.
+2. *Les messages d'erreur précis de la base n'arrivaient pas à l'écran* : `DbError` ne portait pas le texte PostgreSQL (verrou 0011, compte déjà rattaché…), l'écran aurait affiché un message générique. `DbError.pgMessage` (texte de nos propres fonctions, jamais dans les journaux) ; 5 tests.
+Points relevés, non bloquants : un échec entre l'invitation et la création laisse un compte invité sans entreprise (sans accès ; une nouvelle tentative le réutilise) ; les erreurs de suspension / réactivation ne sont pas affichées à l'écran ; l'envoi d'e-mails dépend du SMTP (voir `docs/PLAN_ONBOARDING_PROD.md`).

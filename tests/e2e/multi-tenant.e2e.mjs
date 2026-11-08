@@ -232,6 +232,12 @@ let CAROL_ORG = null
   await S.page.waitForTimeout(1500)
   check("refus : un compte déjà rattaché à une entreprise ne devient pas administrateur d'une autre", !db.organizations.some((o) => o.slug === "dave-tours"))
 
+  await S.page.fill('input[name="name"]', "Eve Holding")
+  await S.page.fill('input[name="admin_email"]', SUPER.email)
+  await S.page.getByRole("button", { name: /Créer l'entreprise/ }).click()
+  await S.page.getByText(/Super Admin ne peut pas/).waitFor({ timeout: 8000 }).catch(() => {})
+  check("refus : le compte Super Admin ne peut pas être l'administrateur d'une entreprise (il lirait ses leads)", !db.organizations.some((o) => o.slug === "eve-holding") && (await body(S.page)).includes("Super Admin ne peut pas"))
+
   // le premier administrateur accepte l'invitation
   const ictx = await browser.newContext()
   const ip = await ictx.newPage()

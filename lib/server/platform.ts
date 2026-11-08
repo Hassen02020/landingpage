@@ -119,9 +119,10 @@ export async function createOrganization(input: CreateOrgInput, actor: PlatformA
     })
     return { ok: true, organizationId, slug, email, invited: invite.invited }
   } catch (e) {
-    const msg = e instanceof DbError ? e.message : ""
+    const msg = e instanceof DbError ? e.pgMessage ?? "" : ""
     if (/0011/.test(msg)) return { ok: false, error: "Création impossible : la migration 0011 doit d'abord être appliquée (verrou contre une 2ᵉ organisation)." }
     if (/déjà rattaché/.test(msg)) return { ok: false, error: "Ce compte appartient déjà à une entreprise : utilisez une autre adresse." }
+    if (/Super Admin ne peut pas/.test(msg)) return { ok: false, error: "Un compte Super Admin ne peut pas être administrateur d'une entreprise : utilisez une autre adresse." }
     if (/Super Admin/.test(msg)) return { ok: false, error: "Action réservée au Super Admin." }
     if (e instanceof DbError && e.isUniqueViolation) return { ok: false, error: "Identifiant d'entreprise déjà utilisé." }
     return { ok: false, error: "Création refusée par la base (migration 0012 appliquée ?). Aucune entreprise n'a été créée." }
@@ -134,7 +135,7 @@ export async function setOrganizationStatus(orgId: string, status: "active" | "s
     await rpc("landing_set_organization_status", { p_org: orgId, p_status: status, p_actor: actor.userId })
     return { ok: true }
   } catch (e) {
-    const msg = e instanceof DbError ? e.message : ""
+    const msg = e instanceof DbError ? e.pgMessage ?? "" : ""
     if (/plateforme/.test(msg)) return { ok: false, error: "L'organisation de la plateforme ne peut pas être suspendue." }
     return { ok: false, error: "Modification refusée." }
   }

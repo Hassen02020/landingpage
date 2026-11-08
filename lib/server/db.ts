@@ -10,7 +10,8 @@ import { isOrgId } from "@/lib/org-id"
 export class DbConfigError extends Error {}
 
 export class DbError extends Error {
-  constructor(public status: number, public code: string | undefined, message: string) {
+  // pgMessage : texte de l'erreur PostgreSQL (nos propres fonctions SQL), jamais inclus dans `message` ni dans les journaux
+  constructor(public status: number, public code: string | undefined, message: string, public pgMessage?: string) {
     super(message)
   }
   get isUniqueViolation() {
@@ -282,7 +283,7 @@ async function request<T>(path: string, init: RequestInit & { prefer?: string } 
   if (!res.ok) {
     const detail = (await res.json().catch(() => ({}))) as { code?: string; message?: string }
     // pas de corps de requête dans l'erreur (données personnelles)
-    throw new DbError(res.status, detail.code, `Supabase ${res.status} ${detail.code ?? ""}`.trim())
+    throw new DbError(res.status, detail.code, `Supabase ${res.status} ${detail.code ?? ""}`.trim(), typeof detail.message === "string" ? detail.message.slice(0, 300) : undefined)
   }
   if (res.status === 204) return undefined as T
   // PostgREST répond 201 avec un corps VIDE pour « return=minimal » : ne pas appeler res.json()
