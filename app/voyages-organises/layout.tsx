@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/voyages-organises" },
   title: "Voyages Organisés 2026-2027 — Easy2Book",
   description:
     "Voyages organisés au départ de Tunis : Australie, Japon, Égypte, Jordanie, Turquie, Maroc, Chine… Départs de novembre 2026 à mai 2027, prix à partir de 1 950 TND par personne. Programme sur demande.",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
       "Premium, Individuel garanti et Standard : découvrez nos départs de novembre 2026 à mai 2027 et demandez le programme sur WhatsApp.",
     url: "https://landingpage-easy2book.vercel.app/voyages-organises",
     siteName: "Easy2Book",
-    images: ["https://landingpage-easy2book.vercel.app/logo.png"],
+    images: ["https://landingpage-easy2book.vercel.app/og-easy2book.jpg"],
     locale: "fr_TN",
     type: "website",
   },

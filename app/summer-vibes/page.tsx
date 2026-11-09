@@ -6,11 +6,8 @@ import Image from "next/image"
 import { CTAButton } from "./components/CTAButton"
 import { CategoriesSection } from "./components/CategoriesSection"
 import { HotelPromosSection } from "./components/HotelPromosSection"
-import { TestimonialsSlider } from "./components/TestimonialsSlider"
-import { CountdownTimer } from "./components/CountdownTimer"
 import { FAQAccordion } from "./components/FAQAccordion"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
-import { STATS } from "./data/stats"
 import { CATEGORIES } from "./config"
 import { SiteFooter } from "@/app/components/SiteFooter"
 import { SiteHeader } from "@/app/components/SiteHeader"
@@ -180,7 +177,7 @@ export default function SummerVibesPage() {
           className="relative z-10 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
           style={{ backgroundColor: "rgba(245,194,66,0.18)", color: "#f5c242", border: "1px solid rgba(245,194,66,0.35)" }}
         >
-          🏷️ Promo du mois — Places limitées
+          🏷️ Promo du mois
         </span>
 
         <h1 className="relative z-10 text-white font-extrabold leading-tight mb-4 [text-shadow:0_2px_14px_rgba(0,0,0,0.55)]" style={{ fontSize: "clamp(2.2rem, 7vw, 4rem)" }}>
@@ -195,10 +192,10 @@ export default function SummerVibesPage() {
         {/* Avantages - 4 points clés */}
         <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 max-w-3xl w-full">
           {[
-            { icon: "⚡", text: "Réponse < 15 min" },
-            { icon: "💰", text: "Meilleurs prix" },
-            { icon: "💳", text: "Paiement simple" },
-            { icon: "🎧", text: "Assistance 24/7" },
+            { icon: "💬", text: "Réponse sur WhatsApp" },
+            { icon: "🏷️", text: "29 hôtels en promo" },
+            { icon: "🧾", text: "Devis gratuit" },
+            { icon: "🤝", text: "Conseiller dédié" },
           ].map((item) => (
             <div
               key={item.text}
@@ -224,35 +221,16 @@ export default function SummerVibesPage() {
         </div>
       </section>
 
-      {/* COMPTEUR URGENCE */}
-      <section className="py-8 px-5" style={{ backgroundColor: "#fef3c7" }}>
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <span className="text-2xl">🔥</span>
-            <h2 className="font-extrabold text-lg" style={{ color: "#92400e" }}>Promo du mois — Places limitées</h2>
-          </div>
-          <p className="text-sm mb-4" style={{ color: "#78350f" }}>Fin des promotions dans :</p>
-          <CountdownTimer />
-          <p className="text-xs mt-4" style={{ color: "#78350f" }}>Les tarifs augmentent progressivement selon disponibilité.</p>
-        </div>
-      </section>
-
-      {/* PREUVE SOCIALE */}
-      <section className="py-12 px-5 bg-white">
-        <div className="max-w-5xl mx-auto">
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-12 text-center">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="flex flex-col items-center">
-                <span className="text-3xl mb-1">{stat.icon}</span>
-                <span className="text-2xl font-extrabold" style={{ color: "#0f4c81" }}>{stat.value}</span>
-                <span className="text-sm text-gray-600">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Avis clients - Slider */}
-          <TestimonialsSlider />
+      {/* CONDITIONS COMMERCIALES */}
+      <section aria-labelledby="conditions" className="py-10 px-5 bg-white">
+        <div className="max-w-3xl mx-auto rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <h2 id="conditions" className="font-extrabold text-lg text-amber-900 mb-3">Conditions des promotions</h2>
+          <ul className="space-y-2 text-sm text-amber-950 list-disc pl-5">
+            <li>Les prix affichés sont des tarifs « à partir de », indicatifs, par personne et par nuit.</li>
+            <li>Les réductions et prix sont confirmés sur WhatsApp selon vos dates, la composition de votre groupe et la disponibilité.</li>
+            <li>Aucune date de validité n&apos;est affichée : l&apos;offre applicable vous est confirmée avant toute réservation.</li>
+            <li>Les conditions de paiement et d&apos;annulation dépendent de chaque hôtel et vous sont communiquées avant de réserver.</li>
+          </ul>
         </div>
       </section>
 
@@ -285,9 +263,9 @@ export default function SummerVibesPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { emoji: "💳", title: "Payez une avance — Le reste à l'hôtel", desc: "Bloquez votre chambre avec un simple acompte. Vous réglez le solde directement à l'arrivée. Zéro stress.", highlight: true },
-              { emoji: "🏷️", title: "Meilleurs Prix Garantis", desc: "Nous négocions pour vous les tarifs les plus bas directement auprès des hôtels partenaires.", highlight: false },
-              { emoji: "🎧", title: "Support Local 24/7", desc: "Une équipe tunisienne à votre écoute à toute heure sur WhatsApp pour répondre à chaque question.", highlight: false },
+              { emoji: "💬", title: "Réservation sur WhatsApp", desc: "Choisissez votre hôtel, envoyez vos dates : un conseiller Easy2Book vous confirme le tarif et les conditions.", highlight: true },
+              { emoji: "🏷️", title: "Promos hôtels en Tunisie", desc: "29 hôtels en promotion, avec la réduction et le prix « à partir de » par personne et par nuit.", highlight: false },
+              { emoji: "🇹🇳", title: "Équipe tunisienne", desc: "Une équipe locale à votre écoute sur WhatsApp et par téléphone pour répondre à vos questions.", highlight: false },
               { emoji: "🏖️", title: "Hammamet · Sousse · Djerba", desc: "Large sélection d'hôtels dans les plus belles destinations balnéaires de Tunisie.", highlight: false },
             ].map(({ emoji, title, desc, highlight }) => (
               <div

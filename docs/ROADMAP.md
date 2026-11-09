@@ -179,3 +179,5 @@ Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des do
 
 ## Chantier 07 — audit et amélioration UI/UX du frontend public (09/11/2026)
 Audit mesuré (axe-core, captures mobile 390 px et ordinateur 1366 px, poids, débordements) sur `/`, `/omra`, `/voyages-organises`, `/summer-vibes`. **Avant : 15 à 76 défauts d'accessibilité par page** (contrastes insuffisants sur les boutons verts, le texte gris et les couleurs d'accent ; aucune zone `main` ; page arabe déclarée en français ; ordre des titres ; zones tactiles trop petites ; logo de 1,4 Mo ; image d'en-tête de 1 600 px servie à un mobile de 390 px). **Après : 0 défaut axe sur les 8 vues.** Détail dans `docs/UI_AUDIT_07.md`.
+
+| AUDIT-FRONT-09 | Suites de l'audit frontend (prix Omra, urgence, preuves, SEO, confidentialité) | `docs/AUDIT_FRONT_09.md` |

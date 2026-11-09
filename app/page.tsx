@@ -39,9 +39,9 @@ const OFFERS: {
     product: "omra",
     href: "/omra",
     emoji: "🕋",
-    title: "Omra Ramadan 2027",
+    title: "Omra Ramadan & Chawwal 2027",
     subtitle: "14 nuits · Makkah & Médine",
-    price: "À partir de 4 800 TND",
+    price: "Ramadan dès 5 500 TND · Chawwal dès 4 800 TND",
     points: ["Visa + assurance + vol inclus", "Hôtel 3★ proche du Haram", "Accompagnatrice femme"],
     color: "from-emerald-700 to-emerald-900",
   },
@@ -89,8 +89,7 @@ export default function HomePage() {
             Voyages organisés, Omra & <span className="text-amber-400">promos hôtels</span>
           </h1>
           <p className="text-lg text-blue-100 max-w-2xl mx-auto mb-8">
-            Choisissez votre offre, recevez votre devis sur WhatsApp en quelques minutes. Réservation simple, conseillers à
-            votre écoute 7j/7.
+            Choisissez votre offre, recevez votre devis gratuit sur WhatsApp. Réservation simple, avec un conseiller Easy2Book.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a

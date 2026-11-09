@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/omra" },
   title: "عمرة رمضان 2027 + عمرة شوال — Easy2Book 🕋",
   description:
     "رحلة عمرة ابتداءً من 4800 د.ت — فندق أرائك غزة ⭐⭐⭐ — تأشيرة + تأمين + طيران — أفواج 27 جانفي و18 فيفري و15 مارس 2027. احجز مكانك الآن مع Easy2Book!",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     siteName: "Easy2Book",
     images: [
       {
-        url: "https://landingpage-easy2book.vercel.app/logo.png",
+        url: "https://landingpage-easy2book.vercel.app/og-easy2book.jpg",
         width: 1200,
         height: 630,
         alt: "Easy2Book عمرة رمضان 2027",
@@ -25,10 +26,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "عمرة رمضان 2027 + شوال — ابتداءً من 4800 د.ت 🕋",
     description: "احجز رحلة عمرتك في رمضان 2027 مع Easy2Book — ابتداءً من 4800 د.ت",
-    images: ["https://landingpage-easy2book.vercel.app/logo.png"],
-  },
-  other: {
-    "fb:page_id": "Easy2Bookplateforme",
+    images: ["https://landingpage-easy2book.vercel.app/og-easy2book.jpg"],
   },
 }
 

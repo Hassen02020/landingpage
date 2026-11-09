@@ -260,10 +260,10 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
             {[
               { icon: "🤝", title: "Réseau de partenaires", desc: "Hôtels, compagnies aériennes et guides sélectionnés pour vous garantir la meilleure expérience au meilleur prix." },
               { icon: "💰", title: "Prix négociés", desc: "Grâce aux voyages en groupe et à notre expertise du marché, nous proposons des tarifs très compétitifs." },
-              { icon: "🎯", title: "Programme clé en main", desc: "Tout est inclus : vols, hôtels, transfers, visites guidées. Vous n'avez qu'à profiter." },
+              { icon: "🎯", title: "Programme détaillé", desc: "Le programme et les prestations de chaque départ vous sont envoyés sur WhatsApp avant votre décision." },
               { icon: "👨‍✈️", title: "Guides expérimentés", desc: "Cyrine & Nawel — chargées de voyage disponibles avant et pendant tout votre séjour." },
               { icon: "🔒", title: "Réservation sécurisée", desc: "50% à la confirmation, solde 30 jours avant le départ. Conditions d'annulation claires." },
-              { icon: "📞", title: "Support local 24/7", desc: "Une équipe tunisienne à votre écoute : par téléphone, email ou WhatsApp à toute heure." },
+              { icon: "📞", title: "Équipe locale", desc: "Une équipe tunisienne à votre écoute par téléphone ou sur WhatsApp." },
             ].map((a, i) => (
               <div key={i} className="bg-gray-50 rounded-2xl p-6 hover:shadow-md transition-all border border-gray-100">
                 <div className="text-4xl mb-3">{a.icon}</div>
