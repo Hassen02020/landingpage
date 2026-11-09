@@ -27,7 +27,7 @@ const OFFERS: {
     href: "/voyages-organises",
     emoji: "✈️",
     title: "Voyages organisés",
-    subtitle: "Turquie · Malaisie & Bali · Égypte · Maroc",
+    subtitle: "Australie · Japon · Égypte · Jordanie · Turquie · Maroc",
     price: "Vols + hôtels + visites inclus",
     points: ["Départs garantis depuis Tunis", "Accompagnateur Easy2Book", "Paiement facilité"],
     image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&q=80",

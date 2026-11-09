@@ -5,6 +5,7 @@ import { SkipLink } from "@/app/components/SkipLink"
 import Image from "next/image"
 import { CTAButton } from "./components/CTAButton"
 import { CategoriesSection } from "./components/CategoriesSection"
+import { HotelPromosSection } from "./components/HotelPromosSection"
 import { TestimonialsSlider } from "./components/TestimonialsSlider"
 import { CountdownTimer } from "./components/CountdownTimer"
 import { FAQAccordion } from "./components/FAQAccordion"
@@ -341,6 +342,9 @@ export default function SummerVibesPage() {
           </div>
         </div>
       </section>
+
+      {/* PROMOS HÔTELS TUNISIE (fichier promos_hotels_tunisie) */}
+      <HotelPromosSection whatsappNumber={WHATSAPP_NUMBER} />
 
       {/* CATÉGORIES HÔTELS */}
       <CategoriesSection whatsappNumber={WHATSAPP_NUMBER} />
