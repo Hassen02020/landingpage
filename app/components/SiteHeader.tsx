@@ -26,7 +26,7 @@ export function SiteHeader({ cta, fixed = false, current }: { cta: ReactNode; fi
   return (
     <header className={`${fixed ? "fixed inset-x-0" : "sticky"} top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm`}>
       <div className="max-w-6xl mx-auto px-4 h-[72px] flex items-center justify-between gap-3">
-        <Link href="/" aria-label="Easy2Book, accueil" className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Image src="/logo.png" alt="" width={56} height={56} priority className="w-12 h-12 sm:w-14 sm:h-14 object-contain" />
           <span className="leading-tight">
             <span className="block font-black text-gray-900 text-base sm:text-lg tracking-tight">Easy2Book</span>
