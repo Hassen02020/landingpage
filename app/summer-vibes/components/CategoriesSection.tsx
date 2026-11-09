@@ -50,7 +50,7 @@ export function CategoriesSection({ whatsappNumber }: CategoriesSectionProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {current.hotels.map(({ name, city, tag, img }) => {
             const msg = encodeURIComponent(waText(
-              `Bonjour Easy2Book, je souhaite avoir le tarif pour l'hôtel ${name} (${city}) — Summer Vibes 2026 !`
+              `Bonjour Easy2Book, je souhaite avoir le tarif pour l'hôtel ${name} (${city}) — promo du mois !`
             ))
             const url = `https://wa.me/${whatsappNumber}?text=${msg}`
             return (

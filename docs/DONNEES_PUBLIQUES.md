@@ -20,8 +20,11 @@ Les modules sont **générés à partir des fichiers** (aucune retranscription �
 - La feuille « Départs passés » n'est pas affichée (départs terminés).
 - Les chiffres du bandeau de `/voyages-organises` (destinations, départs, catégories, prix de départ) sont **calculés** à partir des données ; les mentions non justifiées par le fichier (« 20+ dates », « 4★/5★ hôtels partenaires », « 100 % organisé & guidé », « Vol inclus / Hôtel sélectionné / Visites guidées / Groupe organisé ») ont été retirées de cette page.
 
+## `/summer-vibes` devient « Promo du mois » (09/11/2026, demande du propriétaire)
+Les mentions saisonnières « Été 2026 » / « Summer Vibes 2026 » sont remplacées par « Promo du mois » (badge, titre « Les promos du mois sur vos hôtels en Tunisie », bandeau d'urgence, titre et description de la page, messages WhatsApp). Le **compte à rebours vise désormais la fin du mois en cours (heure de Tunis)** : il visait le 31/07/2026 et affichait des zéros (`tests/countdown.test.ts`). Le bandeau Omra de la page annonce « عمرة رمضان وشوال 2027 », comme la page Omra. L'identifiant technique de campagne `summer_vibes_2026` (suivi des statistiques) est conservé pour ne pas couper l'historique.
+
 ## Contenus existants NON vérifiés (non modifiés, à valider par le propriétaire)
-`/summer-vibes` : titre « Été 2026 », « Places limitées — Été 2026 », compte à rebours, « 4.9/5 », « +1200 réservations », « +500 clients », catégories d'hôtels (El Mouradi…, « All inclusive », « Aquapark ») et témoignages. Accueil : « Vols + hôtels + visites inclus », « Départs garantis depuis Tunis ». `/voyages-organises` : section « Pourquoi choisir Easy2Book » (guides nommées, « support 24/7 »).
+`/summer-vibes` : « Places limitées », « Les tarifs augmentent progressivement », « 4.9/5 », « +1200 réservations », « +500 clients », catégories d'hôtels (El Mouradi…, « All inclusive », « Aquapark ») et témoignages. Accueil : « Vols + hôtels + visites inclus », « Départs garantis depuis Tunis ». `/voyages-organises` : section « Pourquoi choisir Easy2Book » (guides nommées, « support 24/7 »).
 
 ## Mettre à jour la prochaine fois
 Envoyer le nouveau fichier ; les modules sont régénérés et les tests de cohérence rejoués. À terme, ces listes pourraient être gérées depuis l'administration (module Catalogue existant) pour éviter toute intervention technique.

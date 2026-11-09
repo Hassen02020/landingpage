@@ -17,7 +17,7 @@ import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
 
 const WHATSAPP_MESSAGE = encodeURIComponent(waText(
-  "Bonjour Easy2Book, je souhaite avoir le tarif pour Summer Vibes 2026 !\n\nMerci de me préciser :\n- Date du congés\n- Nombre d'adultes\n- Âges des enfants\n- Zone : Hammamet / Monastir / Sousse / Tabarka / Mahdia / Djerba"
+  "Bonjour Easy2Book, je souhaite avoir le tarif pour la promo du mois !\n\nMerci de me préciser :\n- Date du congés\n- Nombre d'adultes\n- Âges des enfants\n- Zone : Hammamet / Monastir / Sousse / Tabarka / Mahdia / Djerba"
 ))
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`
 
@@ -217,12 +217,12 @@ export default function SummerVibesPage() {
           className="relative z-10 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
           style={{ backgroundColor: "rgba(245,194,66,0.18)", color: "#f5c242", border: "1px solid rgba(245,194,66,0.35)" }}
         >
-          🌴 Été 2026 — Places limitées
+          🏷️ Promo du mois — Places limitées
         </span>
 
         <h1 className="relative z-10 text-white font-extrabold leading-tight mb-4" style={{ fontSize: "clamp(2.2rem, 7vw, 4rem)" }}>
-          Vos vacances d'été<br />
-          <span style={{ color: "#f5c242" }}>commencent ici</span>
+          Les promos du mois<br />
+          <span style={{ color: "#f5c242" }}>sur vos hôtels en Tunisie</span>
         </h1>
 
         <p className="relative z-10 text-blue-100 text-lg sm:text-xl max-w-2xl mb-8 leading-relaxed">
@@ -266,7 +266,7 @@ export default function SummerVibesPage() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
             <span className="text-2xl">🔥</span>
-            <h2 className="font-extrabold text-lg" style={{ color: "#92400e" }}>Places limitées — Été 2026</h2>
+            <h2 className="font-extrabold text-lg" style={{ color: "#92400e" }}>Promo du mois — Places limitées</h2>
           </div>
           <p className="text-sm mb-4" style={{ color: "#78350f" }}>Fin des promotions dans :</p>
           <CountdownTimer />
@@ -385,7 +385,7 @@ export default function SummerVibesPage() {
             >
               <span className="text-2xl">🕋</span>
               <div className="text-left">
-                <div className="text-base font-black">عمرة الصيف 2026</div>
+                <div className="text-base font-black">عمرة رمضان وشوال 2027</div>
                 <div className="text-emerald-50 text-xs font-semibold">3 أفواج — 4 800 TND</div>
               </div>
             </a>
