@@ -150,13 +150,13 @@ export default function SummerVibesPage() {
       <SiteHeader
         fixed
         current="/summer-vibes"
-        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 sm:px-5 py-2.5 rounded-full shrink-0 shadow transition-colors" />}
+        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm sm:text-base font-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 shadow transition-colors" />}
       />
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
       <section
-        className="relative flex flex-col items-center justify-center text-center px-5 pt-24 pb-20 overflow-hidden"
+        className="relative flex flex-col items-center justify-center text-center px-5 pt-32 pb-20 overflow-hidden"
         style={{ minHeight: "92vh" }}
       >
         {/* Fond : photo d'automne en famille (Adobe Stock, licence achetée) + voile léger pour garder le texte lisible */}

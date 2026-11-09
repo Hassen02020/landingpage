@@ -146,12 +146,12 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
       <SiteHeader
         fixed
         current="/voyages-organises"
-        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 sm:px-5 py-2.5 rounded-full shrink-0 transition-colors shadow" />}
+        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm sm:text-base font-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 transition-colors shadow" />}
       />
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
-      <section className="relative min-h-[85vh] flex items-center justify-center pt-20 overflow-hidden">
+      <section className="relative min-h-[85vh] flex items-center justify-center pt-28 overflow-hidden">
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

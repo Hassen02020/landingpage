@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { SITE_URL } from "@/lib/config"
 import Script from "next/script"
 import { FAQ_ITEMS } from "./data/faq"
 
@@ -6,7 +7,7 @@ export const metadata: Metadata = {
   title: "Easy2Book | Promos du mois — Hôtels Tunisie, offres exclusives",
   description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Promos hôtels en Tunisie : réduction et prix par personne et par nuit, devis gratuit sur WhatsApp.",
   alternates: {
-    canonical: "https://landingpage-easy2book.vercel.app/summer-vibes",
+    canonical: `${SITE_URL}/summer-vibes`,
   },
   robots: {
     index: true,
@@ -24,11 +25,11 @@ export const metadata: Metadata = {
     description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7.",
     type: "website",
     locale: "fr_FR",
-    url: "https://landingpage-easy2book.vercel.app/summer-vibes",
+    url: `${SITE_URL}/summer-vibes`,
     siteName: "Easy2Book",
     images: [
       {
-        url: "https://landingpage-easy2book.vercel.app/og-easy2book.jpg",
+        url: `${SITE_URL}/og-easy2book.jpg`,
         width: 1200,
         height: 630,
         alt: "Easy2Book — Promos du mois",
@@ -39,7 +40,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Easy2Book | Promos du mois — Hôtels Tunisie, offres exclusives",
     description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7.",
-    images: ["https://landingpage-easy2book.vercel.app/og-easy2book.jpg"],
+    images: [`${SITE_URL}/og-easy2book.jpg`],
   },
 }
 
@@ -48,7 +49,7 @@ const jsonLdTravelAgency = {
   "@type": "TravelAgency",
   "name": "Easy2Book",
   "description": "Centrale de réservation d'hôtels en Tunisie. Hôtels, voyages de noces, séjours famille et offres exclusives.",
-  "url": "https://landingpage-easy2book.vercel.app/summer-vibes",
+  "url": `${SITE_URL}/summer-vibes`,
   "telephone": "+21698140514",
   "address": {
     "@type": "PostalAddress",
