@@ -23,6 +23,11 @@ Les modules sont **générés à partir des fichiers** (aucune retranscription �
 ## `/summer-vibes` devient « Promo du mois » (09/11/2026, demande du propriétaire)
 Les mentions saisonnières « Été 2026 » / « Summer Vibes 2026 » sont remplacées par « Promo du mois » (badge, titre « Les promos du mois sur vos hôtels en Tunisie », bandeau d'urgence, titre et description de la page, messages WhatsApp). Le **compte à rebours vise désormais la fin du mois en cours (heure de Tunis)** : il visait le 31/07/2026 et affichait des zéros (`tests/countdown.test.ts`). Le bandeau Omra de la page annonce « عمرة رمضان وشوال 2027 », comme la page Omra. L'identifiant technique de campagne `summer_vibes_2026` (suivi des statistiques) est conservé pour ne pas couper l'historique.
 
+## Ajustements du 09/11/2026 (demande du propriétaire)
+- **Photo d'été retirée** de l'en-tête de `/summer-vibes` (famille à la plage) : fond en dégradé aux couleurs de la marque, aperçu social = logo. Une photo adaptée au mois pourra être ajoutée dès que le propriétaire la fournit.
+- **Voiles de couleur allégés pour laisser voir les photos** : `/omra` (voile 75/65/90 % → 35/25/65 %), en-tête de `/voyages-organises`, cartes d'offres de l'accueil, dégradés du bas des photos d'hôtels et de catégories ; une ombre portée douce garde le texte lisible.
+- **Départs passés jamais présents dans le HTML** : `/voyages-organises` est régénérée toutes les heures et reçoit la date du jour (Tunis) du serveur ; le navigateur la remet à jour ensuite.
+
 ## Contenus existants NON vérifiés (non modifiés, à valider par le propriétaire)
 `/summer-vibes` : « Places limitées », « Les tarifs augmentent progressivement », « 4.9/5 », « +1200 réservations », « +500 clients », catégories d'hôtels (El Mouradi…, « All inclusive », « Aquapark ») et témoignages. Accueil : « Vols + hôtels + visites inclus », « Départs garantis depuis Tunis ». `/voyages-organises` : section « Pourquoi choisir Easy2Book » (guides nommées, « support 24/7 »).
 

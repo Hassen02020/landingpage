@@ -76,7 +76,7 @@ export function CategoriesSection({ whatsappNumber }: CategoriesSectionProps) {
                   >
                     {current.label.split(" ").slice(0, 2).join(" ")}
                   </span>
-                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
                   <p className="absolute bottom-2 left-3 text-white text-xs font-semibold">📍 {city}</p>
                 </div>
                 <div className="flex flex-col flex-1 p-5">

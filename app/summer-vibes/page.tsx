@@ -200,16 +200,8 @@ export default function SummerVibesPage() {
         className="relative flex flex-col items-center justify-center text-center px-5 pt-16 pb-20 overflow-hidden"
         style={{ minHeight: "92vh" }}
       >
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/hero-bg.jpg"
-            alt="Famille en vacances"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
+        {/* Fond : dégradé aux couleurs de la marque (la photo d'été a été retirée ; une photo adaptée au mois pourra être ajoutée) */}
+        <div className="absolute inset-0" aria-hidden="true" style={{ background: "linear-gradient(135deg, #071e3d 0%, #0f4c81 55%, #0b6e8a 100%)" }} />
         <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
         <div className="absolute -bottom-28 -left-16 w-96 h-96 rounded-full opacity-5" style={{ backgroundColor: "#f5c242" }} aria-hidden="true" />
 

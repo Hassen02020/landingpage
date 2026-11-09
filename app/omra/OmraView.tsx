@@ -212,8 +212,8 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
       {/* HERO — image réelle issue de la vidéo Easy2Book */}
       <section id="top" className="relative pt-14 overflow-hidden">
         <Image src="/omra-hero.jpg" alt="معتمرون مع Easy2Book في الحرم" fill priority sizes="100vw" className="object-cover object-center" />
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/75 via-emerald-950/65 to-emerald-950/90" />
-        <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-12 sm:pt-16 sm:pb-16 text-center text-white">
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/35 via-emerald-950/25 to-emerald-950/65" />
+        <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-12 sm:pt-16 sm:pb-16 text-center text-white [text-shadow:0_2px_14px_rgba(0,0,0,0.55),0_1px_3px_rgba(0,0,0,0.5)]">
           <div className="inline-flex items-center gap-2 bg-amber-400/15 border border-amber-300/40 text-amber-200 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full mb-5">
             🕋 فتح باب التسجيل — الأماكن محدودة
           </div>
