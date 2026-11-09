@@ -49,7 +49,7 @@ export function CategoryView({ category, offers }: { category: Category; offers:
         ) : (
           <div className="w-full h-40 bg-gradient-to-br from-emerald-800 to-emerald-950" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/10 flex items-end">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end">
           <div className="max-w-5xl mx-auto w-full px-4 pb-6 text-white">
             <h1 className="text-3xl sm:text-4xl font-black">{category.name}</h1>
             {category.headline && <p className="mt-1 text-white/90">{category.headline}</p>}

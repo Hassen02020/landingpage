@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: "Easy2Book",
     images: [
       {
-        url: "https://landingpage-easy2book.vercel.app/hero-bg.jpg",
+        url: "https://landingpage-easy2book.vercel.app/logo.png",
         width: 1200,
         height: 630,
         alt: "Easy2Book — Promos du mois",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Easy2Book | Promos du mois — Hôtels Tunisie, offres exclusives",
     description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7.",
-    images: ["https://landingpage-easy2book.vercel.app/hero-bg.jpg"],
+    images: ["https://landingpage-easy2book.vercel.app/logo.png"],
   },
   other: {
     "fb:page_id": "Easy2Bookplateforme",

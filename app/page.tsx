@@ -153,7 +153,7 @@ export default function HomePage() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-7xl bg-emerald-900">{o.emoji}</div>
                   )}
-                  <div className={`absolute inset-0 bg-gradient-to-t ${o.color} opacity-60`} />
+                  <div className={`absolute inset-0 bg-gradient-to-t ${o.color} opacity-35`} />
                   <div className="absolute bottom-3 left-4 text-white">
                     <div className="text-2xl font-black">
                       {o.emoji} {o.title}
