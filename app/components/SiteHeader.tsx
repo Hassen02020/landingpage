@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { PHONE_NUMBER } from "@/lib/config"
 
 export const formatPhone = (n: string) => n.replace(/(\d{2})(\d{3})(\d{3})/, "$1 $2 $3")
@@ -33,6 +33,7 @@ export function SiteHeader({
   taglineOnMobile = false,
   homeHref = "/",
   phoneAriaLabel,
+  menuLabel = "Menu",
 }: {
   cta: ReactNode
   fixed?: boolean
@@ -42,15 +43,17 @@ export function SiteHeader({
   taglineOnMobile?: boolean
   homeHref?: string
   phoneAriaLabel?: string
+  menuLabel?: string
 }) {
+  const [open, setOpen] = useState(false)
   return (
     <header className={`${fixed ? "fixed inset-x-0" : "sticky"} top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm`}>
-      <div className="max-w-6xl mx-auto px-4 h-[72px] flex items-center justify-between gap-3">
+      <div className="max-w-6xl mx-auto px-4 h-[76px] sm:h-[92px] flex items-center justify-between gap-3">
         <Link href={homeHref} className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Image src="/logo.png" alt="" width={56} height={56} priority className="w-12 h-12 sm:w-14 sm:h-14 object-contain" />
+          <Image src="/logo.png" alt="" width={80} height={80} priority className="w-14 h-14 sm:w-[76px] sm:h-[76px] object-contain" />
           <span className="leading-tight">
-            <span className="block font-black text-gray-900 text-base sm:text-lg tracking-tight">Easy2Book</span>
-            <span className={`${taglineOnMobile ? "block" : "hidden sm:block"} text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] text-blue-700`}>{tagline}</span>
+            <span className="block font-black text-gray-900 text-lg sm:text-2xl tracking-tight">Easy2Book</span>
+            <span className={`${taglineOnMobile ? "block" : "hidden sm:block"} text-xs sm:text-[13px] font-bold uppercase tracking-[0.14em] text-blue-700`}>{tagline}</span>
           </span>
         </Link>
         {nav.length > 0 && <nav aria-label="Navigation principale" className="hidden lg:flex items-center gap-1">
@@ -59,20 +62,53 @@ export function SiteHeader({
               key={n.href}
               href={n.href}
               aria-current={current === n.href ? "page" : undefined}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${current === n.href ? "bg-blue-50 text-blue-800" : "text-gray-700 hover:bg-gray-100"}`}
+              className={`px-5 py-2.5 rounded-full text-base font-bold transition-colors ${current === n.href ? "bg-blue-50 text-blue-800" : "text-gray-700 hover:bg-gray-100"}`}
             >
               {n.label}
             </Link>
           ))}
         </nav>}
         <div className="flex items-center gap-3">
-          <a href={`tel:+216${PHONE_NUMBER}`} aria-label={phoneAriaLabel} className="hidden md:inline-flex items-center gap-2 text-sm font-extrabold text-gray-800 hover:text-blue-700">
-            <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-blue-50 text-blue-700"><PhoneIcon /></span>
+          <a href={`tel:+216${PHONE_NUMBER}`} aria-label={phoneAriaLabel} className="hidden md:inline-flex items-center gap-2.5 text-base font-extrabold text-gray-800 hover:text-blue-700">
+            <span className="inline-flex w-10 h-10 items-center justify-center rounded-full bg-blue-50 text-blue-700"><PhoneIcon className="w-5 h-5" /></span>
             <span dir="ltr">{formatPhone(PHONE_NUMBER)}</span>
           </a>
           {cta}
+          {nav.length > 0 && (
+            <button
+              type="button"
+              aria-label={menuLabel}
+              aria-expanded={open}
+              aria-controls="menu-mobile"
+              data-compact
+              onClick={() => setOpen((v) => !v)}
+              className="lg:hidden inline-flex w-12 h-12 items-center justify-center rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="w-6 h-6" aria-hidden="true">
+                {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+              </svg>
+            </button>
+          )}
         </div>
       </div>
+      {nav.length > 0 && open && (
+        <nav id="menu-mobile" aria-label="Navigation principale" className="lg:hidden border-t border-gray-100 bg-white px-4 pb-4 pt-2 shadow-lg">
+          <ul className="max-w-6xl mx-auto grid gap-1">
+            {nav.map((n) => (
+              <li key={n.href}>
+                <Link
+                  href={n.href}
+                  onClick={() => setOpen(false)}
+                  aria-current={current === n.href ? "page" : undefined}
+                  className={`block px-4 py-3 rounded-xl text-lg font-bold ${current === n.href ? "bg-blue-50 text-blue-800" : "text-gray-800 hover:bg-gray-100"}`}
+                >
+                  {n.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </header>
   )
 }

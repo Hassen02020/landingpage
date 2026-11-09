@@ -74,7 +74,7 @@ export default function HomePage() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-header" })}
-            className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 sm:px-5 py-2.5 rounded-full shrink-0 shadow transition-colors"
+            className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm sm:text-base font-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 shadow transition-colors"
           >
             <WhatsAppIcon /> WhatsApp
           </a>

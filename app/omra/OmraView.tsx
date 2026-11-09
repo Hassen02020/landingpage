@@ -183,13 +183,19 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
       {/* EN-TÊTE */}
       <SiteHeader
         fixed
-        nav={[]}
+        current="/omra"
+        menuLabel="القائمة"
+        nav={[
+          { href: "/voyages-organises", label: "رحلات منظمة" },
+          { href: "/omra", label: "العمرة" },
+          { href: "/summer-vibes", label: "عروض الفنادق" },
+        ]}
         tagline="عمرة رمضان وشوال 2027"
         taglineOnMobile
         homeHref="#top"
         phoneAriaLabel="اتصل بنا"
         cta={
-          <button type="button" onClick={goToForm} className="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold px-5 py-2.5 rounded-full shrink-0 transition-colors">
+          <button type="button" onClick={goToForm} className="bg-emerald-700 hover:bg-emerald-800 text-white text-sm sm:text-base font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 transition-colors">
             احجز مكانك
           </button>
         }
@@ -197,7 +203,7 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO — image réelle issue de la vidéo Easy2Book */}
-      <section id="top" className="relative pt-[72px] overflow-hidden">
+      <section id="top" className="relative pt-[76px] sm:pt-[92px] overflow-hidden">
         <Image src="/omra-hero.jpg" alt="معتمرون مع Easy2Book في الحرم" fill priority sizes="100vw" className="object-cover object-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/35 via-emerald-950/25 to-emerald-950/65" />
         <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-12 sm:pt-16 sm:pb-16 text-center text-white [text-shadow:0_2px_14px_rgba(0,0,0,0.55),0_1px_3px_rgba(0,0,0,0.5)]">
