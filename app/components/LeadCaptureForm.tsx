@@ -109,7 +109,7 @@ export function LeadCaptureForm({
   periods,
   niche,
   lang = "fr",
-  accentColor = "#25D366",
+  accentColor = "#15803d",
   formId = "lead-form",
   showDate = false, // la date / période souhaitée relève de la qualification (pas du premier contact)
   offerValue,
@@ -250,7 +250,7 @@ export function LeadCaptureForm({
           href={result.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full text-center bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl"
+          className="block w-full text-center bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-xl"
         >
           💬 {t.openWa}
         </a>

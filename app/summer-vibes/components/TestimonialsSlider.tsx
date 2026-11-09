@@ -47,7 +47,7 @@ export function TestimonialsSlider() {
       <div className="flex justify-center gap-2 mt-6">
         <button
           onClick={prevSlide}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-110"
           style={{ backgroundColor: "#0f4c81", color: "#fff" }}
           aria-label="Témoignage précédent"
         >
@@ -57,14 +57,18 @@ export function TestimonialsSlider() {
           <button
             key={i}
             onClick={() => setCurrentIndex(i)}
-            className="w-3 h-3 rounded-full transition-all"
-            style={{ backgroundColor: currentIndex === i ? "#0f4c81" : "#e5e7eb" }}
+            type="button"
+            data-compact
+            className="group flex h-6 w-6 items-center justify-center"
             aria-label={`Témoignage ${i + 1}`}
-          />
+            aria-current={currentIndex === i ? "true" : undefined}
+          >
+            <span className="block h-3 w-3 rounded-full transition-all" style={{ backgroundColor: currentIndex === i ? "#0f4c81" : "#cbd5e1" }} />
+          </button>
         ))}
         <button
           onClick={nextSlide}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-110"
           style={{ backgroundColor: "#0f4c81", color: "#fff" }}
           aria-label="Témoignage suivant"
         >

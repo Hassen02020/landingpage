@@ -44,7 +44,7 @@ check("redirection WhatsApp avec la référence CRM", decodeURIComponent(page.ur
 await page.goto(`${BASE}/omra`, { waitUntil: "networkidle" })
 const wa = decodeURIComponent((await page.getByText("أو اسأل على واتساب").first().getAttribute("href")) || "")
 check("lien WhatsApp d'un fuseau : message arabe avec fuseau, durée et prix", wa.includes("الفوج الأول — 27 جانفي 2027") && wa.includes("14 ليلة") && wa.includes("5500"))
-check("barre d'action mobile visible", await page.locator("div.fixed.bottom-0 >> text=احجز مكانك").isVisible())
+check("barre d'action mobile visible", await page.locator(".fixed.bottom-0 >> text=احجز مكانك").isVisible())
 
 await browser.close()
 console.log(failed ? `\n${failed} échec(s)` : "\nparcours OK")

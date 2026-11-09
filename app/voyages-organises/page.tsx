@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { SkipLink } from "@/app/components/SkipLink"
 import Image from "next/image"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
@@ -210,7 +211,7 @@ function VoyageCard({ voyage }: { voyage: typeof VOYAGES[0] }) {
         <p className="text-gray-500 text-sm mb-4 leading-relaxed">{voyage.description}</p>
 
         <div className="mb-4">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Inclus</div>
+          <div className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Inclus</div>
           <div className="grid grid-cols-1 gap-1">
             {voyage.highlights.map((h, i) => (
               <div key={i} className="text-sm text-gray-700">{h}</div>
@@ -219,7 +220,7 @@ function VoyageCard({ voyage }: { voyage: typeof VOYAGES[0] }) {
         </div>
 
         <div className="mb-4">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+          <div className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
             📅 Dates de départ ({voyage.departures.length} {voyage.departures.length > 1 ? "départs" : "départ"})
           </div>
           <div className="space-y-1">
@@ -247,7 +248,7 @@ function VoyageCard({ voyage }: { voyage: typeof VOYAGES[0] }) {
           label="💬 Réserver via WhatsApp"
           location={`card-${voyage.id}`}
           tripName={voyage.title}
-          className="mt-auto block w-full bg-green-500 hover:bg-green-600 text-white font-black text-sm py-3 rounded-2xl text-center transition-all shadow hover:shadow-lg"
+          className="mt-auto block w-full bg-green-700 hover:bg-green-800 text-white font-black text-sm py-3 rounded-2xl text-center transition-all shadow hover:shadow-lg"
         />
       </div>
     </div>
@@ -271,6 +272,7 @@ export default function VoyagesOrganisesPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans">
+      <SkipLink label="Aller au contenu" />
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
@@ -289,19 +291,23 @@ export default function VoyagesOrganisesPage() {
             <CTAButton
               label="💬 WhatsApp"
               location="header"
-              className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm font-black px-4 py-2 rounded-full transition-all shadow"
+              className="bg-green-700 hover:bg-green-800 text-white text-xs sm:text-sm font-black px-4 py-2 rounded-full transition-all shadow"
             />
           </div>
         </div>
       </header>
+      <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
       <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1600&q=80"
+            src="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1000&q=72"
+            srcSet="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=640&q=72 640w, https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1000&q=72 1000w, https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1400&q=70 1400w"
+            sizes="100vw"
             alt="Voyages organisés"
+            fetchPriority="high"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 via-blue-900/60 to-white/10" />
@@ -358,7 +364,7 @@ export default function VoyagesOrganisesPage() {
             <CTAButton
               label="💬 Réserver sur WhatsApp"
               location="hero"
-              className="bg-green-500 hover:bg-green-400 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-2xl transition-all hover:scale-105"
+              className="bg-green-700 hover:bg-green-800 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-2xl transition-all hover:scale-105"
             />
             <a
               href={`tel:+216${PHONE_NUMBER}`}
@@ -468,7 +474,7 @@ export default function VoyagesOrganisesPage() {
             <CTAButton
               label="💬 Réserver sur WhatsApp"
               location="bottom-cta"
-              className="bg-green-500 hover:bg-green-400 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition-all hover:scale-105"
+              className="bg-green-700 hover:bg-green-800 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition-all hover:scale-105"
             />
             <a
               href={`tel:+216${PHONE_NUMBER}`}
@@ -485,12 +491,14 @@ export default function VoyagesOrganisesPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-black text-gray-500 py-8 text-center text-sm">
+      </main>
+
+      <footer className="bg-black text-gray-400 py-8 text-center text-sm">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Image src="/logo.png" alt="Easy2Book" width={32} height={32} className="rounded-full bg-white p-0.5" />
             <span className="text-white font-bold">Easy2Book</span>
-            <span className="text-gray-600">— Agence de Voyage</span>
+            <span className="text-gray-400">— Agence de Voyage</span>
           </div>
           <div className="flex gap-4 justify-center flex-wrap mb-4">
             <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" onClick={(e) => trackWhatsAppClick(e, "footer")} className="text-green-400 hover:text-green-300 font-semibold">
@@ -506,18 +514,18 @@ export default function VoyagesOrganisesPage() {
               TikTok
             </a>
           </div>
-          <p className="text-xs text-gray-600">© 2026 Easy2Book. Tous droits réservés.</p>
+          <p className="text-xs text-gray-400">© 2026 Easy2Book. Tous droits réservés.</p>
         </div>
       </footer>
 
       {/* FLOATING WHATSAPP */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <aside aria-label="Contact WhatsApp" className="fixed bottom-6 right-6 z-50">
         <CTAButton
           label="💬"
           location="floating"
-          className="bg-green-500 hover:bg-green-400 text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 block text-center leading-[4rem]"
+          className="bg-green-700 hover:bg-green-800 text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 block text-center leading-[4rem]"
         />
-      </div>
+      </aside>
     </div>
   )
 }

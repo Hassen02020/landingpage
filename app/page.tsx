@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { SkipLink } from "@/app/components/SkipLink"
 import Link from "next/link"
 import { waText } from "@/lib/wa-text"
 import { LeadCaptureForm } from "./components/LeadCaptureForm"
@@ -62,6 +63,7 @@ const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
+      <SkipLink label="Aller au contenu" />
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -81,13 +83,14 @@ export default function HomePage() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-header" })}
-              className="bg-green-500 hover:bg-green-600 text-white text-sm font-black px-4 py-2 rounded-full shadow"
+              className="bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 py-2 rounded-full shadow"
             >
               💬 WhatsApp
             </a>
           </div>
         </div>
       </header>
+      <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
       <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-emerald-900 text-white">
@@ -111,7 +114,7 @@ export default function HomePage() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-hero" })}
-              className="bg-green-500 hover:bg-green-400 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl"
+              className="bg-green-700 hover:bg-green-800 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl"
             >
               💬 Écrire sur WhatsApp
             </a>
@@ -189,6 +192,8 @@ export default function HomePage() {
       </section>
 
       {/* FOOTER */}
+      </main>
+
       <footer className="bg-gray-950 text-gray-400 py-8 text-center text-sm">
         <div className="flex gap-4 justify-center flex-wrap mb-3">
           <Link href="/voyages-organises" className="hover:text-white">✈️ Voyages organisés</Link>
@@ -204,20 +209,22 @@ export default function HomePage() {
             🎵 TikTok
           </a>
         </div>
-        <p className="text-xs text-gray-600">© 2026 Easy2Book. Tous droits réservés.</p>
+        <p className="text-xs text-gray-400">© 2026 Easy2Book. Tous droits réservés.</p>
       </footer>
 
       {/* WHATSAPP FLOTTANT */}
+      <aside aria-label="Contact WhatsApp">
       <a
         href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-floating" })}
         aria-label="WhatsApp"
-        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-400 text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-50 bg-green-700 hover:bg-green-800 text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center"
       >
         💬
       </a>
+      </aside>
     </div>
   )
 }

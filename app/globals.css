@@ -1,3 +1,42 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---- Site public : confort tactile et lisibilité (n'affecte pas l'espace équipe, repéré par .admin-root) ---- */
+body:not(:has(.admin-root)) {
+  -webkit-text-size-adjust: 100%;
+}
+body:not(:has(.admin-root)) :is(button, summary, footer a, header a[href]):not([data-compact]) {
+  min-height: 44px;
+}
+body:not(:has(.admin-root)) :is(button, header a[href]):not([data-compact]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+body:not(:has(.admin-root)) footer a {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 0.35rem;
+}
+body:not(:has(.admin-root)) summary {
+  padding-block: 0.6rem;
+}
+body:not(:has(.admin-root)) input[type="checkbox"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+body:not(:has(.admin-root)) :focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  body:not(:has(.admin-root)) *, body:not(:has(.admin-root)) *::before, body:not(:has(.admin-root)) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

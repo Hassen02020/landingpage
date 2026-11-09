@@ -94,7 +94,7 @@ export function CategoriesSection({ whatsappNumber }: CategoriesSectionProps) {
                   </div>
                   <div
                     className="mt-auto inline-flex items-center gap-1.5 text-sm font-bold px-4 py-3 rounded-xl self-start shadow-md hover:shadow-lg transition-shadow"
-                    style={{ backgroundColor: "#25D366", color: "#fff" }}
+                    style={{ backgroundColor: "#15803d", color: "#fff" }}
                   >
                     💬 Réserver
                   </div>

@@ -5,7 +5,7 @@ export const CATEGORIES = [
   {
     id: "elmouradi",
     label: "🏨 Chaîne El Mouradi",
-    color: "#e53e3e",
+    color: "#c53030",
     hotels: [
       { name: "El Mouradi Hammamet", city: "Hammamet", tag: "All inclusive · Bord de mer · Toboggan", img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80" },
       { name: "El Mouradi Club Kantaoui", city: "Sousse", tag: "All inclusive · Port El Kantaoui · Plage", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
@@ -22,7 +22,7 @@ export const CATEGORIES = [
   {
     id: "earlybooking",
     label: "⏰ Early Booking",
-    color: "#d97706",
+    color: "#b45309",
     hotels: [
       { name: "Iberostar Selection Eolia Djerba", city: "Djerba", tag: "⚡ -40% avant le 30 Juin · 5★", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" },
       { name: "Iberostar Mehari Djerba", city: "Djerba", tag: "⚡ -40% avant le 30 Juin · Plage", img: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" },
@@ -41,7 +41,7 @@ export const CATEGORIES = [
   {
     id: "enfant-gratuit",
     label: "👶 Enfant Gratuit",
-    color: "#38a169",
+    color: "#2f855a",
     hotels: [
       { name: "Yadis Hammamet", city: "Hammamet", tag: "👶 Enfant -6 ans GRATUIT · All inclusive", img: "https://images.unsplash.com/photo-1468581264429-2548ef9eb732?w=600&q=80" },
       { name: "Houda Yasmine Marina & SPA", city: "Hammamet", tag: "👶 1er enfant -6 ans GRATUIT · Spa", img: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=600&q=80" },
@@ -77,7 +77,7 @@ export const CATEGORIES = [
   {
     id: "voyage-noces",
     label: "💑 Voyage de Noces",
-    color: "#db2777",
+    color: "#be185d",
     hotels: [
       { name: "La Badira", city: "Hammamet", tag: "Luxe 5★ · Offre Noces · Spa", img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80" },
       { name: "Royal Azur Thalassa", city: "Hammamet", tag: "5★ · Thalasso · Romantique", img: "https://images.unsplash.com/photo-1535827841776-24afc1e255ac?w=600&q=80" },
@@ -106,7 +106,7 @@ export const CATEGORIES = [
   {
     id: "bons-plans",
     label: "💰 Bons Plans",
-    color: "#d97706",
+    color: "#b45309",
     hotels: [
       { name: "Sol Azur Beach Congres", city: "Hammamet", tag: "Meilleur rapport qualité/prix", img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
       { name: "Dar Khayam", city: "Hammamet", tag: "Aquapark · Bon plan famille", img: "https://images.unsplash.com/photo-1540541338537-41e2a5e6b5b6?w=600&q=80" },
