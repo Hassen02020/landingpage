@@ -12,6 +12,7 @@ import { FAQAccordion } from "./components/FAQAccordion"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { STATS } from "./data/stats"
 import { CATEGORIES } from "./config"
+import { SiteFooter } from "@/app/components/SiteFooter"
 import { WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
@@ -407,24 +408,7 @@ export default function SummerVibesPage() {
       {/* FOOTER */}
       </main>
 
-      <footer className="py-6 px-5 text-center text-xs text-white/60" style={{ backgroundColor: "#071e3d" }}>
-        © {new Date().getFullYear()} Easy2Book — Centrale de Réservation &nbsp;|&nbsp;
-        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors" onClick={(e) => trackWhatsAppClick(e, "footer")}>
-          +216 98 140 514
-        </a>
-        &nbsp;|&nbsp;
-        <a href="https://www.facebook.com/Easy2Bookplateforme" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
-          Facebook
-        </a>
-        &nbsp;|&nbsp;
-        <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
-          Instagram
-        </a>
-        &nbsp;|&nbsp;
-        <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
-          TikTok
-        </a>
-      </footer>
+      <SiteFooter whatsappHref={WHATSAPP_URL} onWhatsApp={(e) => trackWhatsAppClick(e, "footer")} extraPhones={["97449510"]} />
 
       {/* FLOATING WHATSAPP */}
       <aside aria-label="Contact WhatsApp">

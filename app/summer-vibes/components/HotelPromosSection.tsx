@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { HOTEL_PROMOS } from "../data/hotel-promos"
 import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
+import { CITY_PHOTOS } from "../data/city-photos"
 
 const CITIES = ["Toutes", ...Array.from(new Set(HOTEL_PROMOS.map((h) => h.city))).sort((a, b) => a.localeCompare(b, "fr"))]
 const fmt = (n: number) => n.toLocaleString("fr-FR").replace(/ | /g, " ")
@@ -53,6 +54,13 @@ export function HotelPromosSection({ whatsappNumber }: { whatsappNumber: string 
             )
             return (
               <li key={h.name} className="flex flex-col bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
+                {CITY_PHOTOS[h.city.toLowerCase()] && (
+                  <div className="relative h-32 w-full overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={CITY_PHOTOS[h.city.toLowerCase()]} alt={`Vue de ${h.city}, Tunisie`} loading="lazy" className="w-full h-full object-cover" />
+                    <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/50 to-transparent" aria-hidden="true" />
+                  </div>
+                )}
                 <div className="flex items-start justify-between gap-3 p-5 pb-3">
                   <div>
                     <h3 className="font-extrabold text-gray-900 leading-snug">{h.name}</h3>

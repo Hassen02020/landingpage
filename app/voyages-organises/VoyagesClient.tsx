@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { SkipLink } from "@/app/components/SkipLink"
 import Image from "next/image"
+import { SiteHeader } from "@/app/components/SiteHeader"
+import { SiteFooter } from "@/app/components/SiteFooter"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
@@ -141,31 +143,15 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
       <SkipLink label="Aller au contenu" />
 
       {/* HEADER */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Easy2Book" width={44} height={44} className="rounded-full object-contain bg-white p-0.5" priority />
-            <div>
-              <div className="font-black text-gray-900 text-sm">Easy2Book</div>
-              <div className="text-xs text-blue-600 font-semibold">Agence de Voyage</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <a href={`tel:+216${PHONE_NUMBER}`} className="hidden sm:flex items-center gap-1 text-sm font-bold text-gray-700 hover:text-blue-700">
-              📞 {PHONE_NUMBER}
-            </a>
-            <CTAButton
-              label="💬 WhatsApp"
-              location="header"
-              className="bg-green-700 hover:bg-green-800 text-white text-xs sm:text-sm font-black px-4 py-2 rounded-full transition-all shadow"
-            />
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        fixed
+        current="/voyages-organises"
+        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 sm:px-5 py-2.5 rounded-full shrink-0 transition-colors shadow" />}
+      />
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
-      <section className="relative min-h-[85vh] flex items-center justify-center pt-16 overflow-hidden">
+      <section className="relative min-h-[85vh] flex items-center justify-center pt-20 overflow-hidden">
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -339,30 +325,7 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
       {/* FOOTER */}
       </main>
 
-      <footer className="bg-black text-gray-400 py-8 text-center text-sm">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Image src="/logo.png" alt="Easy2Book" width={32} height={32} className="rounded-full bg-white p-0.5" />
-            <span className="text-white font-bold">Easy2Book</span>
-            <span className="text-gray-400">— Agence de Voyage</span>
-          </div>
-          <div className="flex gap-4 justify-center flex-wrap mb-4">
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" onClick={(e) => trackWhatsAppClick(e, "footer")} className="text-green-400 hover:text-green-300 font-semibold">
-              💬 WhatsApp
-            </a>
-            <a href="https://www.facebook.com/Easy2Bookplateforme" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 font-semibold">
-              Facebook
-            </a>
-            <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:text-pink-300 font-semibold">
-              Instagram
-            </a>
-            <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white font-semibold">
-              TikTok
-            </a>
-          </div>
-          <p className="text-xs text-gray-400">© 2026 Easy2Book. Tous droits réservés.</p>
-        </div>
-      </footer>
+      <SiteFooter whatsappHref={`https://wa.me/${WHATSAPP_NUMBER}`} onWhatsApp={(e) => trackWhatsAppClick(e, "footer")} />
 
       {/* FLOATING WHATSAPP */}
       <aside aria-label="Contact WhatsApp" className="fixed bottom-6 right-6 z-50">

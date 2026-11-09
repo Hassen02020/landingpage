@@ -2,6 +2,8 @@
 
 import Image from "next/image"
 import { SkipLink } from "@/app/components/SkipLink"
+import { SiteHeader, WhatsAppIcon } from "@/app/components/SiteHeader"
+import { SiteFooter } from "@/app/components/SiteFooter"
 import Link from "next/link"
 import { waText } from "@/lib/wa-text"
 import { LeadCaptureForm } from "./components/LeadCaptureForm"
@@ -65,31 +67,19 @@ export default function HomePage() {
     <div className="min-h-screen bg-white font-sans text-gray-900">
       <SkipLink label="Aller au contenu" />
       {/* HEADER */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Easy2Book" width={40} height={40} className="rounded-full" priority />
-            <div>
-              <div className="font-black text-sm">Easy2Book</div>
-              <div className="text-xs text-blue-600 font-semibold">Agence de voyage</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <a href={`tel:+216${PHONE_NUMBER}`} className="hidden sm:inline text-sm font-bold text-gray-700">
-              📞 {PHONE_NUMBER}
-            </a>
-            <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-header" })}
-              className="bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 py-2 rounded-full shadow"
-            >
-              💬 WhatsApp
-            </a>
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        cta={
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-header" })}
+            className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 sm:px-5 py-2.5 rounded-full shrink-0 shadow transition-colors"
+          >
+            <WhatsAppIcon /> WhatsApp
+          </a>
+        }
+      />
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
@@ -195,23 +185,7 @@ export default function HomePage() {
       {/* FOOTER */}
       </main>
 
-      <footer className="bg-gray-950 text-gray-400 py-8 text-center text-sm">
-        <div className="flex gap-4 justify-center flex-wrap mb-3">
-          <Link href="/voyages-organises" className="hover:text-white">✈️ Voyages organisés</Link>
-          <Link href="/omra" className="hover:text-white">🕋 Omra</Link>
-          <Link href="/summer-vibes" className="hover:text-white">🏖️ Promos hôtels</Link>
-          <a href="https://www.facebook.com/Easy2Bookplateforme" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-            📘 Facebook
-          </a>
-          <a href="https://www.instagram.com/easy2book.2025/" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-            📸 Instagram
-          </a>
-          <a href="https://www.tiktok.com/@easy2book" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-            🎵 TikTok
-          </a>
-        </div>
-        <p className="text-xs text-gray-400">© 2026 Easy2Book. Tous droits réservés.</p>
-      </footer>
+      <SiteFooter whatsappHref={WHATSAPP_URL} onWhatsApp={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-footer" })} />
 
       {/* WHATSAPP FLOTTANT */}
       <aside aria-label="Contact WhatsApp">
