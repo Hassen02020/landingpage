@@ -22,19 +22,39 @@ const NAV = [
 ]
 
 /** En-tête commun : logo bien visible, navigation, téléphone lisible et bouton WhatsApp (passé en `cta`, chaque page garde son suivi). */
-export function SiteHeader({ cta, fixed = false, current }: { cta: ReactNode; fixed?: boolean; current?: string }) {
+type NavItem = { href: string; label: string }
+
+export function SiteHeader({
+  cta,
+  fixed = false,
+  current,
+  nav = NAV,
+  tagline = "Centrale de réservation",
+  taglineOnMobile = false,
+  homeHref = "/",
+  phoneAriaLabel,
+}: {
+  cta: ReactNode
+  fixed?: boolean
+  current?: string
+  nav?: NavItem[]
+  tagline?: string
+  taglineOnMobile?: boolean
+  homeHref?: string
+  phoneAriaLabel?: string
+}) {
   return (
     <header className={`${fixed ? "fixed inset-x-0" : "sticky"} top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm`}>
       <div className="max-w-6xl mx-auto px-4 h-[72px] flex items-center justify-between gap-3">
-        <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <Link href={homeHref} className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Image src="/logo.png" alt="" width={56} height={56} priority className="w-12 h-12 sm:w-14 sm:h-14 object-contain" />
           <span className="leading-tight">
             <span className="block font-black text-gray-900 text-base sm:text-lg tracking-tight">Easy2Book</span>
-            <span className="hidden sm:block text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Centrale de réservation</span>
+            <span className={`${taglineOnMobile ? "block" : "hidden sm:block"} text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] text-blue-700`}>{tagline}</span>
           </span>
         </Link>
-        <nav aria-label="Navigation principale" className="hidden lg:flex items-center gap-1">
-          {NAV.map((n) => (
+        {nav.length > 0 && <nav aria-label="Navigation principale" className="hidden lg:flex items-center gap-1">
+          {nav.map((n) => (
             <Link
               key={n.href}
               href={n.href}
@@ -44,11 +64,11 @@ export function SiteHeader({ cta, fixed = false, current }: { cta: ReactNode; fi
               {n.label}
             </Link>
           ))}
-        </nav>
+        </nav>}
         <div className="flex items-center gap-3">
-          <a href={`tel:+216${PHONE_NUMBER}`} className="hidden md:inline-flex items-center gap-2 text-sm font-extrabold text-gray-800 hover:text-blue-700">
+          <a href={`tel:+216${PHONE_NUMBER}`} aria-label={phoneAriaLabel} className="hidden md:inline-flex items-center gap-2 text-sm font-extrabold text-gray-800 hover:text-blue-700">
             <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-blue-50 text-blue-700"><PhoneIcon /></span>
-            {formatPhone(PHONE_NUMBER)}
+            <span dir="ltr">{formatPhone(PHONE_NUMBER)}</span>
           </a>
           {cta}
         </div>

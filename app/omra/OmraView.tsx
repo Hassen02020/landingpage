@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { SkipLink } from "@/app/components/SkipLink"
+import { SiteHeader } from "@/app/components/SiteHeader"
 import Image from "next/image"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { PHONE_NUMBER, SOCIAL_LINKS, WHATSAPP_NUMBER } from "@/lib/config"
@@ -180,37 +181,23 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
     <div className="min-h-screen bg-stone-50 font-sans text-gray-900 pb-20 sm:pb-0" dir="rtl" lang="ar">
       <SkipLink label="تخطّي إلى المحتوى" />
       {/* EN-TÊTE */}
-      <header className="fixed inset-x-0 top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <a href="#top" className="flex items-center gap-2 min-w-0">
-            <Image src="/logo.png" alt="Easy2Book" width={36} height={36} className="rounded-full shrink-0" />
-            <div className="min-w-0">
-              <div className="font-extrabold text-sm leading-tight">Easy2Book</div>
-              <div className="text-[11px] text-emerald-700 truncate">عمرة رمضان وشوال 2027</div>
-            </div>
-          </a>
-          <div className="flex items-center gap-2">
-            <a
-              href={`tel:+216${PHONE_NUMBER}`}
-              className="hidden sm:inline-flex items-center gap-1 text-sm font-bold text-emerald-800 px-3 py-2"
-              aria-label="اتصل بنا"
-            >
-              📞 <span dir="ltr">98 140 514</span>
-            </a>
-            <button
-              type="button"
-              onClick={goToForm}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold px-4 py-2 rounded-full"
-            >
-              احجز مكانك
-            </button>
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        fixed
+        nav={[]}
+        tagline="عمرة رمضان وشوال 2027"
+        taglineOnMobile
+        homeHref="#top"
+        phoneAriaLabel="اتصل بنا"
+        cta={
+          <button type="button" onClick={goToForm} className="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold px-5 py-2.5 rounded-full shrink-0 transition-colors">
+            احجز مكانك
+          </button>
+        }
+      />
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO — image réelle issue de la vidéo Easy2Book */}
-      <section id="top" className="relative pt-14 overflow-hidden">
+      <section id="top" className="relative pt-[72px] overflow-hidden">
         <Image src="/omra-hero.jpg" alt="معتمرون مع Easy2Book في الحرم" fill priority sizes="100vw" className="object-cover object-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/35 via-emerald-950/25 to-emerald-950/65" />
         <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-12 sm:pt-16 sm:pb-16 text-center text-white [text-shadow:0_2px_14px_rgba(0,0,0,0.55),0_1px_3px_rgba(0,0,0,0.5)]">

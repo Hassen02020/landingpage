@@ -13,6 +13,7 @@ import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { STATS } from "./data/stats"
 import { CATEGORIES } from "./config"
 import { SiteFooter } from "@/app/components/SiteFooter"
+import { SiteHeader } from "@/app/components/SiteHeader"
 import { WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
@@ -149,56 +150,16 @@ export default function SummerVibesPage() {
       <SkipLink label="Aller au contenu" />
 
       {/* HEADER */}
-      <header
-        className="sticky top-0 z-40 flex items-center justify-between px-5 py-3 shadow-md"
-        style={{ backgroundColor: "#0f4c81" }}
-      >
-        <div className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Easy2Book Logo"
-            width={44}
-            height={44}
-            className="rounded-full object-contain bg-white p-0.5"
-            priority
-          />
-          <div className="leading-tight">
-            <p className="text-white font-extrabold text-lg tracking-tight leading-none">Easy2Book</p>
-            <p className="text-yellow-300 text-xs font-medium tracking-widest uppercase">Centrale de Réservation</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="https://www.facebook.com/Easy2Bookplateforme"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-            aria-label="Suivez-nous sur Facebook"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="white">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-          </a>
-          <a
-            href="tel:+21698140514"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-bold transition-colors hover:bg-white/10"
-            style={{ color: "#fff" }}
-          >
-            📞 98 140 514 / 97 449 510
-          </a>
-          <CTAButton
-            label="💬 Réserver"
-            className="hidden sm:inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold transition-transform active:scale-95"
-            style={{ backgroundColor: "#f5c242", color: "#0f4c81" }}
-            location="header"
-          />
-        </div>
-      </header>
+      <SiteHeader
+        fixed
+        current="/summer-vibes"
+        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm font-black px-4 sm:px-5 py-2.5 rounded-full shrink-0 shadow transition-colors" />}
+      />
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
       <section
-        className="relative flex flex-col items-center justify-center text-center px-5 pt-16 pb-20 overflow-hidden"
+        className="relative flex flex-col items-center justify-center text-center px-5 pt-24 pb-20 overflow-hidden"
         style={{ minHeight: "92vh" }}
       >
         {/* Fond : photo d'automne en famille (Adobe Stock, licence achetée) + voile léger pour garder le texte lisible */}
