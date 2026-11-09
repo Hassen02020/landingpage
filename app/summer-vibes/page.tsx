@@ -319,7 +319,7 @@ export default function SummerVibesPage() {
             Pourquoi Easy2Book ?
           </p>
           <h2 className="text-center font-extrabold text-2xl sm:text-3xl mb-10 text-gray-900">
-            Votre agence de confiance pour l&apos;été
+            Votre agence de confiance pour vos séjours
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[

@@ -141,7 +141,7 @@ export default function HomePage() {
                 }
                 className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all hover:-translate-y-1 flex flex-col"
               >
-                <div className="relative h-44 overflow-hidden">
+                <div className="relative h-52 overflow-hidden">
                   {o.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -153,8 +153,9 @@ export default function HomePage() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-7xl bg-emerald-900">{o.emoji}</div>
                   )}
-                  <div className={`absolute inset-0 bg-gradient-to-t ${o.color} opacity-35`} />
-                  <div className="absolute bottom-3 left-4 text-white">
+                  <div className={`absolute inset-0 bg-gradient-to-t ${o.color} opacity-30`} />
+                  <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/75 via-black/35 to-transparent" aria-hidden="true" />
+                  <div className="absolute bottom-3 left-4 right-4 text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.6)]">
                     <div className="text-2xl font-black">
                       {o.emoji} {o.title}
                     </div>
