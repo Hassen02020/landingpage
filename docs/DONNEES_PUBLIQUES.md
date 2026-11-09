@@ -33,3 +33,10 @@ Les mentions saisonnières « Été 2026 » / « Summer Vibes 2026 » sont rempl
 
 ## Mettre à jour la prochaine fois
 Envoyer le nouveau fichier ; les modules sont régénérés et les tests de cohérence rejoués. À terme, ces listes pourraient être gérées depuis l'administration (module Catalogue existant) pour éviter toute intervention technique.
+
+## Audit UI du 09/11/2026 — points à valider par le propriétaire
+
+- Accueil : « conseillers 7j/7 », « Visa + assurance + vol inclus », « Hôtel 3★ proche du Haram », « Accompagnatrice femme », « Paiement facilité », « Départs garantis depuis Tunis » ne viennent pas des fichiers fournis.
+- Promos : « Meilleurs prix garantis », « Support local 24/7 », « Réponse < 15 min », « Payez une avance », « Places limitées » : promesses commerciales non prouvées.
+- Catégories d'hôtels (config.ts, ~70 entrées) : étiquettes « Burkini autorisé », « 5★ », « Toboggan », « Enfant gratuit » non issues de l'Excel. Les photos sont des vues de VILLES (Adobe Stock, licence achetée), pas des hôtels : remplacer par les photos réelles des hôtels dès qu'elles sont fournies.
+- Deux blocs se recoupent sur /summer-vibes (« Promos du moment » = 29 hôtels de l'Excel, et « Toutes nos catégories » = liste historique) : à fusionner après validation.

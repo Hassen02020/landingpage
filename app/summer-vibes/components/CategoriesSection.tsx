@@ -5,6 +5,18 @@ import { CATEGORIES } from "../config"
 import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
 
+// Photos de villes tunisiennes (Adobe Stock, licence achetée). Ce sont des vues de la ville, pas de l'hôtel :
+// la légende n'indique que la ville. Sans photo pour la ville (ex. Gammarth), on garde le bandeau de couleur.
+const CITY_PHOTOS: Record<string, string> = {
+  hammamet: "/villes/hammamet.jpg",
+  sousse: "/villes/sousse.jpg",
+  djerba: "/villes/djerba.jpg",
+  monastir: "/villes/monastir.jpg",
+  mahdia: "/villes/mahdia.jpg",
+  tozeur: "/villes/tozeur.jpg",
+  tunis: "/villes/tunis.jpg",
+}
+
 interface CategoriesSectionProps {
   whatsappNumber: string
 }
@@ -48,7 +60,7 @@ export function CategoriesSection({ whatsappNumber }: CategoriesSectionProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {current.hotels.map(({ name, city, tag, img }) => {
+          {current.hotels.map(({ name, city, tag }) => {
             const msg = encodeURIComponent(waText(
               `Bonjour Easy2Book, je souhaite avoir le tarif pour l'hôtel ${name} (${city}) — promo du mois !`
             ))
@@ -62,23 +74,27 @@ export function CategoriesSection({ whatsappNumber }: CategoriesSectionProps) {
                 onClick={(e) => handleWhatsAppClick(e, { product: "hotel", location: `hotel-card`, offer: `${name} (${city})`, niche: current.id })}
                 className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer border border-gray-100"
               >
-                <div className="relative w-full overflow-hidden" style={{ height: "200px" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img}
-                    alt={name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  <span
-                    className="absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full shadow text-white"
-                    style={{ backgroundColor: current.color }}
-                  >
-                    {current.label.split(" ").slice(0, 2).join(" ")}
-                  </span>
-                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
-                  <p className="absolute bottom-2 left-3 text-white text-xs font-semibold">📍 {city}</p>
-                </div>
+                {CITY_PHOTOS[city.toLowerCase()] ? (
+                  <div className="relative w-full overflow-hidden" style={{ height: "180px" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={CITY_PHOTOS[city.toLowerCase()]}
+                      alt={`Vue de ${city}, Tunisie`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <span className="absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full shadow text-white" style={{ backgroundColor: current.color }}>
+                      {current.label.split(" ").slice(1, 3).join(" ")}
+                    </span>
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+                    <p className="absolute bottom-2 left-3 text-white text-xs font-semibold">📍 {city}, Tunisie</p>
+                  </div>
+                ) : (
+                  <div className="relative w-full px-5 py-4 text-white" style={{ background: `linear-gradient(135deg, ${current.color} 0%, #0a3260 100%)` }}>
+                    <span className="text-xs font-bold uppercase tracking-wider opacity-90">{current.label.split(" ").slice(1).join(" ")}</span>
+                    <p className="text-sm font-semibold mt-1">📍 {city}, Tunisie</p>
+                  </div>
+                )}
                 <div className="flex flex-col flex-1 p-5">
                   <h3 className="font-bold text-base leading-snug mb-2 text-gray-900 group-hover:text-blue-900 transition-colors">
                     {name}
@@ -86,12 +102,6 @@ export function CategoriesSection({ whatsappNumber }: CategoriesSectionProps) {
                   <p className="text-xs font-semibold mb-3" style={{ color: current.color }}>
                     {tag}
                   </p>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-lg">🏊</span>
-                    <span className="text-xs text-gray-600">Piscine</span>
-                    <span className="text-lg">🍽</span>
-                    <span className="text-xs text-gray-600">All inclusive</span>
-                  </div>
                   <div
                     className="mt-auto inline-flex items-center gap-1.5 text-sm font-bold px-4 py-3 rounded-xl self-start shadow-md hover:shadow-lg transition-shadow"
                     style={{ backgroundColor: "#15803d", color: "#fff" }}

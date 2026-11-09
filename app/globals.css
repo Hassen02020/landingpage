@@ -9,7 +9,7 @@ body:not(:has(.admin-root)) {
 body:not(:has(.admin-root)) :is(button, summary, footer a, header a[href]):not([data-compact]) {
   min-height: 44px;
 }
-body:not(:has(.admin-root)) :is(button, header a[href]):not([data-compact]) {
+body:not(:has(.admin-root)) :is(button, header a[href]):not([data-compact], .hidden) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
