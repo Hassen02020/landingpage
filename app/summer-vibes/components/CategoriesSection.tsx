@@ -4,18 +4,7 @@ import { useState } from "react"
 import { CATEGORIES } from "../config"
 import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
-
-// Photos de villes tunisiennes (Adobe Stock, licence achetée). Ce sont des vues de la ville, pas de l'hôtel :
-// la légende n'indique que la ville. Sans photo pour la ville (ex. Gammarth), on garde le bandeau de couleur.
-const CITY_PHOTOS: Record<string, string> = {
-  hammamet: "/villes/hammamet.jpg",
-  sousse: "/villes/sousse.jpg",
-  djerba: "/villes/djerba.jpg",
-  monastir: "/villes/monastir.jpg",
-  mahdia: "/villes/mahdia.jpg",
-  tozeur: "/villes/tozeur.jpg",
-  tunis: "/villes/tunis.jpg",
-}
+import { CITY_PHOTOS } from "../data/city-photos"
 
 interface CategoriesSectionProps {
   whatsappNumber: string
