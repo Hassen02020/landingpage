@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { SITE_URL } from "@/lib/config"
 
 export const metadata: Metadata = {
   alternates: { canonical: "/voyages-organises" },
@@ -9,9 +10,9 @@ export const metadata: Metadata = {
     title: "Voyages Organisés 2026-2027 — Easy2Book",
     description:
       "Premium, Individuel garanti et Standard : découvrez nos départs de novembre 2026 à mai 2027 et demandez le programme sur WhatsApp.",
-    url: "https://landingpage-easy2book.vercel.app/voyages-organises",
+    url: `${SITE_URL}/voyages-organises`,
     siteName: "Easy2Book",
-    images: ["https://landingpage-easy2book.vercel.app/og-easy2book.jpg"],
+    images: [`${SITE_URL}/og-easy2book.jpg`],
     locale: "fr_TN",
     type: "website",
   },

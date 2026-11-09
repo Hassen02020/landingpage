@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { SITE_URL } from "@/lib/config"
 
 export const metadata: Metadata = {
   alternates: { canonical: "/omra" },
@@ -10,11 +11,11 @@ export const metadata: Metadata = {
     description:
       "✅ فندق قريب من الحرم ✅ تأشيرة + تأمين ✅ طيران ✅ مرافقة نسائية ✅ هدايا للمعتمرين — الأفواج: 27 جانفي | 18 فيفري | 15 مارس 2027",
     type: "website",
-    url: "https://landingpage-easy2book.vercel.app/omra",
+    url: `${SITE_URL}/omra`,
     siteName: "Easy2Book",
     images: [
       {
-        url: "https://landingpage-easy2book.vercel.app/og-easy2book.jpg",
+        url: `${SITE_URL}/og-easy2book.jpg`,
         width: 1200,
         height: 630,
         alt: "Easy2Book عمرة رمضان 2027",
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "عمرة رمضان 2027 + شوال — ابتداءً من 4800 د.ت 🕋",
     description: "احجز رحلة عمرتك في رمضان 2027 مع Easy2Book — ابتداءً من 4800 د.ت",
-    images: ["https://landingpage-easy2book.vercel.app/og-easy2book.jpg"],
+    images: [`${SITE_URL}/og-easy2book.jpg`],
   },
 }
 
