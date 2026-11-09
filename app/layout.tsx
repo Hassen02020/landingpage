@@ -5,6 +5,7 @@ import { TrackingConsent } from "./components/TrackingConsent"
 import { SITE_URL } from "@/lib/config"
 
 export const metadata: Metadata = {
+  alternates: { canonical: "./" },
   metadataBase: new URL(SITE_URL),
   title: "Easy2Book — Voyages organisés, Omra & Promos hôtels",
   description:
@@ -17,15 +18,12 @@ export const metadata: Metadata = {
     siteName: "Easy2Book",
     images: [
       {
-        url: "/logo.png",
+        url: "/og-easy2book.jpg",
         width: 1200,
         height: 630,
         alt: "Easy2Book",
       },
     ],
-  },
-  other: {
-    "fb:page_id": "Easy2Bookplateforme",
   },
 }
 

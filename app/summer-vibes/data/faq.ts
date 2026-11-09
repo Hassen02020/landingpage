@@ -1,7 +1,7 @@
 export const FAQ_ITEMS = [
   {
     q: "Comment fonctionne le paiement ?",
-    a: "Vous payez un acompte pour confirmer votre réservation, le reste est réglé directement à l'hôtel à votre arrivée. Simple et sécurisé !"
+    a: "Les modalités de paiement dépendent de l'hôtel et de la période. Elles vous sont précisées sur WhatsApp avant toute réservation."
   },
   {
     q: "Puis-je annuler ma réservation ?",
@@ -13,10 +13,10 @@ export const FAQ_ITEMS = [
   },
   {
     q: "Quand vais-je recevoir ma confirmation ?",
-    a: "Vous recevez votre confirmation de réservation par WhatsApp dans les 15 minutes suivant votre paiement d'acompte."
+    a: "Votre conseiller vous confirme la disponibilité, le tarif et les conditions sur WhatsApp. Aucune réservation n'est faite sans votre accord."
   },
   {
-    q: "Combien de temps prend la réponse ?",
-    a: "Notre équipe répond en moins de 15 minutes sur WhatsApp, 7j/7."
+    q: "Comment vous contacter ?",
+    a: "Par WhatsApp ou par téléphone au 98 140 514 / 97 449 510. Un conseiller vous répond avec un devis gratuit."
   }
 ] as const
