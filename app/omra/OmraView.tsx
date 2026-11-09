@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { SkipLink } from "@/app/components/SkipLink"
 import Image from "next/image"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
 import { PHONE_NUMBER, SOCIAL_LINKS, WHATSAPP_NUMBER } from "@/lib/config"
@@ -176,7 +177,8 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans text-gray-900 pb-20 sm:pb-0" dir="rtl">
+    <div className="min-h-screen bg-stone-50 font-sans text-gray-900 pb-20 sm:pb-0" dir="rtl" lang="ar">
+      <SkipLink label="تخطّي إلى المحتوى" />
       {/* EN-TÊTE */}
       <header className="fixed inset-x-0 top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
@@ -205,6 +207,7 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
           </div>
         </div>
       </header>
+      <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO — image réelle issue de la vidéo Easy2Book */}
       <section id="top" className="relative pt-14 overflow-hidden">
@@ -454,6 +457,8 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
       </section>
 
       {/* PIED DE PAGE */}
+      </main>
+
       <footer className="bg-emerald-950 text-emerald-100/70 py-10 text-center text-sm">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -475,12 +480,12 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
               TikTok
             </a>
           </div>
-          <p className="mt-5 text-xs text-emerald-100/40">© 2026 Easy2Book</p>
+          <p className="mt-5 text-xs text-emerald-100/70">© 2026 Easy2Book</p>
         </div>
       </footer>
 
       {/* BARRE D'ACTION MOBILE */}
-      <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
+      <aside aria-label="حجز سريع" className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
         <button
           type="button"
           onClick={goToForm}
@@ -488,13 +493,13 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
         >
           احجز مكانك
         </button>
-        <WhatsAppLink fallbackValue={OMRA_PRICE_FROM} location="sticky" className="bg-[#25D366] text-white font-bold rounded-xl px-4 py-3" pkg={selected}>
+        <WhatsAppLink fallbackValue={OMRA_PRICE_FROM} location="sticky" className="bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl px-4 py-3" pkg={selected}>
           واتساب
         </WhatsAppLink>
-        <a href={`tel:+216${PHONE_NUMBER}`} aria-label="اتصل بنا" className="border border-gray-300 rounded-xl px-4 py-3 font-bold">
+        <a href={`tel:+216${PHONE_NUMBER}`} aria-label="اتصل بنا" className="border border-gray-300 rounded-xl px-4 py-3 font-bold min-h-[44px] inline-flex items-center">
           📞
         </a>
-      </div>
+      </aside>
     </div>
   )
 }

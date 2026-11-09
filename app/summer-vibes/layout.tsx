@@ -3,7 +3,7 @@ import Script from "next/script"
 import { FAQ_ITEMS } from "./data/faq"
 
 export const metadata: Metadata = {
-  title: "Easy2Book | Hôtels Tunisie Été 2026 – Offres Exclusives",
+  title: "Easy2Book | Promos du mois — Hôtels Tunisie, offres exclusives",
   description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7 pour vos vacances en Tunisie.",
   alternates: {
     canonical: "https://landingpage-easy2book.vercel.app/summer-vibes",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Easy2Book | Hôtels Tunisie Été 2026 – Offres Exclusives",
+    title: "Easy2Book | Promos du mois — Hôtels Tunisie, offres exclusives",
     description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7.",
     type: "website",
     locale: "fr_FR",
@@ -31,13 +31,13 @@ export const metadata: Metadata = {
         url: "https://landingpage-easy2book.vercel.app/hero-bg.jpg",
         width: 1200,
         height: 630,
-        alt: "Easy2Book Summer Vibes 2026",
+        alt: "Easy2Book — Promos du mois",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Easy2Book | Hôtels Tunisie Été 2026 – Offres Exclusives",
+    title: "Easy2Book | Promos du mois — Hôtels Tunisie, offres exclusives",
     description: "Réservez hôtels, voyages de noces et vacances famille avec Easy2Book. Meilleurs prix garantis, paiement flexible et assistance 24/7.",
     images: ["https://landingpage-easy2book.vercel.app/hero-bg.jpg"],
   },

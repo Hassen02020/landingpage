@@ -176,3 +176,6 @@ Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des do
 | Rôles et permissions : Employé / Manager / Administrateur appliqués par permission partout, rôle Manager (chantier 06) — migration 0013 | **CODE ÉCRIT + TESTÉ** ; migration **non appliquée** ; `docs/MULTI_TENANT.md` §17 |
 | Page publique `/o/<identifiant>` et formulaire configurable par entreprise (chantier 05 B) — migration 0014 | **CODE ÉCRIT + TESTÉ** ; migration **non appliquée** ; `docs/MULTI_TENANT.md` §19 |
 
+
+## Chantier 07 — audit et amélioration UI/UX du frontend public (09/11/2026)
+Audit mesuré (axe-core, captures mobile 390 px et ordinateur 1366 px, poids, débordements) sur `/`, `/omra`, `/voyages-organises`, `/summer-vibes`. **Avant : 15 à 76 défauts d'accessibilité par page** (contrastes insuffisants sur les boutons verts, le texte gris et les couleurs d'accent ; aucune zone `main` ; page arabe déclarée en français ; ordre des titres ; zones tactiles trop petites ; logo de 1,4 Mo ; image d'en-tête de 1 600 px servie à un mobile de 390 px). **Après : 0 défaut axe sur les 8 vues.** Détail dans `docs/UI_AUDIT_07.md`.

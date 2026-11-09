@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Voyages Organisés 2026 — Easy2Book",
+  title: "Voyages Organisés 2026-2027 — Easy2Book",
   description:
-    "Voyages organisés Turquie, Malaisie & Bali, Égypte, Maroc — Été & Automne 2026. Vols + hôtels + visites inclus. Réservez avec Easy2Book.",
+    "Voyages organisés au départ de Tunis : Australie, Japon, Égypte, Jordanie, Turquie, Maroc, Chine… Départs de novembre 2026 à mai 2027, prix à partir de 1 950 TND par personne. Programme sur demande.",
   openGraph: {
-    title: "Voyages Organisés 2026 — Easy2Book",
+    title: "Voyages Organisés 2026-2027 — Easy2Book",
     description:
-      "Istanbul, Kuala Lumpur & Bali, Sharm El Sheikh, Marrakech... Découvrez nos voyages organisés tout inclus pour l'été 2026.",
+      "Premium, Individuel garanti et Standard : découvrez nos départs de novembre 2026 à mai 2027 et demandez le programme sur WhatsApp.",
     url: "https://landingpage-easy2book.vercel.app/voyages-organises",
     siteName: "Easy2Book",
     images: ["https://landingpage-easy2book.vercel.app/logo.png"],
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Voyages Organisés 2026 — Easy2Book",
-    description: "Turquie, Malaisie & Bali, Égypte, Maroc — voyages tout inclus. Réservez maintenant avec Easy2Book.",
+    title: "Voyages Organisés 2026-2027 — Easy2Book",
+    description: "Australie, Japon, Égypte, Jordanie, Turquie, Maroc… départs de novembre 2026 à mai 2027. Programme sur demande.",
   },
 }
 

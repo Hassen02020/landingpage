@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react"
 
-const TARGET_DATE = new Date("2026-07-31T23:59:59")
+// « Promo du mois » : le compte à rebours vise TOUJOURS la fin du mois en cours (heure de Tunis, UTC+1 sans changement d'heure),
+// jamais une date figée qui finirait par afficher des zéros.
+export function endOfMonthTunis(now = new Date()): number {
+  const [y, m] = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Tunis", year: "numeric", month: "2-digit" }).format(now).split("-").map(Number)
+  return Date.UTC(y, m, 1, 0, 0, 0) - 3_600_000 - 1000 // 1er du mois suivant 00:00 à Tunis, moins 1 seconde
+}
 
 export function CountdownTimer() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
@@ -10,7 +15,7 @@ export function CountdownTimer() {
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date()
-      const difference = TARGET_DATE.getTime() - now.getTime()
+      const difference = endOfMonthTunis(now) - now.getTime()
 
       if (difference <= 0) {
         return { days: 0, hours: 0, minutes: 0, seconds: 0 }

@@ -129,7 +129,7 @@ export function TrackingConsent() {
               <button
                 type="button"
                 onClick={() => choose("granted")}
-                className="px-4 py-2 rounded-xl bg-green-500 hover:bg-green-400 text-sm font-bold"
+                className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-sm font-bold"
               >
                 {isArabic ? "قبول" : "Accepter"}
               </button>

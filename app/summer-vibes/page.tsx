@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { SkipLink } from "@/app/components/SkipLink"
 import Image from "next/image"
 import { CTAButton } from "./components/CTAButton"
 import { CategoriesSection } from "./components/CategoriesSection"
+import { HotelPromosSection } from "./components/HotelPromosSection"
 import { TestimonialsSlider } from "./components/TestimonialsSlider"
 import { CountdownTimer } from "./components/CountdownTimer"
 import { FAQAccordion } from "./components/FAQAccordion"
@@ -15,7 +17,7 @@ import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
 
 const WHATSAPP_MESSAGE = encodeURIComponent(waText(
-  "Bonjour Easy2Book, je souhaite avoir le tarif pour Summer Vibes 2026 !\n\nMerci de me préciser :\n- Date du congés\n- Nombre d'adultes\n- Âges des enfants\n- Zone : Hammamet / Monastir / Sousse / Tabarka / Mahdia / Djerba"
+  "Bonjour Easy2Book, je souhaite avoir le tarif pour la promo du mois !\n\nMerci de me préciser :\n- Date du congés\n- Nombre d'adultes\n- Âges des enfants\n- Zone : Hammamet / Monastir / Sousse / Tabarka / Mahdia / Djerba"
 ))
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`
 
@@ -143,6 +145,7 @@ export default function SummerVibesPage() {
 
   return (
     <div className="min-h-screen font-sans bg-white text-gray-900">
+      <SkipLink label="Aller au contenu" />
 
       {/* HEADER */}
       <header
@@ -190,6 +193,7 @@ export default function SummerVibesPage() {
           />
         </div>
       </header>
+      <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
       <section
@@ -213,12 +217,12 @@ export default function SummerVibesPage() {
           className="relative z-10 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
           style={{ backgroundColor: "rgba(245,194,66,0.18)", color: "#f5c242", border: "1px solid rgba(245,194,66,0.35)" }}
         >
-          🌴 Été 2026 — Places limitées
+          🏷️ Promo du mois — Places limitées
         </span>
 
         <h1 className="relative z-10 text-white font-extrabold leading-tight mb-4" style={{ fontSize: "clamp(2.2rem, 7vw, 4rem)" }}>
-          Vos vacances d'été<br />
-          <span style={{ color: "#f5c242" }}>commencent ici</span>
+          Les promos du mois<br />
+          <span style={{ color: "#f5c242" }}>sur vos hôtels en Tunisie</span>
         </h1>
 
         <p className="relative z-10 text-blue-100 text-lg sm:text-xl max-w-2xl mb-8 leading-relaxed">
@@ -247,7 +251,7 @@ export default function SummerVibesPage() {
         <CTAButton
           label="🟢 Réserver sur WhatsApp"
           className="relative z-10 inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-2xl transition-all hover:brightness-110 active:scale-95"
-          style={{ backgroundColor: "#25D366", color: "#fff" }}
+          style={{ backgroundColor: "#15803d", color: "#fff" }}
           location="hero"
         />
 
@@ -262,7 +266,7 @@ export default function SummerVibesPage() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
             <span className="text-2xl">🔥</span>
-            <h3 className="font-extrabold text-lg" style={{ color: "#92400e" }}>Places limitées — Été 2026</h3>
+            <h2 className="font-extrabold text-lg" style={{ color: "#92400e" }}>Promo du mois — Places limitées</h2>
           </div>
           <p className="text-sm mb-4" style={{ color: "#78350f" }}>Fin des promotions dans :</p>
           <CountdownTimer />
@@ -339,6 +343,9 @@ export default function SummerVibesPage() {
         </div>
       </section>
 
+      {/* PROMOS HÔTELS TUNISIE (fichier promos_hotels_tunisie) */}
+      <HotelPromosSection whatsappNumber={WHATSAPP_NUMBER} />
+
       {/* CATÉGORIES HÔTELS */}
       <CategoriesSection whatsappNumber={WHATSAPP_NUMBER} />
 
@@ -364,7 +371,7 @@ export default function SummerVibesPage() {
         <CTAButton
           label="🟢 Réserver sur WhatsApp"
           className="inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl text-lg font-extrabold shadow-xl transition-all hover:brightness-110 active:scale-95"
-          style={{ backgroundColor: "#25D366", color: "#fff" }}
+          style={{ backgroundColor: "#15803d", color: "#fff" }}
           location="bottom-cta"
         />
 
@@ -374,12 +381,12 @@ export default function SummerVibesPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-xl mx-auto">
             <a
               href="/omra"
-              className="flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg px-8 py-5 rounded-2xl shadow-xl transition-all hover:scale-105 border-2 border-emerald-400"
+              className="flex items-center justify-center gap-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-lg px-8 py-5 rounded-2xl shadow-xl transition-all hover:scale-105 border-2 border-emerald-400"
             >
               <span className="text-2xl">🕋</span>
               <div className="text-left">
-                <div className="text-base font-black">عمرة الصيف 2026</div>
-                <div className="text-emerald-200 text-xs font-semibold">3 أفواج — 4 800 TND</div>
+                <div className="text-base font-black">عمرة رمضان وشوال 2027</div>
+                <div className="text-emerald-50 text-xs font-semibold">3 أفواج — 4 800 TND</div>
               </div>
             </a>
             <a
@@ -397,6 +404,8 @@ export default function SummerVibesPage() {
       </section>
 
       {/* FOOTER */}
+      </main>
+
       <footer className="py-6 px-5 text-center text-xs text-white/60" style={{ backgroundColor: "#071e3d" }}>
         © {new Date().getFullYear()} Easy2Book — Centrale de Réservation &nbsp;|&nbsp;
         <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors" onClick={(e) => trackWhatsAppClick(e, "footer")}>
@@ -417,6 +426,7 @@ export default function SummerVibesPage() {
       </footer>
 
       {/* FLOATING WHATSAPP */}
+      <aside aria-label="Contact WhatsApp">
       <a
         href={WHATSAPP_URL}
         target="_blank"
@@ -424,13 +434,14 @@ export default function SummerVibesPage() {
         onClick={(e) => trackWhatsAppClick(e, "floating")}
         aria-label="Nous contacter sur WhatsApp"
         className="fixed bottom-6 right-5 z-50 flex items-center justify-center rounded-full shadow-2xl transition-transform hover:scale-110 active:scale-95"
-        style={{ backgroundColor: "#25D366", width: "60px", height: "60px" }}
+        style={{ backgroundColor: "#15803d", width: "60px", height: "60px" }}
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="white" aria-hidden="true">
           <path d="M16.003 2.667C8.637 2.667 2.667 8.637 2.667 16c0 2.37.635 4.664 1.84 6.672L2.667 29.333l6.88-1.806A13.28 13.28 0 0 0 16.003 29.333c7.363 0 13.33-5.97 13.33-13.333S23.366 2.667 16.003 2.667zm0 24c-2.18 0-4.31-.588-6.168-1.703l-.441-.263-4.082 1.071 1.09-3.967-.288-.457A10.636 10.636 0 0 1 5.333 16c0-5.882 4.787-10.667 10.67-10.667S26.667 10.118 26.667 16 21.882 26.667 16.003 26.667zm5.843-7.984c-.32-.16-1.893-.934-2.187-1.04-.294-.107-.508-.16-.721.16-.214.32-.828 1.04-.015 1.254-.826-.027-1.654-.214-2.373-.614-.64-.36-1.2-.867-1.627-1.467-.427-.6-.694-1.28-.76-1.987-.067-.694.107-1.4.48-1.987.374-.586.934-1.04 1.574-1.28.64-.24 1.334-.267 1.987-.08.654.187 1.254.56 1.72 1.08.467.52.8 1.16.947 1.84l.08.4c.027.16.04.32.04.48 0 .294-.04.587-.12.867-.08.28-.214.547-.387.787-.174.24-.387.44-.627.6-.24.16-.507.267-.787.32-.28.053-.56.053-.84 0-.64-.107-1.24-.4-1.72-.84l-.08-.067c.267.4.587.76.96 1.067.827.693 1.84 1.12 2.907 1.227.373.04.747.013 1.107-.08.36-.093.706-.253 1.013-.467.306-.213.573-.48.787-.787.213-.306.373-.64.48-.986.106-.347.16-.707.16-1.067 0-.387-.04-.773-.12-1.147l-.04-.16c-.133-.64-.373-1.253-.72-1.8-.347-.547-.8-1.027-1.333-1.413-.533-.387-1.12-.653-1.747-.8a5.48 5.48 0 0 0-1.893-.107c-.64.08-1.253.28-1.813.587-.56.307-1.053.72-1.453 1.213-.4.494-.693 1.054-.853 1.654-.16.6-.187 1.227-.08 1.84.107.613.347 1.2.7 1.72.354.52.813.96 1.347 1.28.534.32 1.12.52 1.733.587.614.067 1.24 0 1.827-.187.587-.187 1.12-.507 1.573-.933.454-.427.8-.947 1.027-1.52.227-.573.32-1.2.267-1.813z" />
         </svg>
         <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ backgroundColor: "#25D366" }} aria-hidden="true" />
       </a>
+      </aside>
 
     </div>
   )
