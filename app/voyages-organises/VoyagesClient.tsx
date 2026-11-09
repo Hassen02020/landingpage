@@ -165,7 +165,7 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
-      <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
+      <section className="relative min-h-[85vh] flex items-center justify-center pt-16 overflow-hidden">
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -190,7 +190,7 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
           </h1>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
             {destinations.join(" · ")}<br />
-            <span className="font-bold text-yellow-300">Voyages tout inclus · Devis gratuit · Assistance complète</span>
+            <span className="font-bold text-yellow-300">Devis gratuit · Programme détaillé sur WhatsApp · Assistance complète</span>
           </p>
 
           {/* Filtre par catégorie */}
@@ -214,18 +214,6 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-2xl mx-auto mb-10">
-            {[
-              { icon: "🧭", text: `${upcoming.length} voyage${upcoming.length > 1 ? "s" : ""} au départ` },
-              { icon: "💰", text: cheapest !== null ? `Dès ${fmtPrice(cheapest)} TND / pers.` : "Tarifs sur demande" },
-              { icon: "💬", text: "Programme sur demande" },
-            ].map((u, i) => (
-              <div key={i} className="bg-white/15 backdrop-blur border border-white/20 rounded-2xl p-3 text-center">
-                <div className="text-2xl mb-1">{u.icon}</div>
-                <div className="text-white text-xs font-bold">{u.text}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
