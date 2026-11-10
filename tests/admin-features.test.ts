@@ -102,6 +102,46 @@ describe("intégrations Meta / TikTok gérées depuis /admin", () => {
     expect(meta.url).not.toContain("meta-test-token")
     expect((meta.init.headers as Record<string, string>).Authorization).toBe("Bearer meta-test-token")
   })
+
+  it("test Meta sans code de test : un refus de lecture du pixel (code 100) n'est pas présenté comme un pixel introuvable", async () => {
+    configureAll()
+    installFetchMock()
+    vi.stubGlobal("fetch", vi.fn(async (url: unknown) => {
+      if (String(url).includes("graph.facebook.com")) return new Response(JSON.stringify({ error: { code: 100, message: "Unsupported get request" } }), { status: 400 })
+      return new Response("[]", { status: 200 })
+    }))
+    const r = await testIntegration("meta", actor)
+    expect(r.ok).toBe(false)
+    expect(r.message).toMatch(/code de test/)
+    expect(r.message).not.toMatch(/introuvable/)
+  })
+
+  it("test Meta avec code de test : envoie UN événement de test (POST /events) et réussit sur events_received", async () => {
+    configureAll()
+    vi.stubEnv("LANDING_SUPABASE_SERVICE_ROLE_KEY", "service-role-test-0123456789")
+    const f = installFetchMock()
+    await saveIntegration("meta", { enabled: false, pixelId: "1674012850599992", token: META_TOKEN, clearToken: false, testEventCode: "TEST12345" }, actor)
+    const calls: { url: string; init: RequestInit }[] = []
+    const base = globalThis.fetch
+    vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
+      const u = String(url)
+      if (u.includes("graph.facebook.com")) {
+        calls.push({ url: u, init })
+        return new Response(JSON.stringify({ events_received: 1, messages: [], fbtrace_id: "x" }), { status: 200 })
+      }
+      return base(url as string, init)
+    }))
+    const r = await testIntegration("meta", actor)
+    expect(r.ok).toBe(true)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].url).toBe("https://graph.facebook.com/v21.0/1674012850599992/events")
+    expect(calls[0].init.method).toBe("POST")
+    const body = JSON.parse(String(calls[0].init.body))
+    expect(body.test_event_code).toBe("TEST12345")
+    expect(body.data).toHaveLength(1)
+    expect(String(calls[0].init.body)).not.toContain(META_TOKEN)
+    expect(f.db.landing_integrations[0].last_test_ok).toBe(true)
+  })
 })
 
 describe("protection des formulaires", () => {
