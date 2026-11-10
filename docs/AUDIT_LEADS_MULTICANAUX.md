@@ -81,3 +81,24 @@ Aucune route de webhook n'est exposée : rien n'est atteignable depuis Internet,
 | Signature Meta `X-Hub-Signature-256`, vérification d'abonnement `hub.challenge`, signature horodatée anti-rejeu | `lib/server/webhook-auth.ts` | `tests/webhook-auth.test.ts` (8) |
 
 Limites déclarées : les charges de test sont **simulées** ; la réception réelle d'un lead Facebook, Instagram, TikTok ou WhatsApp n'est **pas prouvée**. Le schéma de signature TikTok est **à confirmer** dans la documentation officielle avant de brancher `verifyTimestampedHmac`. Rattachement page/compte → entreprise, journal des événements (migration) et routes : lots suivants, après les accès externes.
+
+## Lot 2 — Facebook et Instagram (Meta Lead Ads) : CODE ÉCRIT + TESTÉ (plateforme simulée) — INACTIF
+Route `/api/webhooks/meta-leads` : **inerte (404)** tant que `META_APP_SECRET` et `META_LEADS_VERIFY_TOKEN` ne sont pas définis dans Vercel. **Migration 0015 écrite, NON appliquée** (à exécuter par le propriétaire, avec `postcheck-0015.sql`).
+
+Flux : signature `X-Hub-Signature-256` vérifiée sur le corps brut → événements `leadgen` → page Facebook rattachée à UNE entreprise (`landing_meta_pages`) → lecture du lead par l'API Graph avec le jeton de la Page (en-tête, jamais dans l'URL) → service central (idempotence `facebook:<leadgen_id>` ou `instagram:…`, consentement, cloisonnement).
+
+| Cas | Comportement |
+|---|---|
+| Signature invalide / absente | 401, rien lu ni enregistré |
+| Page inconnue ou désactivée | 200, ignoré (journal sans donnée personnelle) |
+| Accord de recontact non confirmé pour la page | 200, **aucun lead enregistré** |
+| Erreur Meta temporaire (5xx, 429, codes 1/2/4/17/32/341/613, réseau), base indisponible | **500** → Meta rejoue ; l'idempotence évite tout doublon |
+| Erreur permanente (jeton invalide 190, lead supprimé, données invalides) | 200, pas de reprise inutile, journal |
+| Même événement reçu deux fois | un seul prospect |
+| Deux entreprises | chaque lead va dans l'entreprise de SA page, avec SON jeton |
+
+Administration : carte « Meta — formulaires instantanés » dans `/admin/integrations` (identifiant de page, jeton chiffré, confirmation de l'accord de recontact, activation). Le jeton n'est jamais réaffiché (4 derniers caractères). Une page ne peut appartenir qu'à une entreprise.
+
+Preuves : `tests/meta-leads.test.ts` (16), `tests/meta-pages.test.ts` (5), `tests/migration-0015.test.ts` (7, PGlite), sabotages vérifiés (entreprise forcée, signature non vérifiée, consentement non exigé : les tests échouent). e2e admin et multi-entreprises : OK.
+
+**Non prouvé** : aucune réception réelle d'un lead Facebook ou Instagram (aucun accès Meta utilisé). Prérequis propriétaire : application Meta Business avec produit Webhooks (objet « Page », champ `leadgen`), permissions de lecture des leads et de la Page, jeton d'accès de la Page, formulaire instantané de test, variables Vercel `META_APP_SECRET` et `META_LEADS_VERIFY_TOKEN`, puis exécution de la migration 0015. Journal des événements et réconciliation : lot 5.
