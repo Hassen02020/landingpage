@@ -30,3 +30,6 @@ Source : audit externe collé par le propriétaire (vérifié contre le code ava
 - P3 : mesure Lighthouse/Core Web Vitals sur le site en ligne, tests multi-écrans.
 - Langue HTML d'Omra : `<html lang="fr">` global ; la page porte `lang="ar"` sur son conteneur.
 - Certification du parcours complet formulaire → CRM → WhatsApp en production (sans créer de faux prospects : à faire avec un prospect de test déclaré).
+
+## Mise à jour du 10/11/2026 — mentions légales
+Informations communiquées par le propriétaire : raison sociale « Easy2Book Tarhouni Hassen », identifiant fiscal / RC « 1399210/02/Z », adresse « Avenue 28 Mars, Siliana, Tunisie », directeur de la publication « Tarhouni Hassen ». Source unique : `lib/legal.ts` (page `/mentions-legales`, politique de confidentialité, pied de page, sitemap). À faire par le propriétaire : confirmer que « 1399210/02/Z » est bien l'identifiant à publier (matricule fiscal ou RC) et, s'il le souhaite, ajouter une adresse e-mail de contact publique.

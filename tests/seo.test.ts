@@ -35,3 +35,25 @@ describe("Politique de confidentialité", () => {
     }
   })
 })
+
+describe("Mentions légales", () => {
+  const page = readFileSync("app/mentions-legales/page.tsx", "utf8")
+  it("la page affiche toutes les mentions exigées à partir de la source unique", async () => {
+    const { LEGAL } = await import("../lib/legal")
+    expect(LEGAL.companyName).toBe("Easy2Book Tarhouni Hassen")
+    expect(LEGAL.registrationId).toBe("1399210/02/Z")
+    expect(LEGAL.address).toBe("Avenue 28 Mars, Siliana, Tunisie")
+    expect(LEGAL.publicationDirector).toBe("Tarhouni Hassen")
+    for (const k of ["LEGAL.companyName", "LEGAL.registrationId", "LEGAL.address", "LEGAL.publicationDirector", "LEGAL.host"]) expect(page).toContain(k)
+    expect(page).toMatch(/Directeur de la publication/)
+    expect(page).toMatch(/Hébergement/)
+  })
+  it("la page est dans le sitemap, a un canonical, et le pied de page la relie", () => {
+    expect(sitemap().some((e) => e.url.endsWith("/mentions-legales"))).toBe(true)
+    expect(page).toMatch(/canonical/)
+    expect(readFileSync("app/components/SiteFooter.tsx", "utf8")).toContain("/mentions-legales")
+  })
+  it("la politique de confidentialité cite l'éditeur légal", () => {
+    expect(readFileSync("app/confidentialite/page.tsx", "utf8")).toContain("LEGAL.companyName")
+  })
+})

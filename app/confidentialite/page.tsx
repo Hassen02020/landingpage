@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { PHONE_NUMBER, SITE_URL } from "@/lib/config"
+import { LEGAL } from "@/lib/legal"
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité — Easy2Book",
@@ -23,7 +24,7 @@ export default function ConfidentialitePage() {
 
         <section className="mb-8">
           <h2 className="text-xl font-extrabold mb-2">Qui traite vos données ?</h2>
-          <p className="text-gray-700 leading-relaxed">Easy2Book, agence de voyage en Tunisie, traite les données que vous nous confiez lorsque vous demandez un devis ou une réservation sur ce site. Contact : <a className="font-bold text-blue-700" href={`tel:+216${PHONE_NUMBER}`}>98 140 514</a> ou WhatsApp.</p>
+          <p className="text-gray-700 leading-relaxed">{LEGAL.companyName} (« Easy2Book »), {LEGAL.address}, identifiant fiscal / RC {LEGAL.registrationId}, traite les données que vous nous confiez lorsque vous demandez un devis ou une réservation sur ce site. Contact : <a className="font-bold text-blue-700" href={`tel:+216${PHONE_NUMBER}`}>98 140 514</a> ou WhatsApp.</p>
         </section>
 
         <section className="mb-8">
