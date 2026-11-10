@@ -221,7 +221,7 @@ export async function testIntegration(provider: Provider, actor: Actor): Promise
   if (cfg.tokenUnreadable && !cfg.token) result = { ok: false, message: "Jeton enregistré illisible : ressaisissez-le." }
   else if (!cfg.pixelId) result = { ok: false, message: "ID du pixel manquant." }
   else if (!cfg.token) result = { ok: false, message: "Jeton d'accès manquant." }
-  else result = provider === "meta" ? await testMeta(cfg.pixelId, cfg.token) : await testTikTok(cfg.pixelId, cfg.token, cfg.testEventCode)
+  else result = provider === "meta" ? await testMeta(cfg.pixelId, cfg.token, cfg.testEventCode) : await testTikTok(cfg.pixelId, cfg.token, cfg.testEventCode)
 
   const message = `${result.message}${cfg.tokenSource === "vercel" ? " (jeton lu dans Vercel)" : ""}`.slice(0, 300)
   await upsertQuiet(
@@ -239,9 +239,38 @@ export async function testIntegration(provider: Provider, actor: Actor): Promise
   return { ok: result.ok, message }
 }
 
-// Lecture du pixel avec le jeton (aucun événement envoyé) : valide jeton + accès au pixel.
-async function testMeta(pixelId: string, token: string): Promise<{ ok: boolean; message: string }> {
+// Test Meta. Un jeton « API Conversions » (généré dans le Gestionnaire d'événements) sert à ENVOYER des événements,
+// pas à lire le pixel : lui demander GET /{pixel} échoue (code 100) même quand le jeton est valable.
+//  • avec un code de test : envoi d'UN événement de test (visible uniquement dans « Tester les événements », non compté) ;
+//  • sans code de test : lecture du pixel ; un refus de lecture n'est pas un verdict sur le jeton.
+async function testMeta(pixelId: string, token: string, testEventCode?: string): Promise<{ ok: boolean; message: string }> {
   try {
+    if (testEventCode) {
+      const res = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(pixelId)}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          data: [
+            {
+              event_name: "ViewContent",
+              event_id: `test-${Date.now()}`,
+              event_time: Math.floor(Date.now() / 1000),
+              action_source: "website",
+              event_source_url: "https://landingpage-easy2book.vercel.app/",
+              user_data: { client_user_agent: "Easy2Book-test-connexion", client_ip_address: "127.0.0.1" },
+            },
+          ],
+          test_event_code: testEventCode,
+        }),
+        cache: "no-store",
+      })
+      const json = (await res.json().catch(() => ({}))) as { events_received?: number; error?: { message?: string; code?: number; error_subcode?: number } }
+      if (res.ok && (json.events_received ?? 0) >= 1) return { ok: true, message: "Événement de test accepté par Meta : voyez l'onglet « Tester les événements »." }
+      const code = json.error?.code
+      if (code === 190) return { ok: false, message: "Jeton invalide ou expiré (Meta code 190) : générez-en un nouveau." }
+      if (code === 100 || code === 803) return { ok: false, message: "Pixel introuvable, ou ce jeton n'a pas le droit d'envoyer des événements à ce pixel (jeton d'un autre ensemble de données ?)." }
+      return { ok: false, message: `Meta a refusé l'événement de test${code ? ` (code ${code})` : ""}.` }
+    }
     const res = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(pixelId)}?fields=id,name`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
@@ -250,7 +279,12 @@ async function testMeta(pixelId: string, token: string): Promise<{ ok: boolean; 
     if (res.ok && json.id) return { ok: true, message: `Connecté au pixel « ${json.name || json.id} ».` }
     const code = json.error?.code
     if (code === 190) return { ok: false, message: "Jeton invalide ou expiré (Meta code 190) : générez-en un nouveau." }
-    if (code === 100 || code === 803) return { ok: false, message: "Pixel introuvable ou non accessible avec ce jeton." }
+    if (code === 100 || code === 803) {
+      return {
+        ok: false,
+        message: "Ce jeton ne permet pas de lire le pixel (normal pour un jeton API Conversions). Saisissez le code de test (onglet « Tester les événements » de Meta), enregistrez, puis relancez le test.",
+      }
+    }
     return { ok: false, message: `Meta a refusé la connexion${code ? ` (code ${code})` : ""}.` }
   } catch {
     return { ok: false, message: "Meta injoignable depuis le serveur." }
