@@ -3,6 +3,8 @@ import { currentStaff } from "@/lib/server/auth"
 import { integrationViews } from "@/lib/server/integrations"
 import { SITE_URL } from "@/lib/config"
 import { IntegrationCard } from "./IntegrationCard"
+import { MetaLeadsCard } from "./MetaLeadsCard"
+import { listMetaPages } from "@/lib/server/meta-pages"
 
 export const dynamic = "force-dynamic"
 
@@ -19,6 +21,8 @@ export default async function IntegrationsPage() {
     return <p className="bg-white rounded-2xl p-6 text-gray-700">Cette page est réservée aux administrateurs.</p>
   }
   const views = await integrationViews()
+  const metaPages = staff?.organizationId ? await listMetaPages(staff.organizationId) : { pages: [], migrationApplied: true }
+  const webhookReady = Boolean(process.env.META_APP_SECRET && process.env.META_LEADS_VERIFY_TOKEN)
   const migrationApplied = views.every((v) => v.migrationApplied)
   const host = new URL(SITE_URL).host
 
@@ -39,6 +43,7 @@ export default async function IntegrationsPage() {
         {views.map((v) => (
           <IntegrationCard key={v.provider} view={v} />
         ))}
+        <MetaLeadsCard pages={metaPages.pages} webhookUrl={`${SITE_URL}/api/webhooks/meta-leads`} webhookReady={webhookReady} migrationApplied={metaPages.migrationApplied} />
       </div>
 
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
