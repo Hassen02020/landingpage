@@ -71,3 +71,13 @@ Statuts : PASS · FAIL · BLOQUÉ (accès ou décision externe) · À VALIDER.
 
 ## Règles non négociables
 Prénom + téléphone au premier contact (e-mail facultatif) ; consentement de recontact enregistré ; source et identifiants publicitaires conservés ; un événement externe ne crée jamais deux leads ; aucune fuite entre entreprises ; EasyV4 reste indépendant.
+
+## Lot 1 — socle central (10/11/2026) : CODE ÉCRIT + TESTÉ (charges simulées) — NON ACTIVÉ
+Aucune route de webhook n'est exposée : rien n'est atteignable depuis Internet, rien n'est actif en production.
+
+| Élément | Fichier | Preuve |
+|---|---|---|
+| Service d'enregistrement d'un lead externe (entreprise passée explicitement ; idempotence `plateforme:identifiant` ; consentement de recontact obligatoire ; aucun identifiant publicitaire personnel ; pas d'événement « Lead » renvoyé aux plateformes) | `lib/server/inbound-leads.ts` | `tests/inbound-leads.test.ts` (10), `tests/inbound-leads-tenant.test.ts` (3, vérifié par sabotage) |
+| Signature Meta `X-Hub-Signature-256`, vérification d'abonnement `hub.challenge`, signature horodatée anti-rejeu | `lib/server/webhook-auth.ts` | `tests/webhook-auth.test.ts` (8) |
+
+Limites déclarées : les charges de test sont **simulées** ; la réception réelle d'un lead Facebook, Instagram, TikTok ou WhatsApp n'est **pas prouvée**. Le schéma de signature TikTok est **à confirmer** dans la documentation officielle avant de brancher `verifyTimestampedHmac`. Rattachement page/compte → entreprise, journal des événements (migration) et routes : lots suivants, après les accès externes.
