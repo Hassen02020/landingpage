@@ -33,7 +33,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | P3 | ~~Deux adresses pour l'Omra (`/omra` et `/c/omra-2027`)~~ → redirection avec conservation des paramètres | 3 |
 | P2 | Customer 360, segmentation, marketing, fidélité : absents | 6–8 |
 | P3 | Lint non configuré ; Playwright non déclaré dans `package.json` | 1 |
-| Opérationnel | Jeton Meta de production invalide (erreur 190) : à remplacer par le propriétaire dans `/admin/integrations` | — |
+| ~~Opérationnel~~ | ~~Jeton Meta de production invalide (190)~~ → **résolu le 10/11/2026** : pixel + API des conversions Meta actifs et validés (événement de test reçu) ; TikTok actif | — |
 | Opérationnel | PR #1 (PETORA, août 2026) ouverte et sans rapport : à fermer par le propriétaire | — |
 
 ## Blocs
@@ -133,8 +133,8 @@ Niveaux : CODE ÉCRIT < TESTÉ < INTÉGRATION CONNECTÉE < PARCOURS VALIDÉ < PR
 | WhatsApp (liens, rattachement, échanges saisis) | PARCOURS VALIDÉ pour les liens ; API officielle **NON CONNECTÉE** | `whatsapp.e2e`, `whatsapp.test` | Accès Business API (propriétaire) |
 | Pipeline à 10 statuts, ventes comptées une fois | PARCOURS VALIDÉ + migration 0007 **appliquée en production** | `pipeline.test`, scénario `admin-flow`, requête du propriétaire | Parcours réel après déploiement |
 | Customer 360, segments, analytics | PARCOURS VALIDÉ (faux Supabase) | `customer360`, `segments`, `analytics` + e2e | Relecture sur données réelles |
-| Intégration Meta | CODE ÉCRIT + TESTÉ ; **jeton invalide en production (190)** | `meta-tiktok.test` | Jeton régénéré par le propriétaire |
-| Intégration TikTok | CODE ÉCRIT + TESTÉ ; non connectée | `meta-tiktok.test` | Jeton et pixel (propriétaire) |
+| Intégration Meta | **ACTIVE EN PRODUCTION** (10/11/2026) : pixel + API des conversions, événement de test reçu, domaines limités | `meta-tiktok.test`, `admin-features.test` | — |
+| Intégration TikTok | **ACTIVE EN PRODUCTION** (10/11/2026) : pixel + Events API, test accepté, premier événement navigateur reçu | `meta-tiktok.test` | Compte annonceur à activer pour diffuser |
 | Sécurité (en-têtes, RLS, droits minimaux, EasyV4 interdit) | TESTÉ | `security-headers`, `db-minimal`, migrations PGlite ; aucun secret trouvé dans le dépôt | Revue externe / lint non configuré |
 | Fidélité / VIP (Bloc 8) | **NON FAIT** | — | Règles à définir par le propriétaire |
 | Envoi de messages, campagnes, export de segments | **NON FAIT par décision** | — | Autorisation spécifique du propriétaire |
@@ -181,3 +181,4 @@ Ordre décidé par le propriétaire : 1 multi-tenant + RLS · 2 migration des do
 Audit mesuré (axe-core, captures mobile 390 px et ordinateur 1366 px, poids, débordements) sur `/`, `/omra`, `/voyages-organises`, `/summer-vibes`. **Avant : 15 à 76 défauts d'accessibilité par page** (contrastes insuffisants sur les boutons verts, le texte gris et les couleurs d'accent ; aucune zone `main` ; page arabe déclarée en français ; ordre des titres ; zones tactiles trop petites ; logo de 1,4 Mo ; image d'en-tête de 1 600 px servie à un mobile de 390 px). **Après : 0 défaut axe sur les 8 vues.** Détail dans `docs/UI_AUDIT_07.md`.
 
 | AUDIT-FRONT-09 | Suites de l'audit frontend (prix Omra, urgence, preuves, SEO, confidentialité) | `docs/AUDIT_FRONT_09.md` |
+| AUDIT-LEADS-MULTICANAUX | Réception automatique des leads Facebook / Instagram / TikTok / WhatsApp : audit A0–A5 (aucun code), lots 1 à 5 proposés | `docs/AUDIT_LEADS_MULTICANAUX.md` |
