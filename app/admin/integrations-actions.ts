@@ -9,6 +9,8 @@ import { PROVIDERS, saveIntegration, testIntegration, type Provider } from "@/li
 
 export interface IntegrationFormState {
   ok?: boolean
+  /** résultat non concluant (ni réussite ni échec) : affiché en information */
+  inconclusive?: boolean
   message?: string
   errors?: Record<string, string>
 }

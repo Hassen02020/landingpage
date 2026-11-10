@@ -214,10 +214,10 @@ export async function saveIntegration(provider: Provider, input: IntegrationInpu
 }
 
 // ---------- test de connexion ----------
-export async function testIntegration(provider: Provider, actor: Actor): Promise<{ ok: boolean; message: string }> {
+export async function testIntegration(provider: Provider, actor: Actor): Promise<{ ok: boolean; message: string; inconclusive?: boolean }> {
   await forget(provider)
   const cfg = await resolveIntegration(provider)
-  let result: { ok: boolean; message: string }
+  let result: { ok: boolean; message: string; inconclusive?: boolean }
   if (cfg.tokenUnreadable && !cfg.token) result = { ok: false, message: "Jeton enregistré illisible : ressaisissez-le." }
   else if (!cfg.pixelId) result = { ok: false, message: "ID du pixel manquant." }
   else if (!cfg.token) result = { ok: false, message: "Jeton d'accès manquant." }
@@ -226,24 +226,24 @@ export async function testIntegration(provider: Provider, actor: Actor): Promise
   const message = `${result.message}${cfg.tokenSource === "vercel" ? " (jeton lu dans Vercel)" : ""}`.slice(0, 300)
   await upsertQuiet(
     "landing_integrations",
-    { provider, enabled: cfg.enabled, last_test_at: new Date().toISOString(), last_test_ok: result.ok, last_test_message: message },
+    { provider, enabled: cfg.enabled, last_test_at: new Date().toISOString(), last_test_ok: result.inconclusive ? null : result.ok, last_test_message: message },
     "provider"
   ).catch(() => console.error("[integrations] résultat du test non enregistré"))
   await insertQuiet("landing_integration_changes", {
     provider,
     actor_id: actor.id,
     actor_label: actor.label.slice(0, 320),
-    summary: `test : ${result.ok ? "réussi" : "échec"}`,
+    summary: `test : ${result.ok ? "réussi" : result.inconclusive ? "non concluant" : "échec"}`,
   }).catch(() => undefined)
   await forget(provider)
-  return { ok: result.ok, message }
+  return { ok: result.ok, message, ...(result.inconclusive ? { inconclusive: true } : {}) }
 }
 
 // Test Meta. Un jeton « API Conversions » (généré dans le Gestionnaire d'événements) sert à ENVOYER des événements,
 // pas à lire le pixel : lui demander GET /{pixel} échoue (code 100) même quand le jeton est valable.
 //  • avec un code de test : envoi d'UN événement de test (visible uniquement dans « Tester les événements », non compté) ;
 //  • sans code de test : lecture du pixel ; un refus de lecture n'est pas un verdict sur le jeton.
-async function testMeta(pixelId: string, token: string, testEventCode?: string): Promise<{ ok: boolean; message: string }> {
+async function testMeta(pixelId: string, token: string, testEventCode?: string): Promise<{ ok: boolean; message: string; inconclusive?: boolean }> {
   try {
     if (testEventCode) {
       const res = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(pixelId)}/events`, {
@@ -282,7 +282,8 @@ async function testMeta(pixelId: string, token: string, testEventCode?: string):
     if (code === 100 || code === 803) {
       return {
         ok: false,
-        message: "Ce jeton ne permet pas de lire le pixel (normal pour un jeton API Conversions). Saisissez le code de test (onglet « Tester les événements » de Meta), enregistrez, puis relancez le test.",
+        inconclusive: true,
+        message: "Test non concluant (pas une erreur) : un jeton API Conversions ne peut pas lire le pixel. Pour le valider, saisissez le code de test (Meta › Évènements de test), enregistrez, testez, puis videz le code.",
       }
     }
     return { ok: false, message: `Meta a refusé la connexion${code ? ` (code ${code})` : ""}.` }
@@ -325,7 +326,7 @@ export interface IntegrationView {
   vercelPixel: boolean
   vercelToken: boolean
   effective: { pixelSource: string; tokenSource: string }
-  lastTest: { at: string; ok: boolean; message: string } | null
+  lastTest: { at: string; ok: boolean | null; message: string } | null
   history: { created_at: string; actor_label: string; summary: string }[]
 }
 
@@ -366,7 +367,7 @@ export async function integrationViews(): Promise<IntegrationView[]> {
         vercelPixel: Boolean(ENV[provider].pixel()),
         vercelToken: Boolean(ENV[provider].token()),
         effective: { pixelSource: eff.pixelSource, tokenSource: eff.tokenSource },
-        lastTest: row?.last_test_at ? { at: row.last_test_at, ok: Boolean(row.last_test_ok), message: row.last_test_message ?? "" } : null,
+        lastTest: row?.last_test_at ? { at: row.last_test_at, ok: row.last_test_ok === null || row.last_test_ok === undefined ? null : Boolean(row.last_test_ok), message: row.last_test_message ?? "" } : null,
         history,
       }
     })
