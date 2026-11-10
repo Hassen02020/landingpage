@@ -63,7 +63,7 @@ export function SiteFooter({ whatsappHref, onWhatsApp, extraPhones = [] }: { wha
           </div>
         </div>
       </div>
-      <div className="border-t border-white/10 py-5 text-center text-xs text-blue-100/60">© {new Date().getFullYear()} Easy2Book. Tous droits réservés. · <Link href="/confidentialite" className="underline underline-offset-2 hover:text-white">Confidentialité</Link></div>
+      <div className="border-t border-white/10 py-5 text-center text-xs text-blue-100/60">© {new Date().getFullYear()} Easy2Book. Tous droits réservés. · <Link href="/mentions-legales" className="underline underline-offset-2 hover:text-white">Mentions légales</Link> · <Link href="/confidentialite" className="underline underline-offset-2 hover:text-white">Confidentialité</Link></div>
     </footer>
   )
 }
