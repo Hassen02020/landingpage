@@ -103,17 +103,24 @@ describe("intégrations Meta / TikTok gérées depuis /admin", () => {
     expect((meta.init.headers as Record<string, string>).Authorization).toBe("Bearer meta-test-token")
   })
 
-  it("test Meta sans code de test : un refus de lecture du pixel (code 100) n'est pas présenté comme un pixel introuvable", async () => {
+  it("test Meta sans code de test : un refus de lecture du pixel (code 100) est « non concluant », pas un échec ni un pixel introuvable", async () => {
     configureAll()
-    installFetchMock()
-    vi.stubGlobal("fetch", vi.fn(async (url: unknown) => {
+    vi.stubEnv("LANDING_SUPABASE_SERVICE_ROLE_KEY", "service-role-test-0123456789")
+    const f = installFetchMock()
+    await saveIntegration("meta", { enabled: true, pixelId: "1674012850599992", token: META_TOKEN, clearToken: false, testEventCode: "" }, actor)
+    const base = globalThis.fetch
+    vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
       if (String(url).includes("graph.facebook.com")) return new Response(JSON.stringify({ error: { code: 100, message: "Unsupported get request" } }), { status: 400 })
-      return new Response("[]", { status: 200 })
+      return base(url as string, init)
     }))
     const r = await testIntegration("meta", actor)
     expect(r.ok).toBe(false)
+    expect(r.inconclusive).toBe(true)
     expect(r.message).toMatch(/code de test/)
     expect(r.message).not.toMatch(/introuvable/)
+    // ni réussite ni échec enregistré en base
+    expect(f.db.landing_integrations[0].last_test_ok).toBeNull()
+    expect(f.db.landing_integration_changes.at(-1)?.summary).toBe("test : non concluant")
   })
 
   it("test Meta avec code de test : envoie UN événement de test (POST /events) et réussit sur events_received", async () => {
