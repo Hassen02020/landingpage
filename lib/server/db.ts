@@ -58,6 +58,7 @@ export const TENANT_TABLES: ReadonlySet<string> = new Set([
   "landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations",
   "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist",
   "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs",
+  "landing_ad_spend", "landing_commissions",
 ])
 // Vues de performance : une ligne PAR ORGANISATION (colonne organization_id, migration 0010). Filtrées en mode multi ;
 // en mode « une organisation » elles sont lues telles quelles (aucun filtre nécessaire, et le site fonctionne avant 0010).

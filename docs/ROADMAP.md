@@ -182,3 +182,4 @@ Audit mesuré (axe-core, captures mobile 390 px et ordinateur 1366 px, poids, d�
 
 | AUDIT-FRONT-09 | Suites de l'audit frontend (prix Omra, urgence, preuves, SEO, confidentialité) | `docs/AUDIT_FRONT_09.md` |
 | AUDIT-LEADS-MULTICANAUX | Réception automatique des leads Facebook / Instagram / TikTok / WhatsApp : audit A0–A5 (aucun code), lots 1 à 5 proposés | `docs/AUDIT_LEADS_MULTICANAUX.md` |
+| ADS-ROI | Rentabilité publicitaire : dépenses + commissions nettes importées d'EasyV4, formules, gagnante (PR 1 : migration 0016 non appliquée + calcul testé) | `docs/ROI_PUBLICITAIRE.md` |
