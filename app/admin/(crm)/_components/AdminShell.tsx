@@ -65,6 +65,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/admin/stats", label: "Statistiques", icon: "chart" },
       { href: "/admin/segments", label: "Segments", icon: "team" },
+      { href: "/admin/rentabilite", label: "Rentabilité", icon: "chart", permission: "ads.view" },
       { href: "/admin/liens", label: "Liens de campagne", icon: "link" },
       { href: "/admin/calculateur", label: "Calculateur", icon: "calc" },
     ],
