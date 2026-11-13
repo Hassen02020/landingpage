@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { can } from "@/lib/permissions"
 import { currentStaff } from "@/lib/server/auth"
-import { listAdSpend } from "@/lib/server/ad-spend"
+import { knownCampaigns, listAdSpend } from "@/lib/server/ad-spend"
 import { listCommissions } from "@/lib/server/commissions"
 import { listVariableCosts } from "@/lib/server/variable-costs"
 import { RentabiliteClient } from "./RentabiliteClient"
@@ -14,7 +14,7 @@ export default async function RentabilitePage() {
     return <p className="bg-white rounded-2xl p-6 text-gray-700">Cette page est réservée aux responsables.</p>
   }
   const canManage = can(staff.orgRole, "ads.manage")
-  const [spend, commissions, costs] = await Promise.all([listAdSpend(), listCommissions(), listVariableCosts()])
+  const [spend, commissions, costs, campaigns] = await Promise.all([listAdSpend(), listCommissions(), listVariableCosts(), knownCampaigns()])
   return (
     <div className="space-y-6">
       <div>
@@ -31,6 +31,7 @@ export default async function RentabilitePage() {
         canManage={canManage && spend.migrationApplied && commissions.migrationApplied}
         costs={costs.rows.map((c) => ({ id: c.id, date: c.cost_date, category: c.category, amount: Number(c.amount_tnd), voids: c.voids_id, target: c.lead_id ? "Réservation" : c.campaign ? `${c.network} · ${c.campaign}` : "Non attribué", reference: c.reference }))}
         costsEnabled={costs.migrationApplied}
+        campaigns={campaigns}
         spend={spend.rows.map((r) => ({ id: r.id, date: r.spend_date, network: r.network, campaign: r.campaign, amount: Number(r.amount_tnd), voids: r.voids_id, reference: r.reference ?? null }))}
         commissions={commissions.rows.map((c) => ({ id: c.id, leadRef: c.lead_ref, reservation: c.external_ref, kind: c.kind, amount: Number(c.amount_tnd), status: c.status, date: c.event_date }))}
       />

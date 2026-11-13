@@ -10,6 +10,7 @@ interface SpendRow { id: number; date: string; network: string; campaign: string
 interface CostRowUi { id: number; date: string; category: string; amount: number; voids: number | null; target: string; reference: string | null }
 interface ComRow { id: number; leadRef: string | null; reservation: string; kind: string; amount: number; status: "provisoire" | "confirme"; date: string }
 
+const CSV_TEMPLATE = "reservation_ref;nature;montant_tnd;date;lead_ref;telephone;ligne\nRES-0001;commission;350,000;2026-11-12;E2B-ABC234;;1\nRES-0001;remboursement;50,000;2026-11-20;E2B-ABC234;;1\n"
 const tnd = (n: number) => `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 3 })} TND`
 const input = "w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500"
 const STATUS_LABEL: Record<string, string> = { rapproche: "Rapprochée", a_valider: "À valider", ambigu: "Ambiguë — refusée", introuvable: "Dossier introuvable", deja_importee: "Déjà importée", conflit: "Conflit de dossier" }
@@ -19,7 +20,7 @@ function Submit({ children }: { children: string }) {
   return <button type="submit" disabled={pending} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-60">{pending ? "…" : children}</button>
 }
 
-export function RentabiliteClient({ canManage, spend, commissions, costs, costsEnabled }: { canManage: boolean; spend: SpendRow[]; commissions: ComRow[]; costs: CostRowUi[]; costsEnabled: boolean }) {
+export function RentabiliteClient({ canManage, spend, commissions, costs, costsEnabled, campaigns }: { canManage: boolean; campaigns: { name: string; conventional: boolean }[]; spend: SpendRow[]; commissions: ComRow[]; costs: CostRowUi[]; costsEnabled: boolean }) {
   const [state, add] = useFormState(addSpendAction, undefined)
   const [cstate, addCost] = useFormState(addCostAction, undefined)
   const costVoided = new Set(costs.filter((c) => c.voids != null).map((c) => c.voids))
@@ -49,13 +50,22 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
 
   return (
     <div className="space-y-6">
+      <section className="bg-blue-50 border border-blue-200 text-blue-950 rounded-2xl p-4 text-sm space-y-2">
+        <h2 className="font-black">Convention unique de nommage des campagnes</h2>
+        <p>Le <strong>même nom</strong> doit être utilisé dans Meta / TikTok Ads Manager (il devient <code>utm_campaign</code>), dans les dépenses saisies ici et dans les liens de campagne : sinon les dépenses ne se rapprochent d&apos;aucun prospect. Format : minuscules, chiffres et tirets, sans espace ni accent — <code>niche-produit-année</code>, par exemple <code>omra-ramadan-2027</code>.</p>
+        {campaigns.length > 0 ? (
+          <p>Noms de campagne vus sur vos prospects : {campaigns.map((c) => <span key={c.name} className={`inline-block mr-1.5 mb-1 px-2 py-0.5 rounded-full text-xs font-bold ${c.conventional ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{c.name}{c.conventional ? "" : " — hors convention"}</span>)}</p>
+        ) : <p className="text-blue-900/80">Aucun prospect avec un nom de campagne pour l&apos;instant.</p>}
+      </section>
+
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
         <h2 className="font-black">Dépenses publicitaires</h2>
         {canManage && (
           <form action={add} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-start">
+            <datalist id="campagnes-connues">{campaigns.filter((c) => c.conventional).map((c) => <option key={c.name} value={c.name} />)}</datalist>
             <label className="text-sm">Date<input type="date" name="date" max={today} defaultValue={today} required className={input} />{err("date") && <span className="text-red-600 text-xs">{err("date")}</span>}</label>
             <label className="text-sm">Réseau<select name="network" className={input} defaultValue="meta"><option value="meta">Meta</option><option value="tiktok">TikTok</option></select>{err("network") && <span className="text-red-600 text-xs">{err("network")}</span>}</label>
-            <label className="text-sm">Campagne<input name="campaign" required maxLength={255} className={input} />{err("campaign") && <span className="text-red-600 text-xs">{err("campaign")}</span>}</label>
+            <label className="text-sm">Campagne (ex. omra-ramadan-2027)<input name="campaign" required maxLength={255} list="campagnes-connues" autoComplete="off" className={input} dir="ltr" />{err("campaign") && <span className="text-red-600 text-xs">{err("campaign")}</span>}</label>
             <label className="text-sm">Montant (TND)<input name="amount" inputMode="decimal" required className={input} />{err("amount") && <span className="text-red-600 text-xs">{err("amount")}</span>}</label>
             <label className="text-sm">Référence (facultatif)<input name="reference" maxLength={200} className={input} /></label>
             <div className="md:col-span-5 flex items-center gap-3"><Submit>Enregistrer la dépense</Submit>{state?.message && <span className={`text-sm ${state.ok ? "text-green-700" : "text-red-600"}`}>{state.message}</span>}</div>
@@ -84,7 +94,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
             <label className="text-sm">Référence (facultatif)<input name="reference" maxLength={200} className={input} /></label>
             <label className="text-sm">Réservation (E2B-XXXXXX)<input name="leadRef" className={input} dir="ltr" />{cerr("leadRef") && <span className="text-red-600 text-xs">{cerr("leadRef")}</span>}</label>
             <label className="text-sm">…ou réseau<select name="network" className={input} defaultValue=""><option value="">—</option><option value="meta">Meta</option><option value="tiktok">TikTok</option></select>{cerr("network") && <span className="text-red-600 text-xs">{cerr("network")}</span>}</label>
-            <label className="text-sm">…et campagne<input name="campaign" maxLength={255} className={input} />{cerr("campaign") && <span className="text-red-600 text-xs">{cerr("campaign")}</span>}</label>
+            <label className="text-sm">…et campagne<input name="campaign" maxLength={255} list="campagnes-connues" autoComplete="off" className={input} dir="ltr" />{cerr("campaign") && <span className="text-red-600 text-xs">{cerr("campaign")}</span>}</label>
             <div className="flex items-end gap-3"><Submit>Enregistrer le coût</Submit></div>
             {cstate?.message && <p className={`md:col-span-4 text-sm ${cstate.ok ? "text-green-700" : "text-red-600"}`}>{cstate.message}</p>}
           </form>
@@ -105,6 +115,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
         <h2 className="font-black">Commissions EasyV4</h2>
         {canManage && (
           <div className="space-y-3">
+            <p className="text-sm text-gray-600"><a download="modele-commissions-easyv4.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`} className="font-bold text-violet-700 underline">Télécharger le modèle de fichier</a>. Sans commissions importées, la marge ne représente PAS la rentabilité réelle : EasyV4 reste la référence, rien n&apos;est inventé ici.</p>
             <p className="text-sm text-gray-600">Collez le CSV exporté d&apos;EasyV4 (colonnes : reservation_ref ; nature ; montant_tnd ; date ; lead_ref ; telephone ; ligne). Rien n&apos;est écrit avant l&apos;aperçu et votre validation.</p>
             <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={5} className={input + " font-mono text-xs"} dir="ltr" aria-label="Contenu CSV des commissions" />
             <div className="flex gap-3"><button type="button" disabled={pending || !csv.trim()} onClick={runPreview} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-gray-900 text-white disabled:opacity-60">Aperçu</button>

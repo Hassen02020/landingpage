@@ -4,6 +4,7 @@
 import { insertOne, select } from "@/lib/server/db"
 import { parseAmount, parseDate, LEAD_REF } from "@/lib/commission-import"
 import { tunisDay } from "@/lib/server/crm"
+import { CAMPAIGN_EXAMPLE, isConventionalCampaign, suggestCampaignName } from "@/lib/campaign-name"
 import { isMissingTable, type SpendResult } from "@/lib/server/ad-spend"
 
 import { COST_CATEGORIES, type CostCategory } from "@/lib/variable-cost-categories"
@@ -50,6 +51,7 @@ export async function addVariableCost(input: CostInput, actorId: string | null):
   if (!leadRef && (campaign || network)) {
     if (network !== "meta" && network !== "tiktok") errors.network = "Réseau : Meta ou TikTok."
     if (campaign.length < 1 || campaign.length > 255) errors.campaign = "Campagne requise (255 caractères maximum)."
+    else if (!isConventionalCampaign(campaign)) errors.campaign = `Nom hors convention (ex. ${CAMPAIGN_EXAMPLE}). Proposition : ${suggestCampaignName(campaign) || CAMPAIGN_EXAMPLE}.`
   }
   if (Object.keys(errors).length) return { ok: false, errors }
   try {

@@ -43,10 +43,10 @@ describe("coûts variables (serveur)", () => {
   })
   it("réservation ET campagne refusés (double comptage) ; campagne seule acceptée ; sans rattachement accepté", async () => {
     expect(await as(E2B, () => addVariableCost({ ...base, leadRef: "E2B-ABC234", network: "meta", campaign: "Omra" }, null))).toMatchObject({ ok: false, errors: { leadRef: expect.stringMatching(/deux fois/) } })
-    expect(await as(E2B, () => addVariableCost({ ...base, network: "meta", campaign: "Omra 2027" }, null))).toEqual({ ok: true })
+    expect(await as(E2B, () => addVariableCost({ ...base, network: "meta", campaign: "omra-2027" }, null))).toEqual({ ok: true })
     expect(await as(E2B, () => addVariableCost(base, null))).toEqual({ ok: true })
     expect(costs).toHaveLength(2)
-    expect(costs[0]).toMatchObject({ lead_id: null, network: "meta", campaign: "Omra 2027" })
+    expect(costs[0]).toMatchObject({ lead_id: null, network: "meta", campaign: "omra-2027" })
   })
   it("catégories « publicité » et « remboursement » refusées ; montant et date validés", async () => {
     for (const category of ["publicite", "remboursement"]) expect(await as(E2B, () => addVariableCost({ ...base, category }, null))).toMatchObject({ ok: false, errors: { category: expect.any(String) } })

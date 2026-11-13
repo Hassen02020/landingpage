@@ -4,6 +4,7 @@ import { currentStaff } from "@/lib/server/auth"
 import { loadProfitability } from "@/lib/server/profitability"
 import { parsePeriod } from "@/lib/server/stats"
 import type { Dimension, GroupRow, Metrics } from "@/lib/ad-economics"
+import { isConventionalCampaign } from "@/lib/campaign-name"
 
 export const dynamic = "force-dynamic"
 
@@ -26,22 +27,30 @@ function Card({ label, value, note, tone }: { label: string; value: string; note
 
 const tone = (n: number) => (n > 0 ? "pos" : n < 0 ? "neg" : undefined)
 
-function Row({ r, winner }: { r: GroupRow; winner: boolean }) {
+function Row({ r, winner, dim }: { r: GroupRow; winner: boolean; dim: Dimension }) {
   const m: Metrics = r.metrics
+  const estSpend = r.spendBasis === "estimee"
+  const estCost = r.costBasis === "estimee"
+  const est = estSpend || estCost
+  const campaignName = dim === "campaign" ? r.key.split("|").slice(1).join("|") : ""
+  const offConvention = dim === "campaign" && campaignName !== "(aucune)" && !isConventionalCampaign(campaignName)
+  const Est = () => <span className="block text-xs text-amber-700">≈ estimation</span>
   return (
     <tr className={`border-t align-top ${winner ? "bg-green-50" : ""}`}>
       <td className="py-2 pr-3 font-semibold">{r.label}{winner && <span className="ml-2 text-xs font-bold bg-green-600 text-white px-2 py-0.5 rounded-full">Gagnante</span>}
         {!r.sufficient && <span className="block text-xs font-normal text-gray-500">échantillon insuffisant ({m.confirmedBookings} réservation(s) confirmée(s))</span>}
-        {r.spendBasis === "estimee" && <span className="block text-xs font-normal text-amber-700">dépense estimée (répartie au prorata des leads)</span>}
+        {est && <span className="block text-xs font-normal text-amber-700">dépense répartie au prorata des leads : estimation, pas une dépense réelle par {dim === "product" ? "produit" : dim === "niche" ? "niche" : "annonce"}</span>}
+        {offConvention && <span className="block text-xs font-normal text-red-700">nom hors convention : vérifiez le nom de campagne dans l&apos;annonce</span>}
+        {m.bookingsWithoutCommission > 0 && <span className="block text-xs font-normal text-red-700">{m.bookingsWithoutCommission} réservation(s) sans commission importée</span>}
       </td>
       <td className="pr-3 text-right">{m.leads}</td>
       <td className="pr-3 text-right">{m.bookings}<span className="block text-xs text-gray-500">{m.confirmedBookings} confirmée(s)</span></td>
-      <td className="pr-3 text-right">{tnd(m.spend)}</td>
-      <td className="pr-3 text-right">{tnd(m.variableCosts)}</td>
+      <td className={`pr-3 text-right ${estSpend ? "text-amber-700" : ""}`}>{estSpend ? "≈ " : ""}{tnd(m.spend)}{estSpend && <Est />}</td>
+      <td className={`pr-3 text-right ${estCost ? "text-amber-700" : ""}`}>{estCost ? "≈ " : ""}{tnd(m.variableCosts)}{estCost && <Est />}</td>
       <td className="pr-3 text-right">{tnd(m.commissionConfirmed)}<span className="block text-xs text-amber-700">+ {tnd(m.commissionProvisional)} provisoire</span></td>
-      <td className={`pr-3 text-right font-bold ${m.marginConfirmed < 0 ? "text-red-600" : m.marginConfirmed > 0 ? "text-green-700" : ""}`}>{signed(m.marginConfirmed)}</td>
-      <td className="pr-3 text-right text-amber-700">{signed(m.marginWithProvisional)}<span className="block text-xs">estimation</span></td>
-      <td className="text-right">{tnd(m.costPerBooking)}</td>
+      <td className={`pr-3 text-right font-bold ${est ? "text-amber-700" : m.marginConfirmed < 0 ? "text-red-600" : m.marginConfirmed > 0 ? "text-green-700" : ""}`}>{est ? "≈ " : ""}{signed(m.marginConfirmed)}{est && <Est />}</td>
+      <td className="pr-3 text-right text-amber-700">≈ {signed(m.marginWithProvisional)}<span className="block text-xs">estimation (provisoire{est ? " + répartition" : ""})</span></td>
+      <td className={`text-right ${estSpend ? "text-amber-700" : ""}`}>{estSpend && m.costPerBooking !== null ? "≈ " : ""}{tnd(m.costPerBooking)}</td>
     </tr>
   )
 }
@@ -65,6 +74,16 @@ export default async function AnalysePage({ searchParams }: { searchParams: { di
       </div>
 
       {!data.migrationApplied && <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">Les migrations 0016 / 0017 ne sont pas toutes appliquées : certains chiffres sont absents.</div>}
+
+      {t.bookings > 0 && t.bookingsWithoutCommission === t.bookings && (
+        <div className="bg-red-50 border border-red-200 text-red-900 rounded-2xl p-4 text-sm"><strong>Aucune commission importée pour vos {t.bookings} réservation(s).</strong> Sans elles, la marge ci-dessous ne représente pas la rentabilité réelle : Landing n&apos;invente jamais une commission. Importez le fichier d&apos;EasyV4 depuis <Link href="/admin/rentabilite" className="underline font-bold">la page de saisie</Link> (le modèle de fichier y est téléchargeable).</div>
+      )}
+      {t.bookings > 0 && t.bookingsWithoutCommission > 0 && t.bookingsWithoutCommission < t.bookings && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm"><strong>{t.bookingsWithoutCommission} réservation(s) sur {t.bookings} n&apos;ont aucune commission importée</strong> : la marge est sous-estimée tant qu&apos;elles ne sont pas rapprochées.</div>
+      )}
+      {(dim === "product" || dim === "niche" || dim === "ad") && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl p-4 text-sm">Dans cette vue, la publicité et les coûts de campagne sont <strong>répartis au prorata des prospects</strong> : ce sont des <strong>estimations (≈)</strong>, pas des dépenses réelles par {dim === "product" ? "produit" : dim === "niche" ? "niche" : "annonce"}. Pour des chiffres réels, regardez les vues Réseau et Campagne.</div>
+      )}
 
       <form className="flex flex-wrap items-end gap-3 text-sm" method="get">
         <input type="hidden" name="dim" value={dim} />
@@ -95,7 +114,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: { di
           <thead><tr className="text-left text-gray-500 text-xs"><th className="py-1 pr-3">{DIMS.find((d) => d.key === dim)?.label}</th><th className="pr-3 text-right">Leads</th><th className="pr-3 text-right">Réservations</th><th className="pr-3 text-right">Publicité</th><th className="pr-3 text-right">Coûts variables</th><th className="pr-3 text-right">Commission</th><th className="pr-3 text-right">Marge confirmée</th><th className="pr-3 text-right">Marge avec provisoire</th><th className="text-right">Coût / réservation</th></tr></thead>
           <tbody>
             {result.rows.length === 0 && <tr><td colSpan={9} className="py-4 text-gray-500">Aucune donnée sur la période.</td></tr>}
-            {result.rows.map((r) => <Row key={r.key} r={r} winner={r.key === result.winnerKey} />)}
+            {result.rows.map((r) => <Row key={r.key} r={r} winner={r.key === result.winnerKey} dim={dim} />)}
             {result.rows.length > 0 && (
               <tr className="border-t-2 font-bold"><td className="py-2 pr-3">Total</td><td className="pr-3 text-right">{t.leads}</td><td className="pr-3 text-right">{t.bookings}</td><td className="pr-3 text-right">{tnd(t.spend)}</td><td className="pr-3 text-right">{tnd(t.variableCosts)}</td><td className="pr-3 text-right">{tnd(t.commissionConfirmed)}</td><td className="pr-3 text-right">{signed(t.marginConfirmed)}</td><td className="pr-3 text-right text-amber-700">{signed(t.marginWithProvisional)}</td><td className="text-right">{tnd(t.costPerBooking)}</td></tr>
             )}
