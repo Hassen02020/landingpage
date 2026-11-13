@@ -33,7 +33,7 @@ async function visit({ url, consent, userAgent, navigateTo, viewport = { width: 
   if (await banner.count()) await banner.first().click()
   await page.waitForTimeout(400)
   if (navigateTo) {
-    await Promise.all([page.waitForURL((u) => u.pathname === navigateTo, { timeout: 10000 }), page.locator(`a[href="${navigateTo}"]`).first().click()])
+    await Promise.all([page.waitForURL((u) => u.pathname === navigateTo, { timeout: 10000 }), page.locator(`a[href="${navigateTo}"]:visible`).first().click()])
     await page.waitForLoadState("networkidle")
     await page.waitForTimeout(300)
   }
