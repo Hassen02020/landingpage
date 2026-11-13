@@ -378,7 +378,7 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
 }
 
 // ---------------------------------------------------------------- statistiques
-for (const [label, path, text] of [["marketing", "/admin/stats", "Leads reçus"], ["équipe", "/admin/stats?view=equipe", "Taux de conclusion"], ["offres", "/admin/stats?view=offres", "Offre"], ["calculateur", "/admin/calculateur", "Profit net"]]) {
+for (const [label, path, text] of [["marketing", "/admin/stats", "Leads reçus"], ["équipe", "/admin/stats?view=equipe", "Taux de conclusion"], ["offres", "/admin/stats?view=offres", "Offre"], ["calculateur", "/admin/calculateur", "Profit net"], ["rentabilité : saisie", "/admin/rentabilite", "Dépenses publicitaires"], ["rentabilité : analyse", "/admin/rentabilite/analyse", "Quelles campagnes rapportent"]]) {
   await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" })
   check(`${label} : page affichée`, await page.getByText(text).first().isVisible())
 }

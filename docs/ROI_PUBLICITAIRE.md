@@ -51,3 +51,10 @@ PR 2 : saisie des dépenses + import des commissions (aperçu avant validation).
 4. **Gagnante** : marge nette confirmée > 0 ET au moins 5 réservations à commission confirmée ET marge strictement supérieure à celle des autres lignes comparables (égalité exacte : pas de gagnante). Sinon la raison est affichée.
 - Sans coût variable saisi, l'écran l'indique : la marge est « avant coûts variables non saisis ».
 - Catégories : frais de paiement, prime du conseiller, messagerie, geste commercial, autre.
+
+## Écran d'analyse `/admin/rentabilite/analyse`
+
+Répond aux cinq questions : combien on dépense pour attirer un client (dépenses ÷ réservations), combien de réservations sont confirmées (commission confirmée), combien de commission est conservée (confirmée / provisoire séparées), ce qui reste après tous les coûts (marge nette confirmée ; marge « avec provisoire » = estimation), quelles campagnes rapportent (bandeau « Gagnante » ou raison de l'absence de gagnante).
+- Axes : réseau, campagne, produit, niche, annonce ; période choisie (leads créés sur la période, dépenses et coûts datés sur la période).
+- Les dépenses réparties au prorata des leads (produit / niche / annonce) sont marquées « estimée » ; les dépenses sans lead et les coûts non attribués sont listés, jamais répartis en silence.
+- Accès : `ads.view` (admin, manager). Lecture seule, cloisonné par entreprise.
