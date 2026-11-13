@@ -354,3 +354,29 @@ describe("reprise d'offres du catalogue", () => {
     expect(Object.keys(list[0])).not.toContain("seats_sold")
   })
 })
+
+describe("personnalisation : droits côté serveur (action)", () => {
+  const fdFor = (id: string) => { const fd = new FormData(); fd.set("id", id); fd.set("design", JSON.stringify({ colors: { preset: "bleu" } })); return fd }
+  it("employé, manager, non connecté : refusés, AUCUNE lecture ni écriture ; administrateur : accepté", async () => {
+    const id = await makeComplete()
+    for (const r of ["employee", "manager", null] as Role[]) {
+      role = r; calls = []
+      const out = await as(E2B, () => actions.saveDesignAction(undefined, fdFor(id)))
+      expect(out.ok, String(r)).toBe(false)
+      expect(calls.filter((c) => c.table.startsWith("landing_"))).toHaveLength(0)
+    }
+    role = "admin"
+    expect((await as(E2B, () => actions.saveDesignAction(undefined, fdFor(id)))).ok).toBe(true)
+    expect(T.landing_categories[0].design).toBeTruthy()
+  })
+  it("autre entreprise : refusée avant toute écriture ; JSON illisible refusé", async () => {
+    const id = await makeComplete()
+    multi = true; role = "admin"; orgId = BOB; resetTenantModeCache(); resetPublicOrgCache(); calls = []
+    const out = await as(BOB, () => actions.saveDesignAction(undefined, fdFor(id)))
+    expect(out.ok).toBe(false)
+    expect(writes()).toHaveLength(0)
+    orgId = E2B; multi = false; role = "admin"; resetTenantModeCache(); resetPublicOrgCache()
+    const bad = new FormData(); bad.set("id", id); bad.set("design", "{pas du json")
+    expect((await as(E2B, () => actions.saveDesignAction(undefined, bad))).ok).toBe(false)
+  })
+})

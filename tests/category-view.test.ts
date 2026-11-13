@@ -4,6 +4,7 @@ import * as ReactNs from "react"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import type { Category, PublicOffer } from "@/lib/server/catalog"
+import { sanitizeDesign } from "@/lib/page-builder/design"
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: () => undefined }) }))
 let CategoryView: typeof import("@/app/p/[slug]/LandingView").LandingView
@@ -67,5 +68,30 @@ describe("rendu public par famille", () => {
   it("FAQ : processus de réservation seulement, aucun chiffre inventé", () => {
     const h = html(category(), [offer()])
     expect(h).toContain("Comment réserver ?"); expect(h).toContain("Les prix affichés sont-ils définitifs ?")
+  })
+})
+
+describe("rendu avec personnalisation (design)", () => {
+  const withDesign = (raw: unknown, product: Category["product"] = "voyage") => renderToStaticMarkup(createElement(CategoryView, { category: category({ product }), offers: [offer({ product, price_before: 3000, price: 2400 })], design: sanitizeDesign(raw, product === "voyage" ? "voyage" : "autre").design }))
+  it("SANS design (null) : rendu strictement identique au rendu par défaut", () => {
+    const base = renderToStaticMarkup(createElement(CategoryView, { category: category(), offers: [offer()] }))
+    expect(renderToStaticMarkup(createElement(CategoryView, { category: category(), offers: [offer()], design: null }))).toBe(base)
+    expect(base).not.toContain("data-custom-colors")
+  })
+  it("design vide (valeurs par défaut) : même apparence que sans design (aucune couleur imposée)", () => {
+    const h = withDesign({})
+    expect(h).not.toContain("data-custom-colors"); expect(h).toContain("blue")
+  })
+  it("injection impossible : balises, scripts et styles dans les textes sont ÉCHAPPÉS ; une couleur piégée est refusée", () => {
+    const h = withDesign({ faq: [{ q: "<script>alert(1)</script>", a: "<img src=x onerror=alert(2)>" }], testimonials: [{ name: "<b>X</b>", text: "\"><svg onload=1>" }], cta: { label: "<i>Go</i>" }, colors: { custom: "red;background:url(javascript:1)" } })
+    expect(h).not.toContain("<script>alert"); expect(h).not.toContain("<img src=x"); expect(h).not.toContain("<svg onload"); expect(h).not.toContain("<b>X</b>"); expect(h).not.toContain("<i>Go</i>")
+    expect(h).toContain("&lt;script&gt;")
+    expect(h).not.toContain("javascript:1"); expect(h).not.toContain("data-custom-colors")
+  })
+  it("réglages appliqués : couleur, bouton, prix barré masqué, « À partir de » masqué, ordre, e-mail", () => {
+    const h = withDesign({ colors: { custom: "#1d4ed8" }, cta: { label: "Réservez" }, price: { prefix: false, showBefore: false }, form: { email: true }, sections: [{ key: "faq", visible: true }] })
+    expect(h).toContain('data-custom-colors="yes"'); expect(h).toContain("--p:#1d4ed8"); expect(h).toContain("Réservez")
+    expect(h).not.toContain("line-through"); expect(h).not.toContain("À partir de"); expect(h).toContain('name="email"')
+    expect(h.indexOf('id="faq"')).toBeLessThan(h.indexOf('id="offres"'))
   })
 })

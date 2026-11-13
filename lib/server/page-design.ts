@@ -1,5 +1,5 @@
 // Lecture / écriture de la personnalisation d'une page (colonne `design` JSONB de landing_categories, migration PROPOSÉE 0018 : voir
-// docs/PROPOSITION_MIGRATION_0018_DESIGN.md — NON appliquée). TANT QUE LA COLONNE N'EXISTE PAS : lecture = « indisponible » (la page
+// supabase/migrations/0018_page_design.sql — fichier local, NON appliqué). TANT QUE LA COLONNE N'EXISTE PAS : lecture = « indisponible » (la page
 // publique garde son rendu actuel), écriture = message clair ; jamais d'erreur 500 ni de perte de données.
 import { DbError, select, update } from "@/lib/server/db"
 import { familyOf } from "@/lib/page-builder/themes"
@@ -44,7 +44,7 @@ export async function saveDesign(id: string, product: Product, raw: unknown, act
     await update("landing_categories", `id=eq.${id}`, { design, updated_at: new Date().toISOString(), updated_by: actorId })
     return { ok: true }
   } catch (e) {
-    if (isMissingColumn(e)) return { ok: false, message: "La personnalisation avancée nécessite la migration 0018 (en attente d'autorisation) : rien n'a été enregistré.", errors: {} }
+    if (isMissingColumn(e)) return { ok: false, message: "La personnalisation avancée nécessite la migration 0018 (fichier prêt, à appliquer par le propriétaire) : rien n'a été enregistré.", errors: {} }
     throw e
   }
 }

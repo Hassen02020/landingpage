@@ -406,6 +406,27 @@ await p.waitForFunction(() => document.querySelector('[data-testid="design-messa
 const withEmail = await (await fetch(`${BASE}/p/${turq.slug}`)).text()
 check("formulaire : le champ e-mail (facultatif) apparaît quand l'équipe le demande", /name="email"/.test(withEmail))
 
+// ================================================================== LOT 5 — personnalisation : rechargement, modification, adresse stable, pages sans réglage, aperçu = page publiée
+const slugBefore = cats().find((c) => c.id === turq.id).slug
+await p.goto(`${BASE}/admin/createur/${turq.id}?etape=design`, { waitUntil: "networkidle" })
+check("rechargement : les réglages enregistrés reviennent dans l'éditeur (couleur, bouton, FAQ, témoignage, programme)", (await p.locator('input[aria-label="Couleur personnalisée"]').inputValue()) === "#b91c1c" && (await p.locator('input[aria-label="Texte du bouton"]').inputValue()) === "Je réserve ma place" && (await p.locator('input[aria-label="Questions fréquentes — Question 1"]').inputValue()) === "Les visas sont-ils inclus ?" && (await p.locator('input[aria-label="Témoignages — Nom du client 1"]').inputValue()) === "Amel B." && (await p.locator('input[aria-label="Programme (étapes ou jours) — Titre (ex. Jour 1) 1"]').inputValue()).startsWith("Jour 1"))
+check("rechargement : l'ordre des sections choisi est conservé (FAQ avant les départs)", await p.locator('[data-testid="section-order"] li').evaluateAll((els) => { const k = els.map((e) => e.getAttribute("data-section")); return k.indexOf("faq") < k.indexOf("offers") }))
+await p.fill('input[aria-label="Texte du bouton"]', "Réservez maintenant")
+await p.click('[data-testid="save-design"]')
+await p.waitForFunction(() => document.querySelector('[data-testid="design-message"]')?.textContent?.includes("enregistrée"))
+const after2 = cats().find((c) => c.id === turq.id)
+check("modification d'une page déjà publiée : prise en compte, page toujours publiée, adresse publique inchangée", after2.design.cta.label === "Réservez maintenant" && after2.visible === true && after2.slug === slugBefore)
+const pubHtml2 = await (await fetch(`${BASE}/p/${slugBefore}`)).text()
+await p.goto(`${BASE}/admin/createur-rendu/${turq.id}`, { waitUntil: "networkidle" })
+const prevHtml = await p.content()
+const colorOf = (h) => (/--p:(#[0-9a-f]{6})/.exec(h) || [])[1]
+check("aperçu = page publiée : même couleur, même bouton, même FAQ, même témoignage", colorOf(prevHtml) === colorOf(pubHtml2) && colorOf(pubHtml2) === "#b91c1c" && prevHtml.includes("Réservez maintenant") && pubHtml2.includes("Réservez maintenant") && prevHtml.includes("Les visas sont-ils inclus") && pubHtml2.includes("Les visas sont-ils inclus") && prevHtml.includes("Amel B.") && pubHtml2.includes("Amel B."))
+const noConf = cats().find((c) => c.visible && c.design === undefined && c.slug !== "omra-2027")
+if (noConf) {
+  const h = await (await fetch(`${BASE}/p/${noConf.slug}`)).text()
+  check(`page publiée sans réglage (${noConf.slug}) : rendu par défaut, aucune couleur imposée, FAQ générique`, !h.includes("data-custom-colors") && (h.includes("Comment réserver") || h.includes("كيف يمكنني الحجز")))
+} else check("page publiée sans réglage : aucune autre page publiée dans ce scénario (couvert par le test unitaire de rendu)", true)
+
 const B = await login(BOB.email, BOB.password)
 await B.page.goto(`${BASE}/admin/createur`, { waitUntil: "networkidle" })
 check("autre entreprise (Bob SARL) : message clair, AUCUN formulaire ni lien vers la plateforme", (await B.page.getByText("pas encore disponible pour votre entreprise").count()) === 1 && (await B.page.getByRole("link", { name: "+ Nouvelle page" }).count()) === 0)
