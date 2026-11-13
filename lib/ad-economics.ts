@@ -5,6 +5,12 @@
 // EasyV4 reste la référence financière : ici on ne fait que LIRE ce qui a été importé, rien n'est inventé ni saisi en double.
 //
 // Règles :
+//  • MARGE NETTE = commission nette − publicité − coûts variables. Deux marges, jamais mélangées : « confirmée » (commissions confirmées seulement)
+//    et « avec provisoire » (provisoires incluses, jamais présentée comme un bénéfice définitif).
+//  • Anti double comptage : un coût variable est rattaché à UNE RÉSERVATION (lead_id) OU à UNE CAMPAGNE OU à rien (« non attribué »). S'il porte les deux,
+//    la réservation l'emporte et la campagne est ignorée. La publicité et le remboursement client ne sont pas des coûts variables : la publicité a sa table,
+//    le remboursement est une ligne négative de commission (déjà déduite de la commission nette) — ces catégories sont écartées ici.
+//  • Gagnante : marge nette CONFIRMÉE > 0, au moins 5 réservations à commission confirmée, et marge strictement supérieure à celle de toutes les autres lignes comparables.
 //  • Résultat = commission nette − dépenses ; rentabilité = commission nette ÷ dépenses × 100 ; dépenses nulles → « non calculable » (null), jamais 0 %.
 //  • Étapes CUMULATIVES par dossier (une seule fois chacune) : qualifié = a atteint « qualifié » ou plus loin (même s'il est perdu ensuite) ;
 //    devis = a atteint « devis » ou plus loin. Réservation = dossier ACTUELLEMENT réservé ou gagné (une annulation le retire).
@@ -32,6 +38,14 @@ export interface EconLead {
   niche: string | null
 }
 export interface SpendRow { id?: number; spend_date: string; network: "meta" | "tiktok"; campaign: string; amount_tnd: number | string; voids_id?: number | null }
+export interface CostRow {
+  category: string
+  amount_tnd: number | string
+  voids_id?: number | null
+  lead_id?: string | null
+  network?: "meta" | "tiktok" | null
+  campaign?: string | null
+}
 export interface CommissionRow { lead_id: string; kind: "commission" | "annulation" | "remboursement"; amount_tnd: number | string; status: "provisoire" | "confirme" }
 
 export interface Metrics {
@@ -44,6 +58,14 @@ export interface Metrics {
   commissionProvisional: number
   commissionNet: number
   result: number
+  /** coûts variables hors publicité (annulations incluses) */
+  variableCosts: number
+  /** réservations dont la commission nette CONFIRMÉE est positive */
+  confirmedBookings: number
+  /** marge nette sur commissions CONFIRMÉES seulement : seule base d'un bénéfice définitif */
+  marginConfirmed: number
+  /** marge nette si les commissions provisoires se confirment : estimation, jamais un bénéfice définitif */
+  marginWithProvisional: number
   /** null : dépenses nulles → rentabilité non calculable (jamais 0 %) */
   profitabilityPct: number | null
   cpl: number | null
@@ -71,6 +93,10 @@ export interface EconomicsResult {
   rows: GroupRow[]
   total: GroupRow
   unattachedSpend: UnattachedSpend[]
+  /** coûts variables sans réservation ni campagne (ou réservation inconnue) : comptés au total, jamais répartis en silence */
+  unattachedCosts: number
+  /** lignes écartées (publicité / remboursement saisis comme coûts) pour éviter de les compter deux fois */
+  excludedCostRows: number
   /** meilleure ligne : résultat positif, dépenses > 0, échantillon suffisant ; null sinon (raison dans winnerReason) */
   winnerKey: string | null
   winnerReason: string
@@ -79,6 +105,7 @@ export interface EconomicsInput {
   leads: EconLead[]
   activities: FunnelActivity[]
   spends: SpendRow[]
+  costs?: CostRow[]
   commissions: CommissionRow[]
   /** nombre minimal de réservations pour désigner une gagnante (défaut 5) */
   minBookings?: number
@@ -103,8 +130,8 @@ const tnd = (m: number): number => Math.round(m) / 1000
 const div = (a: number, b: number): number | null => (b > 0 ? a / b : null)
 const pct = (a: number, b: number): number | null => (b > 0 ? Math.round((1000 * a) / b) / 10 : null)
 
-interface Acc { spend: number; leads: number; qualified: number; quotes: number; bookings: number; comConfirmed: number; comProvisional: number }
-const empty = (): Acc => ({ spend: 0, leads: 0, qualified: 0, quotes: 0, bookings: 0, comConfirmed: 0, comProvisional: 0 })
+interface Acc { costs: number; confirmedBookings: number; spend: number; leads: number; qualified: number; quotes: number; bookings: number; comConfirmed: number; comProvisional: number }
+const empty = (): Acc => ({ costs: 0, confirmedBookings: 0, spend: 0, leads: 0, qualified: 0, quotes: 0, bookings: 0, comConfirmed: 0, comProvisional: 0 })
 
 function metrics(a: Acc): Metrics {
   const net = a.comConfirmed + a.comProvisional
@@ -114,13 +141,15 @@ function metrics(a: Acc): Metrics {
     spend: tnd(a.spend), leads: a.leads, qualified: a.qualified, quotes: a.quotes, bookings: a.bookings,
     commissionConfirmed: tnd(a.comConfirmed), commissionProvisional: tnd(a.comProvisional), commissionNet: tnd(net),
     result: tnd(net - a.spend),
+    variableCosts: tnd(a.costs), confirmedBookings: a.confirmedBookings,
+    marginConfirmed: tnd(a.comConfirmed - a.spend - a.costs), marginWithProvisional: tnd(net - a.spend - a.costs),
     profitabilityPct: a.spend > 0 ? Math.round((1000 * net) / a.spend) / 10 : null,
     cpl: perUnit(a.leads), costPerQualified: perUnit(a.qualified), costPerQuote: perUnit(a.quotes), costPerBooking: perUnit(a.bookings),
     qualificationRate: pct(a.qualified, a.leads), quoteRate: pct(a.quotes, a.leads), bookingRate: pct(a.bookings, a.leads),
   }
 }
 
-interface LeadFacts { lead: EconLead; qualified: boolean; quote: boolean; booked: boolean; comConfirmed: number; comProvisional: number; net: Network; campKey: string }
+interface LeadFacts { lead: EconLead; qualified: boolean; quote: boolean; booked: boolean; confirmedBooking: boolean; comConfirmed: number; comProvisional: number; net: Network; campKey: string }
 
 function groupKeyOf(f: LeadFacts, dim: Dimension): { key: string; label: string } {
   const l = f.lead
@@ -151,7 +180,7 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
     const rank = maxRank({ id: lead.id, created_at: lead.created_at, status: lead.status, booking_value: lead.booking_value, booked_at: lead.booked_at }, actsByLead.get(lead.id) ?? [])
     const c = com.get(lead.id)
     return {
-      lead, qualified: rank >= RANK_QUALIFIED, quote: rank >= RANK_QUOTE, booked: isBooking(lead.status),
+      lead, qualified: rank >= RANK_QUALIFIED, quote: rank >= RANK_QUOTE, booked: isBooking(lead.status), confirmedBooking: isBooking(lead.status) && (c?.c ?? 0) > 0,
       comConfirmed: c?.c ?? 0, comProvisional: c?.p ?? 0, net: leadNetwork(lead.channel), campKey: normalizeCampaign(lead.utm_campaign),
     }
   })
@@ -178,6 +207,7 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
     if (f.qualified) { grp.acc.qualified++; total.qualified++ }
     if (f.quote) { grp.acc.quotes++; total.quotes++ }
     if (f.booked) { grp.acc.bookings++; total.bookings++ }
+    if (f.confirmedBooking) { grp.acc.confirmedBookings++; total.confirmedBookings++ }
     grp.acc.comConfirmed += f.comConfirmed; grp.acc.comProvisional += f.comProvisional
     total.comConfirmed += f.comConfirmed; total.comProvisional += f.comProvisional
     const ck = `${f.net}|${f.campKey}`
@@ -186,48 +216,78 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
   }
 
   const unattached: UnattachedSpend[] = []
-  for (const [ck, s] of Array.from(spendBy.entries())) {
-    total.spend += s.milli
+  const gName = (n: "meta" | "tiktok") => (n === "meta" ? "Meta" : "TikTok")
+  /** rattache un montant de campagne (dépense ou coût) aux groupes de la dimension ; renvoie false si aucun lead sur la campagne */
+  const allocate = (ck: string, network: "meta" | "tiktok", campaign: string, milli: number, field: "spend" | "costs"): boolean => {
     const leadsOfCampaign = campGroups.get(ck)
+    const touch = (g: { acc: Acc; basis: SpendBasis }, part: number, exact: boolean) => {
+      g.acc[field] += part
+      if (field === "spend") g.basis = exact && g.basis !== "estimee" ? "exacte" : "estimee"
+    }
     if (!leadsOfCampaign || leadsOfCampaign.size === 0) {
       // aucune lead sur cette campagne : pour les dimensions réseau / campagne la ligne existe quand même (coût sans prospect)
-      if (dim === "network") { const g = group(s.network, s.network === "meta" ? "Meta" : "TikTok"); g.acc.spend += s.milli; g.basis = "exacte" }
-      else if (dim === "campaign") { const g = group(ck, `${s.network === "meta" ? "Meta" : "TikTok"} · ${s.campaign}`); g.acc.spend += s.milli; g.basis = "exacte" }
-      if (s.milli !== 0) unattached.push({ network: s.network, campaign: s.campaign, amount: tnd(s.milli) })
-      continue
+      if (dim === "network") touch(group(network, gName(network)), milli, true)
+      else if (dim === "campaign") touch(group(ck, `${gName(network)} · ${campaign}`), milli, true)
+      return false
     }
-    if (dim === "network") { const g = group(s.network, s.network === "meta" ? "Meta" : "TikTok"); g.acc.spend += s.milli; g.basis = "exacte"; continue }
-    if (dim === "campaign") { const g = groups.get(ck)!; g.acc.spend += s.milli; g.basis = "exacte"; continue }
+    if (dim === "network") { touch(group(network, gName(network)), milli, true); return true }
+    if (dim === "campaign") { touch(groups.get(ck)!, milli, true); return true }
     // produit / niche / annonce : répartition au prorata des leads de la campagne (restes d'arrondi attribués au plus gros groupe)
     const totalLeads = Array.from(leadsOfCampaign.values()).reduce((a, b) => a + b, 0)
     const entries = Array.from(leadsOfCampaign.entries()).sort((a, b) => b[1] - a[1])
     let given = 0
     entries.forEach(([gk, n], i) => {
-      const part = i === entries.length - 1 ? s.milli - given : Math.round((s.milli * n) / totalLeads)
+      const part = i === entries.length - 1 ? milli - given : Math.round((milli * n) / totalLeads)
       given += part
-      const g = groups.get(gk)!
-      g.acc.spend += part
-      g.basis = entries.length === 1 && g.basis !== "estimee" ? "exacte" : "estimee"
+      touch(groups.get(gk)!, part, entries.length === 1)
     })
+    return true
+  }
+
+  for (const [ck, s] of Array.from(spendBy.entries())) {
+    total.spend += s.milli
+    if (!allocate(ck, s.network, s.campaign, s.milli, "spend") && s.milli !== 0) unattached.push({ network: s.network, campaign: s.campaign, amount: tnd(s.milli) })
+  }
+
+  // coûts variables : une réservation OU une campagne OU rien — chaque coût n'est compté qu'UNE fois
+  const factByLead = new Map<string, LeadFacts>()
+  for (const f of facts) factByLead.set(f.lead.id, f)
+  let unattachedCostsMilli = 0
+  let excluded = 0
+  for (const c of input.costs ?? []) {
+    if (c.category === "remboursement" || c.category === "publicite") { excluded++; continue }
+    const milli = toMilli(c.amount_tnd)
+    total.costs += milli
+    if (c.lead_id) {
+      const f = factByLead.get(c.lead_id)
+      if (f) { const g = groupKeyOf(f, dim); group(g.key, g.label).acc.costs += milli } else unattachedCostsMilli += milli
+    } else if (c.network && c.campaign) {
+      if (!allocate(`${c.network}|${normalizeCampaign(c.campaign)}`, c.network, c.campaign.trim(), milli, "costs")) unattachedCostsMilli += milli
+    } else unattachedCostsMilli += milli
   }
 
   const rows: GroupRow[] = Array.from(groups.entries()).map(([key, g]) => {
     const m = metrics(g.acc)
-    return { key, label: g.label, metrics: m, spendBasis: g.acc.spend > 0 ? g.basis : "aucune", sufficient: m.bookings >= minBookings, hasProvisional: g.acc.comProvisional !== 0 }
+    return { key, label: g.label, metrics: m, spendBasis: g.acc.spend > 0 ? g.basis : "aucune", sufficient: m.confirmedBookings >= minBookings, hasProvisional: g.acc.comProvisional !== 0 }
   })
-  rows.sort((a, b) => b.metrics.result - a.metrics.result || b.metrics.bookings - a.metrics.bookings || a.label.localeCompare(b.label, "fr"))
+  rows.sort((a, b) => b.metrics.marginConfirmed - a.metrics.marginConfirmed || b.metrics.bookings - a.metrics.bookings || a.label.localeCompare(b.label, "fr"))
   const totalRow: GroupRow = {
     key: "total", label: "Total", metrics: metrics(total), spendBasis: total.spend > 0 ? "exacte" : "aucune",
-    sufficient: total.bookings >= minBookings, hasProvisional: total.comProvisional !== 0,
+    sufficient: total.confirmedBookings >= minBookings, hasProvisional: total.comProvisional !== 0,
   }
 
-  // gagnante : meilleur RÉSULTAT (réservations rentables), pas le plus de leads ; échantillon suffisant exigé
-  const candidates = rows.filter((r) => r.sufficient && r.metrics.spend > 0 && r.metrics.result > 0)
-  const winner = candidates.length ? candidates.reduce((a, b) => (b.metrics.result > a.metrics.result ? b : a)) : null
+  // gagnante : marge nette CONFIRMÉE positive, échantillon suffisant (réservations à commission confirmée) et strictement supérieure à celle des autres lignes comparables
+  const comparable = rows.filter((r) => r.sufficient && r.metrics.spend > 0)
+  const best = comparable.length ? comparable.reduce((a, b) => (b.metrics.marginConfirmed > a.metrics.marginConfirmed ? b : a)) : null
+  const tied = best ? comparable.filter((r) => r.metrics.marginConfirmed === best.metrics.marginConfirmed).length > 1 : false
+  const winner = best && best.metrics.marginConfirmed > 0 && !tied ? best : null
+  const provisionalHope = rows.some((r) => r.metrics.bookings >= minBookings && r.metrics.spend > 0 && r.metrics.marginWithProvisional > 0 && r.metrics.marginConfirmed <= 0)
   const winnerReason = winner
-    ? "Meilleur résultat (commission nette − dépenses) parmi les lignes comparables."
-    : rows.some((r) => r.metrics.spend > 0)
-      ? `Aucune gagnante : il faut au moins ${minBookings} réservations, des dépenses et un résultat positif sur la même ligne.`
-      : "Aucune gagnante : aucune dépense enregistrée."
-  return { rows, total: totalRow, unattachedSpend: unattached, winnerKey: winner?.key ?? null, winnerReason }
+    ? "Marge nette confirmée la plus élevée parmi les lignes comparables (publicité et coûts variables déduits)."
+    : !rows.some((r) => r.metrics.spend > 0)
+      ? "Aucune gagnante : aucune dépense enregistrée."
+      : tied
+        ? "Aucune gagnante : deux lignes ou plus ont exactement la même marge nette confirmée."
+        : `Aucune gagnante : il faut au moins ${minBookings} réservations à commission confirmée, des dépenses et une marge nette confirmée positive${provisionalHope ? " (certaines lignes ne seraient positives qu'avec des commissions encore provisoires)" : ""}.`
+  return { rows, total: totalRow, unattachedSpend: unattached, unattachedCosts: tnd(unattachedCostsMilli), excludedCostRows: excluded, winnerKey: winner?.key ?? null, winnerReason }
 }
