@@ -21,6 +21,12 @@ const nextConfig = {
       },
     ]
   },
+  // UNE seule règle, sans joker : /omra-2027 n'existe pas (la catégorie « omra-2027 » est servie par /omra ; /c/omra-2027 redirige déjà dans sa page).
+  // Redirection TEMPORAIRE (307) : tous les paramètres de la requête (UTM, clics publicitaires, clés répétées, valeurs encodées) sont conservés.
+  // Ne pas passer en 308 (mise en cache durable par les navigateurs) sans nouvelle autorisation.
+  async redirects() {
+    return [{ source: "/omra-2027", destination: "/omra", permanent: false }]
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
