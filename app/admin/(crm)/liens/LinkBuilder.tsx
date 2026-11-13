@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { LINK_SOURCES, buildLink, type Destination } from "@/lib/links"
+import { isConventionalCampaign, suggestCampaignName } from "@/lib/campaign-name"
 
 function CopyButton({ text, label = "Copier" }: { text: string; label?: string }) {
   const [done, setDone] = useState(false)
@@ -41,6 +42,9 @@ export function LinkBuilder({ destinations, base }: { destinations: Destination[
     [path, source, effectiveMedium, campaign, content, dynamic, canDynamic, destinations, base]
   )
   const input = "w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+  // AVERTISSEMENT seulement (jamais de correction automatique) : un ancien lien avec tiret bas reste valide et inchangé
+  const usedCampaign = result.ok ? result.params.utm_campaign : undefined
+  const offConvention = Boolean(usedCampaign) && !isConventionalCampaign(usedCampaign as string)
 
   return (
     <div className="space-y-4">
@@ -78,6 +82,11 @@ export function LinkBuilder({ destinations, base }: { destinations: Destination[
         )}
       </div>
 
+      {result.ok && offConvention && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status" data-testid="naming-warning">
+          Nom de campagne hors convention (minuscules, chiffres et tirets, sans tiret bas ni accent). Le lien fonctionne tel quel et les anciens liens ne sont pas modifiés ; pour une <strong>nouvelle</strong> campagne, préférez <code dir="ltr">{suggestCampaignName(usedCampaign as string)}</code> et utilisez le même nom dans la plateforme publicitaire et dans les dépenses.
+        </p>
+      )}
       {result.ok ? (
         <div className="rounded-xl border border-green-200 bg-green-50 p-3">
           <div className="mb-1 text-xs font-bold uppercase tracking-wide text-green-800">Lien prêt à coller</div>

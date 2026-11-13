@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { builderAccess, listBuilderPages } from "@/lib/server/page-builder"
 import { SITE_URL } from "@/lib/config"
+import { creatorPath } from "@/lib/page-builder/paths"
 
 export const dynamic = "force-dynamic"
 
@@ -31,7 +32,7 @@ export default async function CreatorHome() {
               {pages.map(({ category: c, status, offers }) => (
                 <tr key={c.id} className="border-t">
                   <td className="p-3 font-bold">{c.name}</td>
-                  <td className="font-mono text-xs" dir="ltr">{c.slug === "omra-2027" ? "/omra" : `/c/${c.slug}`}</td>
+                  <td className="font-mono text-xs" dir="ltr">{creatorPath(c.slug)}</td>
                   <td><span title={status.detail} className={`px-2 py-0.5 rounded-full text-xs font-bold ${TONE[status.tone]}`}>{status.label}</span></td>
                   <td className="text-right p-3">{offers}</td>
                   <td className="p-3 text-right"><Link href={`/admin/createur/${c.id}?etape=infos`} className="text-violet-700 font-bold">Ouvrir</Link></td>

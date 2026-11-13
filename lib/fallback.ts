@@ -5,18 +5,17 @@ export type QueryInput = Record<string, string | string[] | undefined> | URLSear
 
 /** Cibles de secours (décision D1 : valeurs par défaut, à confirmer par le propriétaire). */
 export const CATEGORY_FALLBACK = "/voyages-organises"
-export const ORGANIZATION_FALLBACK = "/"
 
-export type FallbackKind = "category" | "organization"
+export type FallbackKind = "category"
 
 /** Paramètres de suivi publicitaire (mêmes noms que lib/attribution.ts : un test vérifie qu'ils ne divergent pas). */
 export const TRACKING_PARAMS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ad_id", "adset_id", "campaign_id", "fbclid", "ttclid", "gclid"] as const
 
-/** « /c/mon-slug » → category, « /o/mon-slug » → organization ; tout autre chemin (ou plusieurs segments) → null. */
+/** « /c/mon-slug » (et « /p/mon-slug », pages du Créateur) → category ; tout autre chemin (ou plusieurs segments) → null.
+ *  Aucun secours pour « /o/<entreprise> » : une entreprise inconnue OU suspendue reçoit un 404 neutre (décision du propriétaire). */
 export function fallbackKind(pathname: string): FallbackKind | null {
   const clean = String(pathname ?? "").split(/[?#]/)[0].replace(/\/+$/, "")
-  const m = /^\/(c|o)\/[^/]+$/.exec(clean)
-  return m ? (m[1] === "c" ? "category" : "organization") : null
+  return /^\/(c|p)\/[^/]+$/.test(clean) ? "category" : null
 }
 
 function pairs(query: QueryInput): [string, string][] {
@@ -51,7 +50,6 @@ export function trackingQuery(query: QueryInput): string {
  * Le slug demandé n'est JAMAIS recopié dans la cible : aucune redirection ouverte possible, quelle que soit sa forme.
  */
 export function fallbackTarget(pathname: string, query?: QueryInput): string | null {
-  const kind = fallbackKind(pathname)
-  if (!kind) return null
-  return `${kind === "category" ? CATEGORY_FALLBACK : ORGANIZATION_FALLBACK}${queryString(query)}`
+  if (!fallbackKind(pathname)) return null
+  return `${CATEGORY_FALLBACK}${queryString(query)}`
 }

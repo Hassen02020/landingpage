@@ -104,7 +104,7 @@ export function PageEditor({ theme, category, offers, slugLock }: { theme: Theme
       <div className={tab === "perso" ? "space-y-5" : "hidden"}>
         <section className="bg-white rounded-2xl border p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
           <h2 className="font-black md:col-span-2">Adresse et langue</h2>
-          <Field label="Adresse de la page" error={e("slug")} help={slugLock.locked ? slugLock.message : `Publiée sur /c/${slug || slugify(name) || "…"} — fixée après publication.`}>
+          <Field label="Adresse de la page" error={e("slug")} help={slugLock.locked ? slugLock.message : `Publiée sur /p/${slug || slugify(name) || "…"} — fixée après publication.`}>
             <input name="slug" value={slug} onChange={(ev) => setSlug(ev.target.value)} readOnly={slugLock.locked} placeholder={slugify(name) || "d'après le nom"} className={`${inputCls} ${slugLock.locked ? "bg-gray-100 text-gray-500" : ""}`} dir="ltr" />
           </Field>
           <Field label="Langue de la page publique" help="Le français et l'arabe (écriture de droite à gauche) sont disponibles.">

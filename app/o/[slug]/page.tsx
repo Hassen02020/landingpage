@@ -1,8 +1,7 @@
 import type { Metadata } from "next"
-import { redirect } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { runWithOrg } from "@/lib/server/db"
 import { loadFormConfig, loadPublicOrg, lookupPublicOrg, publicOfferNames } from "@/lib/server/org-public"
-import { fallbackTarget } from "@/lib/fallback"
 import { dbConfigured } from "@/lib/server/db"
 import { unavailable } from "@/lib/server/public-errors"
 import { OrgLeadForm } from "./OrgLeadForm"
@@ -18,13 +17,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     : { title: "Page introuvable" }
 }
 
-export default async function OrgPage({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | string[] | undefined> }) {
+export default async function OrgPage({ params }: { params: { slug: string } }) {
   // panne ou base non configurée = erreur de SERVICE (HTTP 500, message app/error.tsx) : jamais un 404, jamais une redirection
   if (!dbConfigured()) throw unavailable("/o/[slug]", "db_not_configured", params.slug)
   const found = await lookupPublicOrg(params.slug)
   if (found.status === "error") throw unavailable("/o/[slug]", "db_error", params.slug)
-  // inconnue ou suspendue : même secours pour l'instant (la distinction fait l'objet d'une proposition séparée)
-  if (found.status === "not_found") redirect(fallbackTarget(`/o/${params.slug}`, searchParams) ?? "/")
+  // entreprise inconnue OU suspendue : la MÊME réponse neutre (404 standard, sans redirection ni indication sur l'entreprise) — décision du propriétaire
+  if (found.status === "not_found") notFound()
   const org = found.org
   if (org.slug === "easy2book") redirect("/")
   let data: { config: Awaited<ReturnType<typeof loadFormConfig>>; offers: Awaited<ReturnType<typeof publicOfferNames>> }

@@ -68,25 +68,28 @@ describe("/c/[slug]", () => {
 })
 
 describe("/o/[slug]", () => {
-  it("entreprise inconnue ou suspendue → secours (accueil) AVEC les UTM", async () => {
-    expect(await outcome(OrgPage({ params: { slug: "inconnue" }, searchParams: Q }))).toBe("REDIRECT:/?utm_source=facebook&utm_campaign=x")
+  it("entreprise inconnue OU suspendue → 404 NEUTRE : ni redirection vers l'accueil, ni indication sur l'entreprise (même réponse dans les deux cas)", async () => {
+    org = { status: "not_found" } // la recherche ne distingue pas « inconnue » de « suspendue » (filtre status=active)
+    expect(await outcome(OrgPage({ params: { slug: "inconnue" } }))).toBe("NOTFOUND")
+    expect(await outcome(OrgPage({ params: { slug: "suspendue-chez-moi" } }))).toBe("NOTFOUND")
+    expect(logged.filter((l) => l.includes("DB_UNAVAILABLE"))).toHaveLength(0)
   })
   it("panne de base → erreur de service (HTTP 500) : ni 404, ni redirection ; journal DB_UNAVAILABLE", async () => {
     org = { status: "error" }
-    expect(await outcome(OrgPage({ params: { slug: "acme" }, searchParams: Q }))).toBe("UNAVAILABLE:db_error")
+    expect(await outcome(OrgPage({ params: { slug: "acme" } }))).toBe("UNAVAILABLE:db_error")
     expect(logged.some((l) => l.includes('"event":"DB_UNAVAILABLE"') && l.includes('"route":"/o/[slug]"'))).toBe(true)
   })
   it("base non configurée → erreur de service (HTTP 500)", async () => {
     configured = false
-    expect(await outcome(OrgPage({ params: { slug: "acme" }, searchParams: Q }))).toBe("UNAVAILABLE:db_not_configured")
+    expect(await outcome(OrgPage({ params: { slug: "acme" } }))).toBe("UNAVAILABLE:db_not_configured")
   })
   it("NON-RÉGRESSION : /o/easy2book redirige toujours vers l'accueil", async () => {
     org = { status: "found", org: { id: "1", slug: "easy2book", name: "Easy2Book" } }
-    expect(await outcome(OrgPage({ params: { slug: "easy2book" }, searchParams: {} }))).toBe("REDIRECT:/")
+    expect(await outcome(OrgPage({ params: { slug: "easy2book" } }))).toBe("REDIRECT:/")
   })
   it("entreprise active → page affichée", async () => {
     org = { status: "found", org: { id: "1", slug: "acme", name: "Acme" } }
-    expect(await outcome(OrgPage({ params: { slug: "acme" }, searchParams: {} }))).toBe("RENDERED")
+    expect(await outcome(OrgPage({ params: { slug: "acme" } }))).toBe("RENDERED")
   })
 })
 

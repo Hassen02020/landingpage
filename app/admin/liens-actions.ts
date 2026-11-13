@@ -16,5 +16,7 @@ export async function checkDestinationAction(path: string): Promise<LinkCheck> {
   // les pages servies publiquement sont celles de la PLATEFORME : jamais une vérification (ni un lien) pour une autre entreprise
   if (!(await isPlatformOrg())) return refused("Les liens vers des pages du site ne sont proposés qu'à l'organisation de la plateforme.")
   const categories = await publicCategories().catch(() => [])
-  return checkDestination(String(path ?? ""), destinationsFor(categories).map((d) => d.path))
+  // destinations du générateur historique + pages du Créateur (/p/<adresse>) des catégories visibles
+  const allowed = [...destinationsFor(categories).map((d) => d.path), ...categories.filter((c) => c.slug !== "omra-2027").map((c) => `/p/${c.slug}`)]
+  return checkDestination(String(path ?? ""), allowed)
 }

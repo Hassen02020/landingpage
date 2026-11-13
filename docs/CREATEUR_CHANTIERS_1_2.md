@@ -18,10 +18,10 @@ Essai sur serveur Next de production local + faux Supabase multi-entreprises (Ea
 | 2 | Le générateur de B propose les **pages fixes d'Easy2Book** (`/`, `/omra`, `/voyages-organises`, `/summer-vibes`) : elles mènent au site et au CRM d'Easy2Book. | e2e : destinations de B = `/ /omra /voyages-organises /summer-vibes /c/bob-ete /c/collision-x` | Idem : le contexte de l'entreprise doit filtrer les destinations. |
 | 3 | **Collision d'adresse** : B qui crée `collision-x` obtient un lien qui mène à la page d'Easy2Book. | e2e | Idem + empêcher qu'une entreprise non plateforme obtienne un lien `/c/…`. |
 | 4 | Sur `/o/<entreprise>`, **les paramètres de campagne sont perdus** avant d'arriver au prospect (campagne, source, canal vides ; seule la page du formulaire est conservée). | e2e : prospect de B : campagne ∅, source ∅, canal ∅ | Le formulaire `/o` doit envoyer les paramètres de l'adresse au moment de l'envoi. |
-| 5 | **Effet de la phase A** : le secours de `/c/<inconnu>` redirige vers `/voyages-organises`, donc une page de B inconnue du site public envoie le visiteur chez Easy2Book. | e2e (défaut 1) | Le secours dépend du contexte : jamais vers une page d'une autre entreprise. |
+| 5 | **Effet de la phase A sur `/c`** : le secours de `/c/<inconnu>` redirige vers `/voyages-organises` (page d'Easy2Book) — y compris pour une adresse de B. *(Pour `/o/<entreprise>`, la redirection a été retirée : 404 neutre, décision du propriétaire.)* | e2e (défaut 1) | Le secours de `/c` dépend du contexte : jamais vers une page d'une autre entreprise. |
 
 ### Décision d'architecture pour le créateur (conforme à votre règle « jamais un lien vers une autre entreprise »)
-Le **créateur publie dans `/c/<adresse>`, servi uniquement pour Easy2Book**. Il est donc **réservé à l'organisation de la plateforme** et refuse (côté serveur) toute autre entreprise avec un message clair, tant que les défauts 1 à 5 ne sont pas tranchés. Les autres entreprises gardent leurs formulaires `/o/…`.
+Le **créateur publie dans `/p/<adresse>` (comme `/c/<adresse>`), servi uniquement pour Easy2Book**. Il est donc **réservé à l'organisation de la plateforme** et refuse (côté serveur) toute autre entreprise avec un message clair, tant que les défauts 1 à 5 ne sont pas tranchés. Les autres entreprises gardent leurs formulaires `/o/…`.
 
 ## Chantier 2 — Inventaire des liens existants (preuves : `tests/links-inventory.test.ts`, 23 tests)
 ### Routes publiques (à ne jamais retirer)

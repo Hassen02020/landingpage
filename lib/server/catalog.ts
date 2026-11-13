@@ -261,12 +261,14 @@ export async function archiveOffer(id: string, archived: boolean, actorId: strin
   await update("landing_offers", `id=eq.${id}`, { archived_at: archived ? new Date().toISOString() : null, ...(archived ? { visible: false } : {}), ...stamp(actorId) })
 }
 
-/** Cette adresse a-t-elle déjà servi ? (prospect arrivé sur /c/<adresse>, ou événement du site pour cette page). « inconnu » si la vérification échoue. */
+/** Cette adresse a-t-elle déjà servi ? (prospect arrivé sur /c/<adresse> ou /p/<adresse>, ou événement du site pour cette page). « inconnu » si la vérification échoue. */
 export async function isSlugReferenced(slug: string): Promise<boolean | "inconnu"> {
   if (!SLUG.test(slug)) return false
   try {
-    const leads = await select<{ id: string }>("landing_leads", `select=id&landing_page=eq.${encodeURIComponent(`/c/${slug}`)}&limit=1`)
-    if (leads[0]) return true
+    for (const prefix of ["/c/", "/p/"]) {
+      const leads = await select<{ id: string }>("landing_leads", `select=id&landing_page=eq.${encodeURIComponent(`${prefix}${slug}`)}&limit=1`)
+      if (leads[0]) return true
+    }
     const events = await select<{ id: number }>("landing_events", `select=id&niche=eq.${encodeURIComponent(slug)}&limit=1`)
     return Boolean(events[0])
   } catch {

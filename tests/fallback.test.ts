@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
-import { CATEGORY_FALLBACK, ORGANIZATION_FALLBACK, TRACKING_PARAMS, fallbackKind, fallbackTarget, queryString, trackingQuery } from "../lib/fallback"
+import { CATEGORY_FALLBACK, TRACKING_PARAMS, fallbackKind, fallbackTarget, queryString, trackingQuery } from "../lib/fallback"
 import { hotelAnchor, slugify, voyageAnchor } from "../lib/anchors"
 import { VOYAGES } from "../app/voyages-organises/data"
 import { HOTEL_PROMOS } from "../app/summer-vibes/data/hotel-promos"
 
 describe("cible de secours (fonction pure)", () => {
-  it("catégorie introuvable → /voyages-organises ; entreprise introuvable → / (valeurs par défaut D1)", () => {
+  it("catégorie introuvable (/c ou /p) → /voyages-organises ; AUCUN secours pour une entreprise (404 neutre)", () => {
     expect(fallbackTarget("/c/inconnue")).toBe(CATEGORY_FALLBACK)
-    expect(fallbackTarget("/o/inconnue")).toBe(ORGANIZATION_FALLBACK)
+    expect(fallbackTarget("/p/inconnue")).toBe(CATEGORY_FALLBACK)
     expect(CATEGORY_FALLBACK).toBe("/voyages-organises")
-    expect(ORGANIZATION_FALLBACK).toBe("/")
+    expect(fallbackTarget("/o/inconnue")).toBeNull()
+    expect(fallbackTarget("/o/inconnue", { utm_source: "a" })).toBeNull()
   })
 
   it("conserve la query string complète : UTM, identifiants de campagne, clics publicitaires, clés répétées, valeurs encodées", () => {
@@ -23,7 +24,7 @@ describe("cible de secours (fonction pure)", () => {
     expect(u.searchParams.get("fbclid")).toBe("IwAR 1/+x")
     expect(u.searchParams.getAll("tag")).toEqual(["a", "b"])
     expect(u.searchParams.has("vide")).toBe(false)
-    expect(fallbackTarget("/o/inconnue", new URLSearchParams("utm_source=tiktok&ttclid=Z"))).toBe("/?utm_source=tiktok&ttclid=Z")
+    expect(fallbackTarget("/p/inconnue", new URLSearchParams("utm_source=tiktok&ttclid=Z"))).toBe("/voyages-organises?utm_source=tiktok&ttclid=Z")
   })
 
   it("sans paramètre : aucun « ? » ; chemin accepté avec barre finale, query ou ancre", () => {
@@ -36,21 +37,23 @@ describe("cible de secours (fonction pure)", () => {
   it("chemins sans secours : accueil, pages existantes, plusieurs segments, autres préfixes → null (le 404 normal s'applique)", () => {
     for (const p of ["/", "/omra", "/voyages-organises", "/c", "/c/", "/c/a/b", "/o/a/b/c", "/x/y", "/admin/c/x", "/C/x", ""]) expect(fallbackTarget(p), p).toBeNull()
     expect(fallbackKind("/c/x")).toBe("category")
-    expect(fallbackKind("/o/x")).toBe("organization")
+    expect(fallbackKind("/o/x")).toBeNull()
+    expect(fallbackKind("/p/x")).toBe("category")
     expect(fallbackKind("/c")).toBeNull()
   })
 
   it("slugs spéciaux : jamais recopiés dans la cible, aucune redirection ouverte possible", () => {
     const odd = ["../../admin", "%2e%2e%2fadmin", "//evil.com", "https:%2F%2Fevil.com", "évènement", "a%00b", "x".repeat(500), "é‮", "javascript:alert(1)", ".", "..", "a b"]
     for (const slug of odd) {
-      for (const kind of ["c", "o"]) {
+      for (const kind of ["c", "p", "o"]) {
         const t = fallbackTarget(`/${kind}/${slug}`, { utm_source: "a" })
         if (t === null) continue // chemin à plusieurs segments : pas de secours, jamais pire
         expect(t.startsWith("/"), t).toBe(true)
         expect(t.startsWith("//"), t).toBe(false)
         expect(t).not.toMatch(/:\/\//)
         expect(t).not.toContain(slug)
-        expect(["/voyages-organises?utm_source=a", "/?utm_source=a"]).toContain(t)
+        expect(t).toBe("/voyages-organises?utm_source=a")
+        expect(kind, "aucun secours pour une entreprise").not.toBe("o")
       }
     }
   })

@@ -6,7 +6,7 @@ Branche locale `feat/phase-a-parcours-securises` (non poussée). Ce document dé
 |---|---|---|
 | URL inexistante (`/n-importe-quoi`) | **404** | `app/not-found.tsx` : message, retour accueil (paramètres de campagne conservés), WhatsApp. En `noindex`. |
 | Catégorie `/c/<slug>` introuvable (confirmé par la base) | **307** vers `/voyages-organises` | query string conservée (`lib/fallback.ts`). |
-| Entreprise `/o/<slug>` introuvable ou suspendue | **307** vers `/` | provisoire : la distinction inconnue / suspendue fait l'objet d'une proposition séparée (décision D1). |
+| Entreprise `/o/<slug>` introuvable **ou suspendue** | **404 neutre** | même réponse dans les deux cas, sans redirection ni indication sur l'entreprise (décision du propriétaire, qui remplace le secours initial vers l'accueil). |
 | **Panne de la base** (injoignable, 5xx, 401…) | **500** | erreur dédiée `PublicDataUnavailable` ; `app/error.tsx` affiche le message ; journal serveur `DB_UNAVAILABLE`. **Jamais** un 404, **jamais** une redirection. |
 | **Base non configurée** | **500** | même traitement (raison `db_not_configured`) : c'est une erreur de service, pas une ressource inexistante. |
 | `/omra-2027` | **307** vers `/omra` | règle unique de `next.config.mjs`, tous les paramètres conservés, aucun joker. |

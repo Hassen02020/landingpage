@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import { builderAccess, loadBuilderPage } from "@/lib/server/page-builder"
 import { THEMES, themeById, familyOf, type Theme } from "@/lib/page-builder/themes"
 import { SITE_URL } from "@/lib/config"
+import { creatorPath } from "@/lib/page-builder/paths"
 import { PageEditor } from "./PageEditor"
 import { Stepper } from "./Stepper"
 import { ReadinessList } from "./ReadinessList"
@@ -25,7 +26,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   if (!theme) redirect("/admin/createur/modeles")
   const etape = isNew ? "infos" : ["infos", "formulaire", "apercu", "publication"].includes(searchParams.etape ?? "") ? (searchParams.etape as string) : "infos"
   const category = page?.category ?? null
-  const path = category ? (category.slug === "omra-2027" ? "/omra" : `/c/${category.slug}`) : ""
+  const path = category ? creatorPath(category.slug) : ""
   const family = familyOf(category?.product ?? theme.product)
 
   return (

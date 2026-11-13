@@ -6,6 +6,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join, relative } from "node:path"
 import { FIXED_DESTINATIONS, LINK_SOURCES, bioLinks, buildLink } from "../lib/links"
 import { detectChannel } from "../lib/channel"
+import { isConventionalCampaign, suggestCampaignName } from "../lib/campaign-name"
 
 const BASE = "https://landingpage-easy2book.vercel.app"
 const DEST = [...FIXED_DESTINATIONS, { path: "/c/omra-ramadan-2027", label: "catégorie" }]
@@ -99,5 +100,23 @@ describe("inventaire des routes publiques", () => {
   })
   it("routes d'API publiques d'attribution et de collecte toujours présentes", () => {
     for (const r of ["app/api/leads/route.ts", "app/api/o/[slug]/leads/route.ts", "app/api/track/route.ts"]) expect(files, r).toContain(r)
+  })
+})
+
+describe("nommage des campagnes : avertir sans casser les anciens liens", () => {
+  it("un nom avec tiret bas produit TOUJOURS le même lien (aucune correction silencieuse)", () => {
+    const r = buildLink({ path: "/omra", source: "facebook", medium: "paid", campaign: "omra_ramadan_2027" }, DEST, BASE)
+    expect(r.ok && r.url).toBe(`${BASE}/omra?utm_source=facebook&utm_medium=paid&utm_campaign=omra_ramadan_2027`)
+  })
+  it("le format est signalé hors convention et une proposition conforme existe (jamais appliquée d'office)", () => {
+    for (const bad of ["omra_ramadan_2027", "Omra 2027", "omra--2027", "été"]) expect(isConventionalCampaign(bad), bad).toBe(false)
+    expect(suggestCampaignName("omra_ramadan_2027")).toBe("omra-ramadan-2027")
+    expect(isConventionalCampaign("omra-ramadan-2027")).toBe(true)
+  })
+  it("l'écran du générateur affiche l'avertissement sans modifier le lien", () => {
+    const src = readFileSync(join(ROOT, "app/admin/(crm)/liens/LinkBuilder.tsx"), "utf8")
+    expect(src).toMatch(/data-testid="naming-warning"/)
+    expect(src).toMatch(/isConventionalCampaign\(usedCampaign/)
+    expect(src).not.toMatch(/setCampaign\(suggestCampaignName/) // jamais de correction automatique
   })
 })

@@ -1,6 +1,6 @@
 // CRÉATEUR DE LANDING PAGES — couche serveur. RÉUTILISE le catalogue existant (saveCategory, saveOffer, archiveOffer, uploadImage) :
-// une page = une catégorie (/c/<adresse>) + ses offres. AUCUNE nouvelle table, AUCUNE migration. Le brouillon = une catégorie masquée (visible=false).
-// Réservé à l'organisation de la PLATEFORME : /c/<adresse> n'est servie que pour elle (constat du chantier 1) ; toute autre entreprise est refusée côté serveur.
+// une page = une catégorie (publiée sur /p/<adresse>) + ses offres. AUCUNE nouvelle table, AUCUNE migration. Le brouillon = une catégorie masquée (visible=false).
+// Réservé à l'organisation de la PLATEFORME : /p/<adresse> (comme /c/<adresse>) n'est servie que pour elle (constat du chantier 1) ; toute autre entreprise est refusée côté serveur.
 import { currentStaff } from "@/lib/server/auth"
 import { can } from "@/lib/permissions"
 import { isPlatformOrg, update } from "@/lib/server/db"

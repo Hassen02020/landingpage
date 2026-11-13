@@ -1,0 +1,49 @@
+# Inventaire des pages `/c/…` existantes — LECTURE SEULE EN PRODUCTION (à exécuter par vous)
+
+**Statut : NON EXÉCUTÉ.** Claude n'a aucun accès à la base de production et n'en exécute jamais les requêtes ; ces requêtes sont uniquement des `SELECT`.
+**Décision du propriétaire :** aucune modification des pages `/c/…` existantes et aucun déploiement avant que cet inventaire soit fait.
+
+## Ce que le code protège déjà
+- Le rendu `/c/<adresse>` est **identique à celui de `main`** (`app/c/[slug]/CategoryView.tsx`, empreinte vérifiée par `tests/c-pages-unchanged.test.ts`). Les pages du Créateur sont servies ailleurs : `/p/<adresse>`.
+- Restent modifiés côté `/c/…` (phase A, déjà décidée) : le secours d'une catégorie introuvable (redirection avec paramètres conservés) et l'erreur 500 en cas de panne. **Ce sont des chemins d'erreur, pas le rendu des pages existantes.**
+- Nouveauté touchant le catalogue : l'adresse d'une catégorie publiée ou déjà utilisée ne peut plus être renommée (le contenu reste modifiable).
+
+## 1. Catégories existantes et leur état (adresses à protéger)
+```sql
+SELECT c.slug, c.name, c.product, c.visible, c.updated_at,
+       count(o.*) FILTER (WHERE o.visible AND o.archived_at IS NULL)                                   AS offres_affichees,
+       count(o.*) FILTER (WHERE o.visible AND o.archived_at IS NULL AND o.departure_date < current_date) AS offres_expirees
+FROM landing_categories c
+LEFT JOIN landing_offers o ON o.category_id = c.id
+GROUP BY c.id ORDER BY c.slug;
+```
+(si la base contient plusieurs entreprises, ajouter `WHERE c.organization_id = (SELECT id FROM organizations WHERE slug = 'easy2book')`.)
+
+## 2. Prospects arrivés par une page `/c/…` (120 derniers jours)
+```sql
+SELECT landing_page, coalesce(utm_source,'-') AS source, coalesce(utm_campaign,'-') AS campagne,
+       count(*) AS prospects, min(created_at) AS premier, max(created_at) AS dernier
+FROM landing_leads
+WHERE (landing_page LIKE '/c/%' OR landing_page LIKE '/p/%') AND created_at > now() - interval '120 days'
+GROUP BY 1,2,3 ORDER BY prospects DESC;
+```
+
+## 3. Visites enregistrées (visiteurs consentants) sur ces pages
+```sql
+SELECT niche AS page, event_name, count(*) AS evenements, max(created_at) AS dernier
+FROM landing_events
+WHERE niche IN (SELECT slug FROM landing_categories) AND created_at > now() - interval '120 days'
+GROUP BY 1,2 ORDER BY evenements DESC;
+```
+
+## 4. À compléter dans Meta / TikTok / Google Ads Ads Manager
+Relever l'adresse de destination de chaque annonce **active** ou récente et noter celles qui contiennent `/c/`.
+
+## 5. Comment lire le résultat
+| Constat | Conséquence |
+|---|---|
+| Aucune catégorie visible hors `omra-2027`, aucun prospect ni annonce sur `/c/…` | aucune page `/c/…` en usage : le rendu pourra être discuté plus tard |
+| Une ou plusieurs adresses `/c/<x>` avec prospects ou annonces actives | **ne rien changer** à leur rendu ; ces adresses sont automatiquement protégées contre le renommage |
+| Des offres expirées encore affichées | sujet traité séparément (décision : ne pas modifier l'affichage dans ce chantier) |
+
+Ne communiquez pas de données personnelles : ces requêtes ne renvoient que des agrégats.

@@ -145,6 +145,12 @@ describe("protection de l'adresse (sans migration)", () => {
     const r = await as(E2B, () => saveDraft({ id, themeId: "turquie", category: { ...cat(), slug: "autre-adresse" }, offers: [] }, "u1"))
     expect(r.ok).toBe(false)
   })
+  it("adresse déjà utilisée sur /p/<adresse> (page du Créateur) : verrouillée aussi", async () => {
+    const id = await makeComplete()
+    T.landing_leads.push({ id: "L2", organization_id: E2B, landing_page: "/p/turquie-ete-2027" })
+    const r = await as(E2B, () => saveDraft({ id, themeId: "turquie", category: { ...cat(), slug: "autre-adresse-2" }, offers: [] }, "u1"))
+    expect(r.ok).toBe(false)
+  })
   it("brouillon jamais utilisé : l'adresse reste modifiable", async () => {
     const id = await makeComplete()
     const r = await as(E2B, () => saveDraft({ id, themeId: "turquie", category: { ...cat(), slug: "turquie-2027-v2" }, offers: [] }, "u1"))

@@ -1,4 +1,4 @@
-// Rendu PUBLIC par famille de page : structure propre à chaque produit, sections pilotées par les DONNÉES RÉELLES (rien d'inventé), aperçu inerte.
+// Rendu PUBLIC des pages du Créateur (/p/<adresse>) par famille de page : structure propre à chaque produit, sections pilotées par les DONNÉES RÉELLES (rien d'inventé), aperçu inerte.
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import * as ReactNs from "react"
 import { createElement } from "react"
@@ -6,10 +6,10 @@ import { renderToStaticMarkup } from "react-dom/server"
 import type { Category, PublicOffer } from "@/lib/server/catalog"
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useSearchParams: () => new URLSearchParams(), useRouter: () => ({ push: () => undefined }) }))
-let CategoryView: typeof import("@/app/c/[slug]/CategoryView").CategoryView
+let CategoryView: typeof import("@/app/p/[slug]/LandingView").LandingView
 beforeAll(async () => {
   ;(globalThis as { React?: unknown }).React = (ReactNs as { default?: unknown }).default ?? ReactNs
-  CategoryView = (await import("@/app/c/[slug]/CategoryView")).CategoryView
+  CategoryView = (await import("@/app/p/[slug]/LandingView")).LandingView
 })
 
 const category = (o: Partial<Category> = {}): Category => ({ id: "c1", slug: "demo", name: "Page Démo", product: "voyage", lang: "fr", headline: "Accroche démo", description: "Présentation démo du produit.", banner_desktop: null, banner_mobile: null, seo_title: null, seo_description: null, visible: true, position: 0, updated_at: "2026-11-13", ...o })

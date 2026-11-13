@@ -13,6 +13,7 @@ const str = (fd: FormData, k: string) => (typeof fd.get(k) === "string" ? (fd.ge
 
 function refreshPublicPages() {
   revalidatePath("/c/[slug]", "page")
+  revalidatePath("/p/[slug]", "page")
   revalidatePath("/admin/createur")
   revalidatePath("/admin/createur/[id]", "page")
 }
