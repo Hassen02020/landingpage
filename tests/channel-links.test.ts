@@ -63,7 +63,7 @@ describe("générateur de liens de campagne", () => {
   })
 
   it("tout lien généré est reconnu par la détection de canal et conserve ses paramètres (aller-retour)", () => {
-    const expected: Record<string, string> = { facebook: "meta", instagram: "meta", tiktok: "tiktok", whatsapp: "whatsapp" }
+    const expected: Record<string, string> = { facebook: "meta", instagram: "meta", tiktok: "tiktok", whatsapp: "whatsapp", google: "google" }
     for (const s of LINK_SOURCES) {
       for (const m of s.mediums) {
         const r = buildLink({ path: "/omra", source: s.id, medium: m.id, campaign: "test-campagne", content: "visuel-1" }, dest, BASE)

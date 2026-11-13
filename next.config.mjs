@@ -19,6 +19,8 @@ const nextConfig = {
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
+      // aperçu du Créateur : affiché dans un cadre de la MÊME origine uniquement (aperçu mobile / ordinateur) ; reste privé, jamais mis en cache ni indexé
+      { source: "/admin/createur-rendu/:path*", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Cache-Control", value: "no-store, max-age=0" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ]
   },
   // UNE seule règle, sans joker : /omra-2027 n'existe pas (la catégorie « omra-2027 » est servie par /omra ; /c/omra-2027 redirige déjà dans sa page).

@@ -1,5 +1,6 @@
 // Catalogue d'offres et catégories (/admin/catalogue) — pages publiques pilotées par l'admin.
 // Lecture publique : uniquement les offres visibles, JAMAIS le coût.
+import { slugLock, slugify, type SlugLock } from "@/lib/catalog-slug"
 import { insertOne, select, update } from "./db"
 import type { Product } from "@/lib/config"
 
@@ -122,15 +123,7 @@ const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".").
 const int = (v: string) => (v.trim() === "" ? null : parseInt(v, 10))
 const PRODUCTS = ["omra", "voyage", "hotel", "autre"]
 
-export function slugify(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-}
+export { slugify }
 
 export function validateOffer(f: Record<string, string>, features: string[]): { row?: Record<string, unknown>; errors: Record<string, string> } {
   const e: Record<string, string> = {}
@@ -268,12 +261,38 @@ export async function archiveOffer(id: string, archived: boolean, actorId: strin
   await update("landing_offers", `id=eq.${id}`, { archived_at: archived ? new Date().toISOString() : null, ...(archived ? { visible: false } : {}), ...stamp(actorId) })
 }
 
+/** Cette adresse a-t-elle déjà servi ? (prospect arrivé sur /c/<adresse>, ou événement du site pour cette page). « inconnu » si la vérification échoue. */
+export async function isSlugReferenced(slug: string): Promise<boolean | "inconnu"> {
+  if (!SLUG.test(slug)) return false
+  try {
+    const leads = await select<{ id: string }>("landing_leads", `select=id&landing_page=eq.${encodeURIComponent(`/c/${slug}`)}&limit=1`)
+    if (leads[0]) return true
+    const events = await select<{ id: number }>("landing_events", `select=id&niche=eq.${encodeURIComponent(slug)}&limit=1`)
+    return Boolean(events[0])
+  } catch {
+    return "inconnu"
+  }
+}
+
+/** Verrou de l'adresse d'une catégorie EXISTANTE (null si elle n'existe pas). */
+export async function categorySlugLock(id: string): Promise<{ slug: string; lock: SlugLock } | null> {
+  if (!UUID.test(id)) return null
+  const [row] = await select<{ slug: string; visible: boolean }>("landing_categories", `select=slug,visible&id=eq.${id}&limit=1`)
+  if (!row) return null
+  const referenced = row.visible ? false : await isSlugReferenced(row.slug)
+  return { slug: row.slug, lock: slugLock({ slug: row.slug, visible: row.visible, referenced }) }
+}
+
 export async function saveCategory(id: string | null, f: Record<string, string>, actorId: string | null): Promise<Saved> {
   const { row, errors } = validateCategory(f)
   if (!row) return { ok: false, errors }
   try {
     if (id) {
       if (!UUID.test(id)) return { ok: false, errors: { form: "Catégorie introuvable." } }
+      // l'adresse d'une page publiée ou déjà utilisée ne change pas (le contenu reste modifiable)
+      const current = await categorySlugLock(id)
+      if (!current) return { ok: false, errors: { form: "Catégorie introuvable." } }
+      if (row.slug !== current.slug && current.lock.locked) return { ok: false, errors: { slug: current.lock.message } }
       await update("landing_categories", `id=eq.${id}`, { ...row, ...stamp(actorId) })
       return { ok: true, id }
     }

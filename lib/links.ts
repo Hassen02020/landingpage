@@ -50,6 +50,14 @@ export const LINK_SOURCES: LinkSource[] = [
     ],
   },
   {
+    // Google Ads STATIQUE : nom de campagne obligatoire, aucun paramètre dynamique. Le balisage automatique de Google Ads ajoute le gclid tout seul.
+    // (La conservation du gclid sur le prospect nécessite une migration : chantier distinct, non inclus.)
+    id: "google",
+    label: "Google Ads",
+    utm_source: "google",
+    mediums: [{ id: "cpc", label: "Publicité payante (Google Ads)", utm_medium: "cpc" }],
+  },
+  {
     id: "whatsapp",
     label: "WhatsApp",
     utm_source: "whatsapp",
