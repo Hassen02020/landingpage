@@ -63,3 +63,10 @@ SELECT slug, visible, updated_at FROM landing_categories ORDER BY slug;
 | 5 | Secours `/c` vers une page d'Easy2Book pour l'adresse de B | **NON MODIFIÉ** (rendu `/c` protégé avant inventaire) ; sans effet pour B puisqu'il n'obtient plus de lien `/c/…` | — | À traiter avec le service multi-entreprises des catalogues |
 
 Défaut supplémentaire trouvé et corrigé pendant la vérification : la destination initiale du générateur était codée « `/` », absente de la liste d'une entreprise → aucun lien généré pour B. Corrigé (`LinkBuilder.tsx`), couvert par le e2e.
+
+## Audit des adresses entre entreprises (phase de finalisation)
+- **Deux entreprises peuvent-elles avoir la même adresse ?** Par conception oui au niveau des données : l'unicité est `(organization_id, slug)` (migrations 0010/0011 ; état réel en production NON VÉRIFIÉ, requête (c) de `INVENTAIRE_PAGES_C.md`). Prouvé en test : `collision-x` existe chez Easy2Book ET chez B.
+- **Une collision ouvre-t-elle la page d'une autre entreprise ?** Non. `/c/collision-x` sert uniquement la page d'Easy2Book (le contexte public est fixé sur Easy2Book) ; le contenu de B n'est jamais servi (e2e `multi-links`, vérification « JAMAIS le contenu de B »).
+- **Isolation côté serveur :** la couche d'accès à la base ajoute `organization_id=eq.<contexte>` à toute lecture/modification, impose `organization_id` aux insertions et refuse tout filtre ou changement visant une autre entreprise, ainsi que toute requête sans contexte (`tests/tenant-db.test.ts`, 20+ cas dont requêtes simultanées de deux entreprises).
+- **Consultation/modification des données d'une autre entreprise :** refusée par cette couche ; e2e `multi-tenant` : 133 ✓ (isolation des prospects, API, suspension, 404 neutre). Preuves sur FAUX Supabase : elles ne prouvent rien sur la production.
+- **Contrainte d'unicité globale :** NON créée (aucune migration). Solution à présenter pour autorisation séparée : conserver `(organization_id, slug)` et laisser le Créateur réservé à Easy2Book ; une unicité globale des adresses de pages publiques ne serait nécessaire qu'à l'ouverture aux agences.
