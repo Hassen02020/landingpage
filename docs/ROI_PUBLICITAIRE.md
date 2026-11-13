@@ -32,3 +32,11 @@ Meilleur **résultat** (pas le plus de leads), avec dépenses > 0, résultat > 0
 
 ## Suite
 PR 2 : saisie des dépenses + import des commissions (aperçu avant validation). PR 3 : écran « Tests publicitaires & niches rentables » (réseau, campagne, niche, produit, annonce, période). Intégration automatique EasyV4 / API Meta et TikTok : après définition de l'export (aucun accès à EasyV4 n'est utilisé).
+
+## PR 2 — Dépenses et commissions (écran `/admin/rentabilite`)
+
+- **Dépenses** : saisie manuelle (date ≤ aujourd'hui, réseau Meta/TikTok, campagne, montant TND, référence facultative). Ajout seul : une erreur se corrige par une **annulation** (écriture opposée exacte), jamais par modification. Une annulation ne s'annule pas ; une dépense ne s'annule qu'une fois.
+- **Commissions EasyV4** : import CSV contrôlé (`reservation_ref ; nature ; montant_tnd ; date ; lead_ref ; telephone ; ligne`). Le signe est décidé par la nature (commission +, annulation/remboursement −). Aperçu obligatoire avant écriture ; rapprochement par référence dossier `E2B-XXXXXX` (sûr) ou par téléphone (à valider ligne par ligne) ; téléphone ambigu = jamais importé ; réservation rattachée à deux dossiers = conflit. Import idempotent (clé `réservation|nature|ligne`), tout est importé « provisoire », confirmation explicite ensuite.
+- **Droits** : `ads.manage` (admin) écrit ; `ads.view` (manager) lit. Employé : aucun accès. Isolation par entreprise.
+- **Prérequis** : migration 0016 (non appliquée par Claude). Sans elle, l'écran est en lecture seule et l'indique.
+- Tests : `commission-import`, `ad-spend-commissions` (isolation, idempotence, conflits, confirmation unique, migration absente).

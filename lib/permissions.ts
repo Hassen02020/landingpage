@@ -24,17 +24,20 @@ export type Permission =
   | "protection.manage" // blocage de numéros / IP, pays autorisés
   | "templates.manage" // modèles de messages WhatsApp
   | "data.export" // export CSV, blocage d'un numéro depuis une fiche
+  | "ads.manage" // dépenses publicitaires, import et confirmation des commissions (données financières)
+  | "ads.view" // lecture de la rentabilité publicitaire
 
 const ALL_ADMIN: Permission[] = [
   "org.profile.edit", "social.connect", "employees.manage", "employees.view", "site.manage", "campaigns.manage",
   "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned",
   "sales.record", "sales.record_assigned", "catalog.manage", "promos.manage", "protection.manage", "templates.manage", "data.export",
+  "ads.manage", "ads.view",
 ]
 
 export const ROLE_PERMISSIONS: Record<OrgRole, ReadonlySet<Permission>> = {
   admin: new Set(ALL_ADMIN),
   // manager : équipes autorisées, affectation, suivi commercial, rapports ; ni profil, ni réseaux, ni site, ni gestion des comptes
-  manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned"]),
+  manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned", "ads.view"]),
   // employé : VOIT tous les leads de son entreprise (décision du propriétaire, 08/11/2026) ; ne modifie que les siens ;
   // jamais d'affectation, de rapports, de gestion d'équipe ni de réglages. Aucun accès aux leads d'une AUTRE entreprise.
   employee: new Set<Permission>(["leads.view_all", "leads.view_assigned", "leads.update_assigned", "sales.record_assigned"]),
