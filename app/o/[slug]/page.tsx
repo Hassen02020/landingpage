@@ -1,8 +1,10 @@
 import type { Metadata } from "next"
-import { notFound, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
 import { runWithOrg } from "@/lib/server/db"
 import { loadFormConfig, loadPublicOrg, lookupPublicOrg, publicOfferNames } from "@/lib/server/org-public"
 import { fallbackTarget } from "@/lib/fallback"
+import { dbConfigured } from "@/lib/server/db"
+import { unavailable } from "@/lib/server/public-errors"
 import { OrgLeadForm } from "./OrgLeadForm"
 
 // Rendu à chaque requête : une page d'entreprise ne doit jamais être servie depuis le cache d'une autre.
@@ -17,13 +19,21 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function OrgPage({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | string[] | undefined> }) {
+  // panne ou base non configurée = erreur de SERVICE (HTTP 500, message app/error.tsx) : jamais un 404, jamais une redirection
+  if (!dbConfigured()) throw unavailable("/o/[slug]", "db_not_configured", params.slug)
   const found = await lookupPublicOrg(params.slug)
-  // inconnue ou suspendue : même secours, aucune différence visible (cible D1 par défaut : l'accueil) ; panne de base : 404 conservé
+  if (found.status === "error") throw unavailable("/o/[slug]", "db_error", params.slug)
+  // inconnue ou suspendue : même secours pour l'instant (la distinction fait l'objet d'une proposition séparée)
   if (found.status === "not_found") redirect(fallbackTarget(`/o/${params.slug}`, searchParams) ?? "/")
-  if (found.status !== "found") notFound()
   const org = found.org
   if (org.slug === "easy2book") redirect("/")
-  const { config, offers } = await runWithOrg(org.id, async () => ({ config: await loadFormConfig(), offers: await publicOfferNames() }))
+  let data: { config: Awaited<ReturnType<typeof loadFormConfig>>; offers: Awaited<ReturnType<typeof publicOfferNames>> }
+  try {
+    data = await runWithOrg(org.id, async () => ({ config: await loadFormConfig(), offers: await publicOfferNames() }))
+  } catch {
+    throw unavailable("/o/[slug]", "db_error", params.slug) // panne après avoir trouvé l'entreprise : HTTP 500, journalisée
+  }
+  const { config, offers } = data
   return (
     <main className="min-h-screen bg-gradient-to-br from-violet-950 via-violet-900 to-violet-800 px-4 py-10">
       <div className="mx-auto w-full max-w-lg">

@@ -1,8 +1,9 @@
 // Comportement des routes /c/[slug] et /o/[slug] (dépendances simulées) et rendu de la page 404 globale.
 // Un test unitaire ne prouve PAS le comportement sur Netlify / Vercel : voir le parcours e2e tests/e2e/fallback.e2e.mjs.
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import * as ReactNs from "react"
 import { renderToStaticMarkup } from "react-dom/server"
+import { PublicDataUnavailable } from "@/lib/server/public-errors"
 
 class Redirect extends Error { constructor(public to: string) { super(`REDIRECT:${to}`) } }
 class NotFound extends Error { constructor() { super("NOTFOUND") } }
@@ -20,15 +21,19 @@ vi.mock("@/app/o/[slug]/OrgLeadForm", () => ({ OrgLeadForm: () => null }))
 let CategoryPage: typeof import("@/app/c/[slug]/page").default
 let OrgPage: typeof import("@/app/o/[slug]/page").default
 let NotFoundPage: typeof import("@/app/not-found").default
+let ErrorPage: typeof import("@/app/error").default
 beforeAll(async () => {
   ;(globalThis as { React?: unknown }).React = (ReactNs as { default?: unknown }).default ?? ReactNs
   CategoryPage = (await import("@/app/c/[slug]/page")).default
   OrgPage = (await import("@/app/o/[slug]/page")).default
   NotFoundPage = (await import("@/app/not-found")).default
+  ErrorPage = (await import("@/app/error")).default
 })
-beforeEach(() => { configured = true; category = { status: "not_found" }; org = { status: "not_found" } })
+let logged: string[] = []
+beforeEach(() => { configured = true; category = { status: "not_found" }; org = { status: "not_found" }; logged = []; vi.spyOn(console, "error").mockImplementation((m: unknown) => { logged.push(String(m)) }) })
+afterEach(() => vi.restoreAllMocks())
 
-const outcome = async (p: Promise<unknown>) => p.then(() => "RENDERED", (e) => (e instanceof Redirect ? `REDIRECT:${e.to}` : e instanceof NotFound ? "NOTFOUND" : `ERROR:${(e as Error).message}`))
+const outcome = async (p: Promise<unknown>) => p.then(() => "RENDERED", (e) => (e instanceof Redirect ? `REDIRECT:${e.to}` : e instanceof NotFound ? "NOTFOUND" : e instanceof PublicDataUnavailable ? `UNAVAILABLE:${e.reason}` : `ERROR:${(e as Error).message}`))
 const Q = { utm_source: "facebook", utm_campaign: "x" }
 
 describe("/c/[slug]", () => {
@@ -38,13 +43,19 @@ describe("/c/[slug]", () => {
   it("slug inconnu sans paramètre → secours sans « ? »", async () => {
     expect(await outcome(CategoryPage({ params: { slug: "slug-inconnu" }, searchParams: {} }))).toBe("REDIRECT:/voyages-organises")
   })
-  it("panne de base (erreur) → 404 conservé, JAMAIS de redirection qui masquerait l'incident", async () => {
+  it("panne de base (erreur) → erreur de service PublicDataUnavailable (HTTP 500) : ni 404, ni redirection", async () => {
     category = { status: "error" }
-    expect(await outcome(CategoryPage({ params: { slug: "omra-x" }, searchParams: Q }))).toBe("NOTFOUND")
+    expect(await outcome(CategoryPage({ params: { slug: "omra-x" }, searchParams: Q }))).toBe("UNAVAILABLE:db_error")
+    expect(logged.some((l) => l.includes('"event":"DB_UNAVAILABLE"') && l.includes('"route":"/c/[slug]"') && l.includes('"reason":"db_error"'))).toBe(true)
   })
-  it("base non configurée → 404 conservé, pas de secours", async () => {
+  it("base non configurée → erreur de service (HTTP 500), pas un 404 ni un secours", async () => {
     configured = false
-    expect(await outcome(CategoryPage({ params: { slug: "x" }, searchParams: Q }))).toBe("NOTFOUND")
+    expect(await outcome(CategoryPage({ params: { slug: "x" }, searchParams: Q }))).toBe("UNAVAILABLE:db_not_configured")
+    expect(logged.some((l) => l.includes('"reason":"db_not_configured"'))).toBe(true)
+  })
+  it("NON-RÉGRESSION : /c/omra-2027 redirige même base indisponible ou non configurée (aucune lecture de base)", async () => {
+    category = { status: "error" }; configured = false
+    expect(await outcome(CategoryPage({ params: { slug: "omra-2027" }, searchParams: Q }))).toBe("REDIRECT:/omra?utm_source=facebook&utm_campaign=x")
   })
   it("catégorie trouvée → affichée, aucune redirection", async () => {
     category = { status: "found", data: { category: { slug: "ok" }, offers: [] } }
@@ -60,9 +71,14 @@ describe("/o/[slug]", () => {
   it("entreprise inconnue ou suspendue → secours (accueil) AVEC les UTM", async () => {
     expect(await outcome(OrgPage({ params: { slug: "inconnue" }, searchParams: Q }))).toBe("REDIRECT:/?utm_source=facebook&utm_campaign=x")
   })
-  it("panne de base → 404 conservé, pas de secours", async () => {
+  it("panne de base → erreur de service (HTTP 500) : ni 404, ni redirection ; journal DB_UNAVAILABLE", async () => {
     org = { status: "error" }
-    expect(await outcome(OrgPage({ params: { slug: "acme" }, searchParams: Q }))).toBe("NOTFOUND")
+    expect(await outcome(OrgPage({ params: { slug: "acme" }, searchParams: Q }))).toBe("UNAVAILABLE:db_error")
+    expect(logged.some((l) => l.includes('"event":"DB_UNAVAILABLE"') && l.includes('"route":"/o/[slug]"'))).toBe(true)
+  })
+  it("base non configurée → erreur de service (HTTP 500)", async () => {
+    configured = false
+    expect(await outcome(OrgPage({ params: { slug: "acme" }, searchParams: Q }))).toBe("UNAVAILABLE:db_not_configured")
   })
   it("NON-RÉGRESSION : /o/easy2book redirige toujours vers l'accueil", async () => {
     org = { status: "found", org: { id: "1", slug: "easy2book", name: "Easy2Book" } }
@@ -83,5 +99,19 @@ describe("page 404 globale (rendu)", () => {
     expect(html).toContain('href="/"')
     expect(html).toContain(`https://wa.me/${WHATSAPP_NUMBER}?text=`)
     expect(html).toContain("noopener")
+  })
+})
+
+describe("page d'erreur (app/error.tsx)", () => {
+  it("message compréhensible, bouton « Réessayer », WhatsApp, accueil ; le détail technique n'est jamais affiché", () => {
+    const err = Object.assign(new Error("Supabase 503 PGRST000 secret-interne"), { digest: "abc123" })
+    const html = renderToStaticMarkup(ErrorPage({ error: err, reset: () => undefined }) as never)
+    expect(html).toContain("Service momentanément indisponible")
+    expect(html).toContain("Réessayer")
+    expect(html).toContain("https://wa.me/")
+    expect(html).toContain('href="/"')
+    expect(html).toContain("Référence : abc123")
+    expect(html).not.toContain("secret-interne")
+    expect(html).not.toContain("PGRST000")
   })
 })

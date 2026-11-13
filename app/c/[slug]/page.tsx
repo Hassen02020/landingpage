@@ -1,8 +1,9 @@
 import type { Metadata } from "next"
-import { notFound, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
 import { dbConfigured, withPublicOrg } from "@/lib/server/db"
 import { lookupPublicCategory, publicCategory } from "@/lib/server/catalog"
 import { fallbackTarget } from "@/lib/fallback"
+import { unavailable } from "@/lib/server/public-errors"
 import { SITE_URL } from "@/lib/config"
 import { CategoryView } from "./CategoryView"
 
@@ -46,10 +47,11 @@ export default async function CategoryPage({ params, searchParams }: { params: {
     for (const [k, v] of Object.entries(searchParams)) for (const x of Array.isArray(v) ? v : v === undefined ? [] : [v]) qs.append(k, x)
     redirect(`/omra${qs.toString() ? `?${qs}` : ""}`)
   }
-  if (!dbConfigured()) notFound() // base non configurée : situation d'environnement, pas un « introuvable » (aucun secours)
+  // panne ou base non configurée = erreur de SERVICE (HTTP 500, message app/error.tsx) : jamais un 404, jamais une redirection
+  if (!dbConfigured()) throw unavailable("/c/[slug]", "db_not_configured", params.slug)
   const found = await withPublicOrg(() => lookupPublicCategory(params.slug))
-  // secours UNIQUEMENT pour un « introuvable » ; une panne de base garde le 404 actuel (aucune redirection qui masquerait l'incident)
+  if (found.status === "error") throw unavailable("/c/[slug]", "db_error", params.slug)
+  // secours UNIQUEMENT pour un « introuvable » confirmé par la base
   if (found.status === "not_found") redirect(fallbackTarget(`/c/${params.slug}`, searchParams) ?? "/voyages-organises")
-  if (found.status !== "found") notFound()
   return <CategoryView category={found.data.category} offers={found.data.offers} />
 }
