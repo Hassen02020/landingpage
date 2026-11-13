@@ -28,7 +28,9 @@ function CopyButton({ text, label = "Copier" }: { text: string; label?: string }
 export function LinkBuilder({ destinations, base }: { destinations: Destination[]; base: string }) {
   const [source, setSource] = useState("instagram")
   const [medium, setMedium] = useState("bio")
-  const [path, setPath] = useState("/")
+  const [pathChoice, setPath] = useState("")
+  // destination effective : la 1re de la liste tant que rien n'est choisi (une entreprise n'a pas « / » dans sa liste)
+  const path = destinations.some((d) => d.path === pathChoice) ? pathChoice : (destinations[0]?.path ?? "/")
   const [campaign, setCampaign] = useState("")
   const [content, setContent] = useState("")
   const [dynamic, setDynamic] = useState(false)
