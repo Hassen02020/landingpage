@@ -4,7 +4,9 @@
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { archivePage, builderAccess, duplicatePage, publishPage, restorePage, saveDraft, unpublishPage, type OfferInput } from "@/lib/server/page-builder"
-import { uploadImage } from "@/lib/server/catalog"
+import { uploadImage, getCategory } from "@/lib/server/catalog"
+import { saveDesign } from "@/lib/server/page-design"
+import type { DesignErrors } from "@/lib/page-builder/design"
 
 export interface CreatorState { ok?: boolean; message?: string; errors?: Record<string, string> }
 
@@ -118,4 +120,20 @@ export async function unpublishFromListAction(fd: FormData): Promise<void> {
   const res = await unpublishPage(str(fd, "id"), access.staff.userId)
   refreshPublicPages()
   return res.ok ? back("Page désactivée (masquée). Vous pouvez maintenant l'archiver.", true, "&vue=brouillon") : back(res.message, false)
+}
+
+export interface DesignState { ok?: boolean; message?: string; errors?: DesignErrors }
+
+/** Personnalisation : le navigateur envoie le design en JSON, le SERVEUR le revalide intégralement (couleurs, bornes, sections autorisées). */
+export async function saveDesignAction(_prev: DesignState | undefined, fd: FormData): Promise<DesignState> {
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return { ok: false, message: access.message }
+  let raw: unknown
+  try { raw = JSON.parse(str(fd, "design")) } catch { return { ok: false, message: "Données de personnalisation illisibles." } }
+  const category = await getCategory(str(fd, "id"))
+  if (!category) return { ok: false, message: "Page introuvable." }
+  const res = await saveDesign(category.id, category.product, raw, access.staff.userId)
+  if (!res.ok) return { ok: false, message: res.message, errors: res.errors }
+  refreshPublicPages()
+  return { ok: true, message: category.visible ? "Personnalisation enregistrée : la page publiée est à jour." : "Personnalisation enregistrée." }
 }

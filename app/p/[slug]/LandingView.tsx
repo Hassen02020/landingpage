@@ -11,7 +11,8 @@ import type { Category, PublicOffer } from "@/lib/server/catalog"
 import { waText } from "@/lib/wa-text"
 import { familyOf } from "@/lib/page-builder/themes"
 import { faqFor } from "@/lib/page-builder/faq"
-import { SECTIONS, STYLE, derive } from "@/lib/page-builder/style"
+import { SECTIONS, STYLE, derive, type FamilyStyle } from "@/lib/page-builder/style"
+import { resolvePrimary, tint, visibleSections, type DesignSection, type PageDesign } from "@/lib/page-builder/design"
 
 const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
 const frDate = (iso: string) => {
@@ -21,23 +22,33 @@ const frDate = (iso: string) => {
 }
 
 const T = {
-  fr: { from: "À partir de", perPerson: "/ pers.", nights: "nuits", reserve: "Réserver cette offre", ask: "Question sur WhatsApp", full: "Complet", left: (n: number) => `Plus que ${n} place${n > 1 ? "s" : ""}`, formTitle: "Réservez votre place", formSub: "Moins d'une minute — un conseiller vous rappelle", included: "Inclus", call: "Appeler", highlights: "Les points forts", includedTitle: "Prestations incluses", programme: "Programme", gallery: "En images", faq: "Questions fréquentes", dates: "Départs et prix", promo: "Promotion", preview: "Aperçu : les boutons et le formulaire sont désactivés." },
-  ar: { from: "ابتداءً من", perPerson: "/ للشخص", nights: "ليلة", reserve: "احجز هذا العرض", ask: "اسأل على واتساب", full: "مكتمل", left: (n: number) => `بقي ${n} أماكن فقط`, formTitle: "احجز مكانك الآن", formSub: "أقل من دقيقة — مستشارنا يتصل بيك", included: "يشمل", call: "اتصل", highlights: "أبرز المميزات", includedTitle: "الخدمات المشمولة", programme: "البرنامج", gallery: "صور", faq: "أسئلة شائعة", dates: "الرحلات والأسعار", promo: "عرض خاص", preview: "معاينة: الأزرار والنموذج معطّلة." },
+  fr: { from: "À partir de", perPerson: "/ pers.", nights: "nuits", reserve: "Réserver cette offre", ask: "Question sur WhatsApp", full: "Complet", left: (n: number) => `Plus que ${n} place${n > 1 ? "s" : ""}`, formTitle: "Réservez votre place", formSub: "Moins d'une minute — un conseiller vous rappelle", included: "Inclus", call: "Appeler", highlights: "Les points forts", includedTitle: "Prestations incluses", programme: "Programme", gallery: "En images", faq: "Questions fréquentes", dates: "Départs et prix", promo: "Promotion", testimonials: "Ils nous ont fait confiance", whatsappCta: "Écrire sur WhatsApp", preview: "Aperçu : les boutons et le formulaire sont désactivés." },
+  ar: { from: "ابتداءً من", perPerson: "/ للشخص", nights: "ليلة", reserve: "احجز هذا العرض", ask: "اسأل على واتساب", full: "مكتمل", left: (n: number) => `بقي ${n} أماكن فقط`, formTitle: "احجز مكانك الآن", formSub: "أقل من دقيقة — مستشارنا يتصل بيك", included: "يشمل", call: "اتصل", highlights: "أبرز المميزات", includedTitle: "الخدمات المشمولة", programme: "البرنامج", gallery: "صور", faq: "أسئلة شائعة", dates: "الرحلات والأسعار", promo: "عرض خاص", testimonials: "آراء عملائنا", whatsappCta: "راسلنا على واتساب", preview: "معاينة: الأزرار والنموذج معطّلة." },
 }
 
-export function LandingView({ category, offers, preview = false }: { category: Category; offers: PublicOffer[]; preview?: boolean }) {
+// Style personnalisé : une SEULE couleur choisie (contraste du texte blanc vérifié à l'enregistrement) pilote boutons, titres, pastilles et bandeaux.
+const CUSTOM: FamilyStyle = { page: "bg-gray-50", heroNoImage: "bg-[var(--p)]", accentText: "text-white", priceText: "text-[var(--p)]", button: "bg-[var(--p)] hover:brightness-90", buttonSoft: "text-[var(--p)]", chip: "bg-[var(--pl)] text-[var(--p)]", formBand: "bg-[var(--pl)]", sectionTitle: "text-[var(--p)]", ring: "ring-[var(--pl)]", accentColor: "#000000" }
+
+export function LandingView({ category, offers, preview = false, design = null }: { category: Category; offers: PublicOffer[]; preview?: boolean; design?: PageDesign | null }) {
   const lang = category.lang
   const t = T[lang]
   const dir = lang === "ar" ? "rtl" : "ltr"
   const family = familyOf(category.product)
-  const st = STYLE[family]
+  const primary = design ? resolvePrimary(design) : null
+  const base = STYLE[family]
+  const st: FamilyStyle = primary ? { ...CUSTOM, accentColor: primary, page: design?.background === "blanc" ? "bg-white" : design?.background === "teinte" ? "bg-[var(--pl)]" : base.page } : { ...base, page: design?.background === "blanc" ? "bg-white" : base.page }
+  const vars = primary ? ({ "--p": primary, "--pl": tint(primary) } as React.CSSProperties) : undefined
+  const ctaLabel = design?.cta.label || t.reserve
+  const showBefore = design ? design.price.showBefore : true
+  const showFrom = design ? design.price.prefix : true
   const [offer, setOffer] = useState("")
   const label = (o: PublicOffer) => (o.departure_date ? `${o.name} — ${lang === "ar" ? arDate(o.departure_date).full : frDate(o.departure_date)}` : o.name)
   const left = (o: PublicOffer) => (o.seats_total === null ? null : Math.max(0, o.seats_total - o.seats_sold))
   const from = offers.length ? Math.min(...offers.map((o) => Number(o.price))) : null
   const info = derive(offers)
+  if (design && design.program.length) info.programmes = design.program.map((x) => ({ name: x.title, text: x.text }))
   const hasPromo = offers.some((o) => o.price_before !== null && Number(o.price_before) > Number(o.price))
-  const faq = faqFor(family, lang)
+  const faq = design && design.faq.length ? design.faq : faqFor(family, lang)
 
   const choose = (o: PublicOffer) => {
     setOffer(label(o))
@@ -52,7 +63,7 @@ export function LandingView({ category, offers, preview = false }: { category: C
   }
   const title = (txt: string) => <h2 className={`text-2xl font-black mb-4 ${st.sectionTitle}`}>{txt}</h2>
 
-  const section = (key: (typeof SECTIONS)[typeof family][number]) => {
+  const section = (key: DesignSection) => {
     switch (key) {
       case "intro":
         return category.description ? <p key={key} className="max-w-3xl mx-auto px-4 py-6 text-gray-700 whitespace-pre-line leading-relaxed">{category.description}</p> : null
@@ -88,7 +99,7 @@ export function LandingView({ category, offers, preview = false }: { category: C
                         <ul className="text-sm text-gray-700 space-y-1 mb-3">{o.features.slice(0, 6).map((f) => <li key={f}>✓ {f}</li>)}</ul>
                       )}
                       <div className="mt-auto">
-                        {o.price_before !== null && Number(o.price_before) > Number(o.price) && <div className="text-sm text-gray-400 line-through" dir="ltr">{fmt(Number(o.price_before))} TND</div>}
+                        {showBefore && o.price_before !== null && Number(o.price_before) > Number(o.price) && <div className="text-sm text-gray-400 line-through" dir="ltr">{fmt(Number(o.price_before))} TND</div>}
                         <div className={`text-3xl font-black ${st.priceText}`}><span dir="ltr">{fmt(Number(o.price))}</span> <span className="text-base">TND</span></div>
                         {n !== null && n > 0 && n <= 10 && <p className="text-sm font-bold text-red-600 mt-1">🔥 {t.left(n)}</p>}
                         {n === 0 ? (
@@ -138,6 +149,20 @@ export function LandingView({ category, offers, preview = false }: { category: C
             </div>
           </section>
         ) : null
+      case "testimonials":
+        return design && design.testimonials.length > 0 ? (
+          <section key={key} className="max-w-5xl mx-auto px-4 py-6" aria-label={t.testimonials} data-testid="testimonials">
+            {title(t.testimonials)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {design.testimonials.map((x, i) => (
+                <figure key={x.name + i} className="bg-white rounded-2xl border border-gray-100 p-5">
+                  <blockquote className="text-gray-700 whitespace-pre-line">« {x.text} »</blockquote>
+                  <figcaption className="mt-3 text-sm font-bold">{x.name}{x.place ? <span className="font-normal text-gray-500"> — {x.place}</span> : null}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </section>
+        ) : null
       case "faq":
         return (
           <section key={key} id="faq" className="max-w-3xl mx-auto px-4 py-6 scroll-mt-4">
@@ -182,7 +207,7 @@ export function LandingView({ category, offers, preview = false }: { category: C
   }
 
   return (
-    <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} data-family={family}>
+    <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
       {preview && <div className="bg-amber-100 text-amber-900 text-sm font-bold text-center py-2 px-3" role="status">{t.preview}</div>}
       <header className="relative">
         {category.banner_desktop || category.banner_mobile ? (
@@ -199,20 +224,23 @@ export function LandingView({ category, offers, preview = false }: { category: C
             {family === "autre" && hasPromo && <span className="inline-block mb-2 text-xs font-black bg-amber-300 text-amber-950 px-3 py-1 rounded-full">{t.promo}</span>}
             <h1 className="text-3xl sm:text-4xl font-black">{category.name}</h1>
             {category.headline && <p className="mt-1 text-white/90">{category.headline}</p>}
-            {from !== null && (
+            {showFrom && from !== null && (
               <p className={`mt-2 font-bold ${st.accentText}`}>
                 {t.from} <span dir="ltr">{fmt(from)}</span> TND {t.perPerson}
               </p>
             )}
-            <a href="#reservation" className={`mt-4 hidden sm:inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{t.reserve}</a>
+            <div className="mt-4 hidden sm:flex flex-wrap gap-3">
+              <a href="#reservation" className={`inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{ctaLabel}</a>
+              {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#25D366] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
+            </div>
           </div>
         </div>
       </header>
 
-      {SECTIONS[family].map((k) => section(k))}
+      {(design ? visibleSections(design) : (SECTIONS[family] as DesignSection[])).map((k) => section(k))}
 
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
-        <a href="#reservation" className={`text-white font-black rounded-xl py-3 text-center ${st.button}`}>{t.reserve}</a>
+        <a href="#reservation" className={`text-white font-black rounded-xl py-3 text-center ${st.button}`}>{ctaLabel}</a>
         <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "sticky" })} className="bg-[#25D366] text-white font-black rounded-xl px-4 py-3" aria-label="WhatsApp">💬</a>
         <a href={`tel:+216${PHONE_NUMBER}`} aria-label={t.call} className="border rounded-xl px-4 py-3">📞</a>
       </div>

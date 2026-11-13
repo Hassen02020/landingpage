@@ -13,6 +13,7 @@ vi.mock("@/lib/server/auth", () => ({ currentStaff: async () => (role ? { userId
 
 import { configureAll } from "./helpers"
 import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/server/db"
+import { loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
 import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
 import * as actions from "@/app/admin/createur-actions"
@@ -24,6 +25,7 @@ type Row = Record<string, unknown>
 let T: Record<string, Row[]>
 let calls: { method: string; table: string; url: string; body?: unknown }[]
 let multi = false
+let noDesign = false
 let seq = 0
 
 function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
@@ -47,7 +49,7 @@ function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
 
 beforeEach(() => {
   configureAll(); resetTenantModeCache(); resetPublicOrgCache()
-  role = "admin"; orgId = E2B; multi = false; seq = 0; calls = []
+  role = "admin"; orgId = E2B; multi = false; noDesign = false; seq = 0; calls = []
   T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [] }
   vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
     const u = new URL(String(url))
@@ -59,6 +61,7 @@ beforeEach(() => {
       if (u.searchParams.get("slug") === "eq.easy2book") return json([{ id: E2B }])
       return json(multi ? [{ id: E2B }, { id: BOB }] : [{ id: E2B }])
     }
+    if (noDesign && ((method === "GET" && /select=design/.test(u.search)) || (method === "PATCH" && String(init.body ?? "").includes('"design"')))) return json({ code: "42703", message: "column landing_categories.design does not exist" }, 400)
     calls.push({ method, table, url: decodeURIComponent(u.search), body: init.body ? JSON.parse(String(init.body)) : undefined })
     const org = u.searchParams.get("organization_id")?.replace("eq.", "")
     const scoped = (T[table] ?? []).filter((r) => !org || r.organization_id === org)
@@ -283,5 +286,54 @@ describe("duplication et archivage (tableau de bord)", () => {
     expect((await as(E2B, () => duplicatePage("00000000-0000-4000-8000-0000000000aa", "u1"))).ok).toBe(false)
     expect((await as(E2B, () => archivePage("00000000-0000-4000-8000-0000000000aa", "u1"))).ok).toBe(false)
     expect(writes()).toHaveLength(0)
+  })
+})
+
+describe("personnalisation : stockage (colonne design, migration proposée non appliquée)", () => {
+  const D = { colors: { preset: "bleu" }, faq: [{ q: "Quand partir ?", a: "Voir les départs." }], cta: { label: "Réservez" } }
+  it("enregistre un design validé SERVEUR, relu tel quel ; l'adresse, la visibilité et les offres ne changent pas", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    const before = JSON.stringify({ ...T.landing_categories[0], design: undefined, updated_at: undefined })
+    expect((await as(E2B, () => saveDesign(id, "voyage", D, "u1"))).ok).toBe(true)
+    const stored = T.landing_categories[0].design as { colors: { preset: string }; faq: unknown[] }
+    expect(stored.colors.preset).toBe("bleu"); expect(stored.faq).toHaveLength(1)
+    expect(JSON.stringify({ ...T.landing_categories[0], design: undefined, updated_at: undefined })).toBe(before)
+    const loaded = await as(E2B, () => loadDesign(id, "voyage"))
+    expect(loaded).toMatchObject({ available: true, stored: true })
+    expect(loaded.design.cta.label).toBe("Réservez")
+    const pub = await as(E2B, () => publicDesign("turquie-ete-2027", "voyage"))
+    expect(pub?.faq[0].q).toBe("Quand partir ?")
+  })
+  it("design invalide : AUCUNE écriture ; couleur trop claire refusée côté serveur même si l'interface est contournée", async () => {
+    const id = await makeComplete()
+    calls = []
+    const r = await as(E2B, () => saveDesign(id, "voyage", { colors: { custom: "#ffff00" } }, "u1"))
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.errors.custom).toMatch(/trop claire/)
+    expect(writes()).toHaveLength(0)
+  })
+  it("une page masquée n'expose jamais son design au public", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => saveDesign(id, "voyage", D, "u1"))
+    expect(await as(E2B, () => publicDesign("turquie-ete-2027", "voyage"))).toBeNull()
+  })
+  it("colonne absente : lecture « indisponible » (rendu par défaut), écriture refusée avec message clair, publicDesign = null, AUCUNE exception", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    noDesign = true
+    const loaded = await as(E2B, () => loadDesign(id, "voyage"))
+    expect(loaded.available).toBe(false)
+    const r = await as(E2B, () => saveDesign(id, "voyage", D, "u1"))
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.message).toMatch(/migration 0018/)
+    expect(await as(E2B, () => publicDesign("turquie-ete-2027", "voyage"))).toBeNull()
+  })
+  it("autre entreprise : ne peut ni lire ni écrire le design d'une page de la plateforme", async () => {
+    multi = true
+    const id = await makeComplete()
+    const r = await as(BOB, () => saveDesign(id, "voyage", D, "u1")).catch((e) => e)
+    expect(T.landing_categories[0].design).toBeUndefined()
+    void r
   })
 })

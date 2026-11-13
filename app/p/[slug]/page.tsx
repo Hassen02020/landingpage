@@ -5,6 +5,7 @@ import { lookupPublicCategory } from "@/lib/server/catalog"
 import { fallbackTarget, queryString } from "@/lib/fallback"
 import { unavailable } from "@/lib/server/public-errors"
 import { SITE_URL } from "@/lib/config"
+import { publicDesign } from "@/lib/server/page-design"
 import { LandingView } from "./LandingView"
 
 // Pages publiées par le Créateur de Landing Pages. Même règles que /c/<adresse> : introuvable → secours (query conservée) ; panne ou base absente → HTTP 500.
@@ -33,5 +34,6 @@ export default async function LandingPage({ params, searchParams }: { params: { 
   if (found.status === "error") throw unavailable("/p/[slug]", "db_error", params.slug)
   // secours UNIQUEMENT pour un « introuvable » confirmé (page masquée ou inconnue) : le visiteur d'une publicité n'arrive pas sur une erreur
   if (found.status === "not_found") redirect(fallbackTarget(`/p/${params.slug}`, searchParams) ?? "/voyages-organises")
-  return <LandingView category={found.data.category} offers={found.data.offers} />
+  const design = await withPublicOrg(() => publicDesign(found.data.category.slug, found.data.category.product))
+  return <LandingView category={found.data.category} offers={found.data.offers} design={design} />
 }

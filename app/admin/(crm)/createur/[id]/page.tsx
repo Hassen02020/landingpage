@@ -10,6 +10,8 @@ import { ReadinessList } from "./ReadinessList"
 import { PreviewPanel } from "./PreviewPanel"
 import { PublishPanel } from "./PublishPanel"
 import { AdLinkBlock } from "./AdLinkBlock"
+import { DesignEditor } from "./DesignEditor"
+import { loadDesign } from "@/lib/server/page-design"
 import { parsePeriod } from "@/lib/server/stats"
 import { formatStat } from "@/lib/page-builder/stats"
 
@@ -26,7 +28,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   if (!isNew && !page) notFound()
   const theme = themeById(searchParams.theme) ?? (page ? defaultTheme(page.category.product) : null)
   if (!theme) redirect("/admin/createur/modeles")
-  const etape = isNew ? "infos" : ["infos", "formulaire", "apercu", "publication", "stats"].includes(searchParams.etape ?? "") ? (searchParams.etape as string) : "infos"
+  const etape = isNew ? "infos" : ["infos", "design", "formulaire", "apercu", "publication", "stats"].includes(searchParams.etape ?? "") ? (searchParams.etape as string) : "infos"
   const category = page?.category ?? null
   const path = category ? creatorPath(category.slug) : ""
   const family = familyOf(category?.product ?? theme.product)
@@ -48,6 +50,10 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
       {searchParams.ok && etape === "infos" && <div role="status" className="rounded-xl p-3 text-sm bg-green-50 text-green-800 border border-green-200">Brouillon créé. Complétez les informations puis passez à l&apos;étape suivante.</div>}
 
       {etape === "infos" && <PageEditor key={category?.id ?? "nouvelle"} theme={theme} category={category} offers={page?.offers.filter((o) => !o.archived_at) ?? []} slugLock={page?.lock.locked ? { locked: true, message: page.lock.message } : { locked: false }} />}
+
+      {etape === "design" && page && (
+        <DesignStep id={params.id} product={page.category.product} />
+      )}
 
       {etape === "formulaire" && page && (
         <section className="bg-white rounded-2xl border p-5 space-y-4" aria-label="Formulaire">
@@ -115,6 +121,16 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
           )}
         </section>
       )}
+    </div>
+  )
+}
+
+async function DesignStep({ id, product }: { id: string; product: Parameters<typeof loadDesign>[1] }) {
+  const loaded = await loadDesign(id, product)
+  return (
+    <div className="space-y-3">
+      <h2 className="font-black text-lg">3. Personnaliser la page</h2>
+      <DesignEditor key={id} id={id} initial={loaded.design} available={loaded.available} />
     </div>
   )
 }
