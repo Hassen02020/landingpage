@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { can } from "@/lib/permissions"
 import { currentStaff } from "@/lib/server/auth"
 import { listAdSpend } from "@/lib/server/ad-spend"
@@ -19,6 +20,7 @@ export default async function RentabilitePage() {
       <div>
         <h1 className="text-2xl font-black">Rentabilité</h1>
         <p className="text-gray-600 text-sm">Dépenses publicitaires saisies à la main et commissions importées d&apos;EasyV4 (provisoires tant qu&apos;elles ne sont pas confirmées).</p>
+        <Link href="/admin/rentabilite/analyse" className="inline-block mt-2 text-sm font-bold text-violet-700">Voir les campagnes rentables →</Link>
       </div>
       {(!spend.migrationApplied || !commissions.migrationApplied || !costs.migrationApplied) && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">
