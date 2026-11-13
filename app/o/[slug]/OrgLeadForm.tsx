@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { CONSENT_TEXT_VERSION } from "@/lib/config"
 import { STANDARD_LABELS, type FormConfig } from "@/lib/form-config"
+import { attributionFromUrl } from "@/lib/url-attribution"
 
 export function OrgLeadForm({ slug, config, offers }: { slug: string; config: FormConfig; offers: string[] }) {
   const [busy, setBusy] = useState(false)
@@ -27,7 +28,8 @@ export function OrgLeadForm({ slug, config, offers }: { slug: string; config: Fo
         body: JSON.stringify({
           name: fd.get("name"), phone: fd.get("phone"), email: fd.get("email"), message: fd.get("message"), offer: fd.get("offer"), budget: fd.get("budget"),
           custom, website: fd.get("website"), contactConsent: fd.get("consent") === "on", marketingConsent: false, trackingConsent: false,
-          attribution: { page_url: window.location.href, landing_page: window.location.pathname },
+          // campagne lue dans l'adresse au moment de l'envoi (UTM et identifiants de campagne seulement : aucun identifiant de clic, aucun stockage)
+          attribution: attributionFromUrl(window.location.href, window.location.pathname, window.location.search, document.referrer),
         }),
       })
       const json = (await res.json().catch(() => ({}))) as { ref?: string; error?: string; errors?: Record<string, string> }

@@ -60,21 +60,27 @@ const bobDest = await destinations(B.page)
 const bobDestText = bobDest.join(" | ")
 check("le générateur de B ne montre AUCUNE page d'Easy2Book (aucune fuite de nom de catégorie)", !/Easy2Book Seulement|CHEZ-EASY2BOOK|Omra|عمرة/.test(bobDestText.replace(/Omra — \/omra|Accueil|Voyages organisés|Promos hôtels/g, "")), bobDestText)
 console.log(`   destinations proposées à B : ${bobDest.map((d) => d.split(" — ").pop()).join("  ")}`)
-const bobProposesC = bobDest.some((d) => d.includes("/c/bob-ete"))
-const bobProposesFixed = bobDest.some((d) => /— \/omra$/.test(d) || /— \/voyages-organises$/.test(d))
+const bobPaths = bobDest.map((d) => d.split(" — ").pop())
+check("le générateur de B ne propose QUE sa propre page de collecte /o/bob-sarl", JSON.stringify(bobPaths) === JSON.stringify(["/o/bob-sarl"]), JSON.stringify(bobPaths))
+check("aucune page fixe d'Easy2Book (/, /omra, /voyages-organises, /summer-vibes) ni aucune page /c/… n'est proposée à B", !bobPaths.some((x) => x === "/" || x === "/omra" || x === "/voyages-organises" || x === "/summer-vibes" || x.startsWith("/c/")))
+{
+  const bt = await B.page.locator("body").innerText()
+  check("le générateur de B n'affiche pas les liens de bio ni les profils d'Easy2Book", !/Liens de bio des comptes officiels|Easy2Bookplateforme|easy2book\.2025/.test(bt))
+  check("le générateur de B explique que son lien mène à SA page de collecte", (await B.page.locator('[data-testid="company-links-note"]').count()) === 1)
+  await B.page.locator('input[aria-label="Nom de la campagne"]').fill("camp-bob")
+  const bLink = await B.page.locator('[data-testid="generated-link"]').first().innerText()
+  check("lien généré pour B : mène à /o/bob-sarl avec ses paramètres de campagne (jamais à une page d'Easy2Book)", /\/o\/bob-sarl\?utm_source=/.test(bLink) && !/\/c\/|\/omra|voyages-organises|summer-vibes/.test(bLink) && bLink.includes("utm_campaign=camp-bob"), bLink)
+}
 
 // ================================================================ 2. ce que sert réellement le site public pour B
 let r = await head("/c/bob-ete")
-const bobPageServed = r.status === 200
-finding("la page /c/bob-ete (catégorie de B, proposée par son générateur) n'est PAS servie publiquement : le site renvoie le visiteur vers une page d'Easy2Book", !bobPageServed && bobProposesC,
-  `générateur de B ${bobProposesC ? "propose" : "ne propose pas"} /c/bob-ete ; site public : HTTP ${r.status}${r.headers.get("location") ? ` → ${r.headers.get("location")} (page d'Easy2Book)` : ""}`)
-finding("le générateur de B propose des pages FIXES d'Easy2Book (/omra, /voyages-organises, /summer-vibes, /)", bobProposesFixed, bobProposesFixed ? "ces pages mènent au site et au CRM d'Easy2Book, pas à B" : "")
+finding("LIMITE D'ARCHITECTURE (documentée, aucun lien n'est proposé à B) : le catalogue de B n'est pas servi publiquement ; /c/bob-ete renvoie vers une page d'Easy2Book", r.status !== 200, `site public : HTTP ${r.status}${r.headers.get("location") ? ` → ${r.headers.get("location")}` : ""}`)
 
 // ================================================================ 3. collision d'adresse
 r = await fetch(`${BASE}/c/collision-x`)
 const colHtml = await r.text()
 check("collision /c/collision-x : le site public sert la page d'EASY2BOOK, JAMAIS le contenu de B", r.status === 200 && colHtml.includes("CHEZ-EASY2BOOK") && !colHtml.includes("CHEZ-BOB"))
-finding("collision d'adresse : B (qui a créé « collision-x ») obtiendrait un lien vers la page d'Easy2Book", bobDest.some((d) => d.includes("/c/collision-x")), "le lien de B envoie son trafic vers la page d'Easy2Book")
+check("collision d'adresse : B n'obtient AUCUN lien vers /c/collision-x (il n'existe pas dans son générateur)", !bobPaths.some((x) => x.includes("collision-x")))
 
 // ================================================================ 4. isolation des prospects + conservation des UTM
 const e2bBefore = db.landing_leads.filter((l) => l.organization_id === E2B).length
@@ -114,7 +120,8 @@ const e2bNew2 = db.landing_leads.filter((l) => l.organization_id === E2B).slice(
 const l2 = bobNew2[0]
 check("prospect arrivé par /o/bob-sarl : enregistré chez Bob SARL, JAMAIS chez Easy2Book", bobNew2.length === 1 && e2bNew2.length === 0, `Bob +${bobNew2.length}, E2B +${e2bNew2.length}`)
 console.log(`   prospect de B : campagne=${l2?.utm_campaign ?? "∅"} source=${l2?.utm_source ?? "∅"} canal=${l2?.channel ?? "∅"} page d'arrivée=${l2?.landing_page ?? "∅"} page du formulaire=${l2?.form_page ?? "∅"}`)
-finding("les paramètres de campagne d'un lien /o/… sont PERDUS avant d'arriver au prospect de B", !(l2?.utm_campaign === "camp-bob" && l2?.utm_source === "facebook"), `campagne enregistrée : ${l2?.utm_campaign ?? "aucune"}, source : ${l2?.utm_source ?? "aucune"}`)
+check("les paramètres de campagne d'un lien /o/… sont CONSERVÉS jusqu'au prospect de B (campagne, source, support, contenu, canal, page d'arrivée)", l2?.utm_campaign === "camp-bob" && l2?.utm_source === "facebook" && l2?.utm_medium === "paid" && l2?.utm_content === "visuel2" && l2?.channel === "meta" && l2?.landing_page === "/o/bob-sarl", JSON.stringify(l2 && { c: l2.utm_campaign, s: l2.utm_source, m: l2.utm_medium, ct: l2.utm_content, ch: l2.channel, lp: l2.landing_page }))
+check("aucun identifiant de clic publicitaire n'est stocké sur ces pages sans consentement aux traceurs", !l2?.fbclid && !l2?.ttclid && !l2?.gclid)
 
 // ================================================================ 5. l'administrateur d'Easy2Book ne voit pas les pages de B
 const A = await login(ADMIN.email, ADMIN.password)

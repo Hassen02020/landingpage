@@ -87,6 +87,16 @@ export function destinationsFor(categories: { slug: string; name: string }[]): D
   return [...FIXED_DESTINATIONS, ...extra]
 }
 
+/**
+ * Destinations proposées à une ENTREPRISE CLIENTE (autre qu'Easy2Book) : uniquement SA page de collecte /o/<identifiant>.
+ * Les pages fixes (/, /omra…) et le catalogue (/c/…) sont ceux d'Easy2Book : ils mèneraient le visiteur vers le site et le CRM d'une autre entreprise.
+ */
+export function companyDestinations(orgSlug: string | null | undefined, orgName?: string | null): Destination[] {
+  const slug = String(orgSlug ?? "")
+  if (!/^[a-z0-9][a-z0-9-]{1,62}$/.test(slug) || slug === "easy2book") return []
+  return [{ path: `/o/${slug}`, label: `Page de collecte${orgName ? ` de ${orgName}` : ""}` }]
+}
+
 /** « Été 2027 — Turquie ! » → « ete-2027-turquie » (a-z, 0-9, - et _ ; 64 caractères max). */
 export function slugParam(v: string): string {
   return v

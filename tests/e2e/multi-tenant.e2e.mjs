@@ -284,6 +284,21 @@ const B = await session(BOB.email, BOB.password)
   const api = (slug, payload) => fetch(`${BASE}/api/o/${slug}/leads`, { method: "POST", headers: { "Content-Type": "application/json", origin: BASE }, body: JSON.stringify(payload) })
   const full = { name: "Test Nom", phone: "97 654 000", email: "t@t.tn", custom: { c1: "Tunis" }, contactConsent: true }
   check("entreprise inconnue : page et API répondent 404", (await fetch(`${BASE}/o/inconnue`)).status === 404 && (await api("inconnue", full)).status === 404)
+  // COMPLÉMENT (décision du propriétaire) : une entreprise inconnue OU suspendue reçoit la MÊME réponse 404 neutre — aucune redirection, aucune information sur l'entreprise.
+  // (Next répète dans la page l'adresse demandée par le visiteur, comme pour toute adresse inexistante : ce n'est pas une divulgation ; on compare donc après avoir neutralisé l'adresse demandée.)
+  {
+    const unk = await fetch(`${BASE}/o/inconnue?utm_source=facebook`, { redirect: "manual" })
+    const unkBody = await unk.text()
+    check("entreprise inconnue : AUCUNE redirection (ni vers l'accueil ni ailleurs), page 404 neutre", unk.status === 404 && !unk.headers.get("location") && unkBody.includes("existe pas"), `${unk.status} ${unk.headers.get("location") || ""}`)
+    const bo = db.organizations.find((o) => o.id === BOB_ORG)
+    bo.status = "suspended"
+    const sus = await fetch(`${BASE}/o/bob-sarl?utm_source=facebook`, { redirect: "manual" })
+    const susBody = await sus.text()
+    bo.status = "active"
+    check("entreprise suspendue : AUCUNE redirection, page 404 neutre sans nom, titre ni identifiant interne de l'entreprise", sus.status === 404 && !sus.headers.get("location") && susBody.includes("existe pas") && !/Bob SARL|Réservez avec Bob|Circuit Bob/i.test(susBody) && !susBody.includes(BOB_ORG), `${sus.status} ${sus.headers.get("location") || ""}`)
+    const norm = (t) => t.replace(/bob-sarl|inconnue/g, "X")
+    check("suspendue et inconnue : réponses INDISCERNABLES (aucune divulgation de l'existence de l'entreprise)", sus.status === unk.status && norm(susBody) === norm(unkBody))
+  }
   check("Easy2Book garde ses propres pages : /api/o/easy2book/leads est refusé (404)", (await api("easy2book", full)).status === 404)
   const bobOrg = db.organizations.find((o) => o.id === BOB_ORG)
   bobOrg.status = "suspended"
