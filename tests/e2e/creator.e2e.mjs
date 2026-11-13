@@ -341,6 +341,16 @@ check("mobile (390 px) : aucun défilement horizontal du tableau de bord", await
 await shot(M.page, "15-tableau-de-bord-mobile", false)
 await M.ctx.close()
 
+// ================================================================== LOT 2 — statistiques commerciales de la page
+const turq = cats().find((c) => c.slug === "voyage-organise-turquie")
+await p.goto(`${BASE}/admin/createur/${turq.id}?etape=stats`, { waitUntil: "networkidle" })
+check("statistiques : neuf indicateurs affichés", (await p.locator('[data-testid^="stat-"]').count()) === 9, String(await p.locator('[data-testid^="stat-"]').count()))
+check("statistiques : les visites totales et les dépenses absentes affichent NON DISPONIBLE (rien d'inventé)", (await p.locator('[data-testid="stat-visites"]').innerText()).includes("NON DISPONIBLE") && (await p.locator('[data-testid="stat-depenses"]').innerText()).includes("NON DISPONIBLE") && (await p.locator('[data-testid="stat-marge"]').innerText()).includes("NON DISPONIBLE"))
+const prospectsShown = parseInt((await p.locator('[data-testid="stat-prospects"] .text-2xl').innerText()).replace(/\s/g, ""), 10)
+check("statistiques : prospects = prospects réellement enregistrés pour cette page sur la période", prospectsShown === db.landing_leads.filter((l) => l.organization_id === E2B && l.niche === turq.slug && new Date(l.created_at) > new Date(Date.now() - 30 * 86400_000)).length, String(prospectsShown))
+check("statistiques : la commission n'est jamais le chiffre d'affaires (mention explicite)", (await p.locator('[data-testid="stat-commission"]').innerText()).includes("chiffre d'affaires") || (await p.locator('[data-testid="stat-commission"]').innerText()).includes("NON DISPONIBLE"))
+await shot(p, "16-statistiques-page")
+
 const B = await login(BOB.email, BOB.password)
 await B.page.goto(`${BASE}/admin/createur`, { waitUntil: "networkidle" })
 check("autre entreprise (Bob SARL) : message clair, AUCUN formulaire ni lien vers la plateforme", (await B.page.getByText("pas encore disponible pour votre entreprise").count()) === 1 && (await B.page.getByRole("link", { name: "+ Nouvelle page" }).count()) === 0)

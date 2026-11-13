@@ -169,3 +169,23 @@ export async function restorePage(id: string, actorId: string | null): Promise<L
   await update("landing_categories", `id=eq.${id}`, { position: 0, visible: false, updated_at: new Date().toISOString(), updated_by: actorId })
   return { ok: true, id }
 }
+
+// ------------------------------------------------------------------------------------------------ statistiques commerciales (lecture seule)
+import { loadProfitability } from "@/lib/server/profitability"
+import { select as dbSelect } from "@/lib/server/db"
+import { pageStats, type StatCard } from "@/lib/page-builder/stats"
+import { periodFilter, type Period } from "@/lib/server/stats"
+
+export interface PageStatsResult { cards: StatCard[]; leadsInPeriod: number; truncated: boolean }
+
+/** Réutilise le moteur de rentabilité (une seule vérité financière) ; aucune donnée personnelle n'est lue (agrégats et identifiants anonymes de visiteurs). */
+export async function loadPageStats(slug: string, p: Period): Promise<PageStatsResult> {
+  const prof = await loadProfitability(p, "niche")
+  const row = prof.result.rows.find((r) => r.key === slug) ?? null
+  let visitors: number | null = null
+  try {
+    const ev = await dbSelect<{ visitor_ref: string | null }>("landing_events", `select=visitor_ref&niche=eq.${encodeURIComponent(slug)}&event_name=in.(ViewContent,CategoryView)&${periodFilter("created_at", p)}&limit=20000`)
+    visitors = new Set(ev.map((e) => e.visitor_ref).filter(Boolean)).size
+  } catch { visitors = null }
+  return { cards: pageStats({ metrics: row?.metrics ?? null, spendBasis: row?.spendBasis ?? "aucune", ledgerAvailable: prof.migrationApplied, consentingVisitors: visitors }), leadsInPeriod: prof.leadCount, truncated: prof.truncated }
+}
