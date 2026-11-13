@@ -16,8 +16,12 @@ export interface StatInput {
   consentingVisitors: number | null
 }
 
+export type StatGroup = "audience" | "commercial" | "financier"
+export const GROUP_LABELS: Record<StatGroup, string> = { audience: "Audience (qui a vu la page)", commercial: "Résultats commerciaux (prospects du CRM)", financier: "Résultats financiers (jamais le chiffre d'affaires)" }
+
 export interface StatCard {
   id: string
+  group: StatGroup
   label: string
   /** nombre (TND si kind = "money") ; null = non disponible */
   value: number | null
@@ -31,9 +35,10 @@ export function pageStats(i: StatInput): StatCard[] {
   const zero = (n: number | undefined) => n ?? 0
   const spendKnown = i.ledgerAvailable && i.spendBasis !== "aucune"
   const cards: StatCard[] = []
-  const add = (c: Omit<StatCard, "tone"> & { tone?: StatCard["tone"] }) => cards.push({ tone: "plain", ...c })
+  const GROUPS: Record<string, StatGroup> = { visites: "audience", visiteurs: "audience", prospects: "commercial", qualifies: "commercial", devis: "commercial", reservations: "commercial", commission: "financier", depenses: "financier", marge: "financier" }
+  const add = (c: Omit<StatCard, "tone" | "group"> & { tone?: StatCard["tone"] }) => cards.push({ tone: "plain", group: GROUPS[c.id], ...c })
 
-  add({ id: "visites", label: "Visites de la page", value: null, kind: "count", note: "Le site ne compte pas les visites des visiteurs qui refusent le suivi : le total réel n'est pas mesuré." })
+  add({ id: "visites", label: "Visites de la page", value: null, kind: "count", note: "Non mesurées : le site ne compte pas les visiteurs qui refusent le suivi. Un compteur anonyme est proposé (docs/PROPOSITION_VISITES_PAGES.md), non activé." })
   add({ id: "visiteurs", label: "Visiteurs ayant accepté le suivi", value: i.consentingVisitors, kind: "count", note: i.consentingVisitors === null ? "Lecture impossible." : "Visiteurs distincts qui ont ouvert une offre ; sous-estime les visites réelles." })
   add({ id: "prospects", label: "Prospects", value: zero(m?.leads), kind: "count", note: "Demandes reçues par le formulaire de cette page (CRM Easy2Book)." })
   add({ id: "qualifies", label: "Prospects qualifiés", value: zero(m?.qualified), kind: "count", note: "Prospects ayant atteint au moins l'étape « qualifié »." })

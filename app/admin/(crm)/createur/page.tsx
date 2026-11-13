@@ -98,6 +98,8 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
                     <div className="flex flex-wrap gap-2">
                       {life !== "archivee" && <Link href={`/admin/createur/${c.id}?etape=infos`} className={`${btn} bg-violet-700 text-white border-violet-700`}>Modifier</Link>}
                       {life === "publiee" && <Link href={creatorPath(c.slug)} target="_blank" rel="noopener" className={btn}>Voir la page</Link>}
+                      {life === "publiee" && <Link href={`/admin/createur/${c.id}?etape=publication`} className={btn}>Lien publicitaire</Link>}
+                      {life !== "archivee" && <Link href={`/admin/createur/${c.id}?etape=stats`} className={btn}>Statistiques</Link>}
                       <form action={duplicateAction}><input type="hidden" name="id" value={c.id} /><button className={btn}>Dupliquer</button></form>
                       {life === "publiee" && <form action={unpublishFromListAction}><input type="hidden" name="id" value={c.id} /><button className={btn}>Désactiver</button></form>}
                       {life === "brouillon" && <form action={archiveAction}><input type="hidden" name="id" value={c.id} /><button className={btn}>Archiver</button></form>}

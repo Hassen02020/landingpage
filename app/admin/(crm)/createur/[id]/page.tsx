@@ -13,7 +13,7 @@ import { AdLinkBlock } from "./AdLinkBlock"
 import { DesignEditor } from "./DesignEditor"
 import { loadDesign } from "@/lib/server/page-design"
 import { parsePeriod } from "@/lib/server/stats"
-import { formatStat } from "@/lib/page-builder/stats"
+import { formatStat, GROUP_LABELS, type StatGroup } from "@/lib/page-builder/stats"
 
 export const dynamic = "force-dynamic"
 
@@ -53,7 +53,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
       {etape === "infos" && <PageEditor key={category?.id ?? "nouvelle"} theme={theme} category={category} offers={page?.offers.filter((o) => !o.archived_at) ?? []} slugLock={page?.lock.locked ? { locked: true, message: page.lock.message } : { locked: false }} catalogue={catalogue} />}
 
       {etape === "design" && page && (
-        <DesignStep id={params.id} product={page.category.product} />
+        <DesignStep id={params.id} product={page.category.product} theme={theme.id} />
       )}
 
       {etape === "formulaire" && page && (
@@ -108,15 +108,20 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
             <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">Statistiques indisponibles pour le moment.</p>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                {stats.cards.map((c) => (
-                  <div key={c.id} data-testid={`stat-${c.id}`} data-available={c.value === null ? "no" : "yes"} className={`bg-white rounded-2xl border p-4 ${c.tone === "warn" ? "border-amber-300" : ""}`}>
-                    <div className="text-sm text-gray-600">{c.label}</div>
-                    <div className={`text-2xl font-black ${c.value === null ? "text-gray-400 text-lg" : ""}`}>{formatStat(c)}</div>
-                    <p className="text-xs text-gray-500 mt-1">{c.note}</p>
+              {(["audience", "commercial", "financier"] as StatGroup[]).map((g) => (
+                <div key={g} className="space-y-2" data-group={g}>
+                  <h3 className="font-bold text-sm text-gray-700">{GROUP_LABELS[g]}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {stats.cards.filter((c) => c.group === g).map((c) => (
+                      <div key={c.id} data-testid={`stat-${c.id}`} data-available={c.value === null ? "no" : "yes"} className={`bg-white rounded-2xl border p-4 ${c.tone === "warn" ? "border-amber-300" : ""}`}>
+                        <div className="text-sm text-gray-600">{c.label}</div>
+                        <div className={`text-2xl font-black ${c.value === null ? "text-gray-400 text-lg" : ""}`}>{formatStat(c)}</div>
+                        <p className="text-xs text-gray-500 mt-1">{c.note}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
               {stats.truncated && <p className="text-xs text-amber-800">Période trop large : seuls les 10 000 premiers prospects sont comptés.</p>}
             </>
           )}
@@ -126,12 +131,12 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   )
 }
 
-async function DesignStep({ id, product }: { id: string; product: Parameters<typeof loadDesign>[1] }) {
+async function DesignStep({ id, product, theme }: { id: string; product: Parameters<typeof loadDesign>[1]; theme: string }) {
   const loaded = await loadDesign(id, product)
   return (
     <div className="space-y-3">
       <h2 className="font-black text-lg">3. Personnaliser la page</h2>
-      <DesignEditor key={id} id={id} initial={loaded.design} available={loaded.available} />
+      <DesignEditor key={id} id={id} initial={loaded.design} available={loaded.available} theme={theme} />
     </div>
   )
 }

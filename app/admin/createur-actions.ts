@@ -62,7 +62,7 @@ export async function saveDraftAction(_prev: CreatorState | undefined, fd: FormD
   if (!res.ok) return { ok: false, errors: res.errors, message: res.message }
   refreshPublicPages()
   const theme = encodeURIComponent(str(fd, "theme"))
-  const STEPS = ["infos", "formulaire", "apercu", "publication"]
+  const STEPS = ["infos", "design", "formulaire", "apercu", "publication"]
   const next = STEPS.includes(str(fd, "next")) ? str(fd, "next") : ""
   if (next || !str(fd, "id")) redirect(`/admin/createur/${res.id}?etape=${next || "infos"}&theme=${theme}${next ? "" : "&ok=1"}`)
   return { ok: true, message: "Brouillon enregistré." }

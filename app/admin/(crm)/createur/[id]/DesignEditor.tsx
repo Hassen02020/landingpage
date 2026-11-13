@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useFormState, useFormStatus } from "react-dom"
 import { saveDesignAction, type DesignState } from "@/app/admin/createur-actions"
 import { PRESETS, SECTION_LABELS, type PageDesign } from "@/lib/page-builder/design"
@@ -14,7 +15,7 @@ function Save() {
 }
 
 /** Éditeur de personnalisation : l'aperçu (étape 5) montre exactement le résultat ; rien n'est publié tant que la page n'est pas publiée. */
-export function DesignEditor({ id, initial, available }: { id: string; initial: PageDesign; available: boolean }) {
+export function DesignEditor({ id, initial, available, theme }: { id: string; initial: PageDesign; available: boolean; theme: string }) {
   const [d, setD] = useState<PageDesign>(initial)
   const [state, action] = useFormState<DesignState | undefined, FormData>(saveDesignAction, undefined)
   const errs = state?.errors ?? {}
@@ -83,7 +84,7 @@ export function DesignEditor({ id, initial, available }: { id: string; initial: 
         fields={[["name", "Nom du client", "input"], ["place", "Ville (facultatif)", "input"], ["text", "Témoignage", "textarea"]]} />
 
       {state?.message && <div role={state.ok ? "status" : "alert"} data-testid="design-message" className={`rounded-xl p-3 text-sm border ${state.ok ? "bg-green-50 text-green-800 border-green-200" : "bg-red-50 text-red-800 border-red-200"}`}>{state.message}</div>}
-      <Save />
+      <div className="flex flex-wrap items-center gap-3"><Save /><Link href={`/admin/createur/${id}?etape=formulaire&theme=${theme}`} className="px-5 py-3 rounded-xl border font-bold min-h-[44px] bg-white">Continuer vers le formulaire →</Link></div>
     </form>
   )
 }

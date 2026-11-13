@@ -22,7 +22,7 @@ function SaveButtons({ canContinue }: { canContinue: boolean }) {
   return (
     <div className="flex flex-wrap gap-3">
       <button type="submit" disabled={pending} className="border border-violet-700 text-violet-800 font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">{pending ? "Enregistrement…" : "Enregistrer le brouillon"}</button>
-      {canContinue && <button type="submit" name="next" value="formulaire" disabled={pending} className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">Enregistrer et continuer →</button>}
+      {canContinue && <button type="submit" name="next" value="design" disabled={pending} className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">Enregistrer et continuer →</button>}
     </div>
   )
 }
