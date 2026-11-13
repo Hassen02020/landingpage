@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { contrastWithWhite, defaultDesign, resolvePrimary, sanitizeDesign, tint, visibleSections } from "@/lib/page-builder/design"
+import { MAX_DESIGN_BYTES, designBytes, contrastWithWhite, defaultDesign, resolvePrimary, sanitizeDesign, tint, visibleSections } from "@/lib/page-builder/design"
 
 describe("personnalisation : validation stricte", () => {
   it("sans données : design par défaut de la famille (aucune couleur imposée, form visible)", () => {
@@ -56,4 +56,18 @@ describe("personnalisation : validation stricte", () => {
     expect(d.background).toBe("famille")
   })
   it("teinte : mélange avec du blanc", () => { expect(tint("#000000", 0.9)).toBe("#e6e6e6") })
+})
+
+describe("taille : jamais plus que ce que la base accepte (CHECK 16 000 octets)", () => {
+  const big = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), testimonials: Array.from({ length: 6 }, () => ({ name: "é".repeat(60), text: "é".repeat(400), place: "é".repeat(60) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })) }
+  it("un design maximal (≈ 44 Ko) est REFUSÉ par la validation serveur avec un message clair", () => {
+    const r = sanitizeDesign(big, "voyage")
+    expect(designBytes(r.design)).toBeGreaterThan(16000)
+    expect(r.errors.size).toMatch(/trop volumineuse/)
+  })
+  it("un design raisonnable passe et reste sous la limite de la base", () => {
+    const r = sanitizeDesign({ faq: [{ q: "Question ?", a: "Réponse." }], program: Array.from({ length: 7 }, (_, i) => ({ title: `Jour ${i + 1}`, text: "Visite et temps libre. ".repeat(10) })) }, "voyage")
+    expect(r.errors).toEqual({})
+    expect(designBytes(r.design)).toBeLessThan(MAX_DESIGN_BYTES)
+  })
 })

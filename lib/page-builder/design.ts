@@ -70,6 +70,10 @@ export function tint(hex: string, ratio = 0.9): string {
 
 export type DesignErrors = Record<string, string>
 
+/** Taille maximale du design sérialisé, en OCTETS (la base refuse au-delà de 16 000 : marge de sécurité). */
+export const MAX_DESIGN_BYTES = 15000
+export const designBytes = (d: PageDesign): number => new TextEncoder().encode(JSON.stringify(d)).length
+
 /** Nettoie ET valide : renvoie le design sûr et la liste des problèmes (les champs invalides sont écartés, jamais corrigés en silence). */
 export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesign; errors: DesignErrors } {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
@@ -123,6 +127,7 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
   d.faq = d.faq.filter((x) => x.q && x.a)
   d.testimonials = d.testimonials.filter((x) => x.name && x.text)
   d.program = d.program.filter((x) => x.title && x.text)
+  if (designBytes(d) > MAX_DESIGN_BYTES) errors.size = `Personnalisation trop volumineuse (${designBytes(d)} octets, ${MAX_DESIGN_BYTES} maximum) : raccourcissez le programme, la FAQ ou les témoignages.`
   return { design: d, errors }
 }
 

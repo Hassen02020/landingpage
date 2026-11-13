@@ -8,7 +8,9 @@ import type { Product } from "@/lib/config"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** colonne absente (PostgreSQL 42703) ou schéma non à jour */
-export const isMissingColumn = (e: unknown): boolean => e instanceof DbError && (e.code === "42703" || e.code === "PGRST204" || (e.status === 400 && /design/i.test(e.message)))
+export const isMissingColumn = (e: unknown): boolean => e instanceof DbError && (e.code === "42703" || e.code === "PGRST204" || (e.status === 400 && /(column|colonne)[^]*design[^]*(does not exist|n'existe pas|not find)|could not find the .design. column/i.test(e.message)))
+/** contrainte de la base violée (forme ou taille) : filet de sécurité, la validation serveur doit déjà l'avoir évité */
+export const isCheckViolation = (e: unknown): boolean => e instanceof DbError && e.code === "23514"
 
 export interface LoadedDesign { available: boolean; design: PageDesign; stored: boolean }
 
@@ -44,6 +46,7 @@ export async function saveDesign(id: string, product: Product, raw: unknown, act
     await update("landing_categories", `id=eq.${id}`, { design, updated_at: new Date().toISOString(), updated_by: actorId })
     return { ok: true }
   } catch (e) {
+    if (isCheckViolation(e)) return { ok: false, message: "La personnalisation est refusée par la base (forme ou taille) : raccourcissez-la. Rien n'a été enregistré.", errors: {} }
     if (isMissingColumn(e)) return { ok: false, message: "La personnalisation avancée nécessite la migration 0018 (fichier prêt, à appliquer par le propriétaire) : rien n'a été enregistré.", errors: {} }
     throw e
   }

@@ -13,7 +13,7 @@ vi.mock("@/lib/server/auth", () => ({ currentStaff: async () => (role ? { userId
 
 import { configureAll } from "./helpers"
 import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/server/db"
-import { loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
+import { isCheckViolation, isMissingColumn, loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
 import { catalogueOffers } from "@/lib/server/page-builder"
 import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
@@ -378,5 +378,25 @@ describe("personnalisation : droits côté serveur (action)", () => {
     orgId = E2B; multi = false; role = "admin"; resetTenantModeCache(); resetPublicOrgCache()
     const bad = new FormData(); bad.set("id", id); bad.set("design", "{pas du json")
     expect((await as(E2B, () => actions.saveDesignAction(undefined, bad))).ok).toBe(false)
+  })
+})
+
+describe("personnalisation : distinction colonne absente / contrainte violée", () => {
+  it("un design trop volumineux est refusé AVANT toute écriture (aucun PATCH)", async () => {
+    const id = await makeComplete(); calls = []
+    const big = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })) }
+    const r = await as(E2B, () => saveDesign(id, "voyage", big, "u1"))
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.errors.size).toMatch(/volumineuse/)
+    expect(writes()).toHaveLength(0)
+  })
+  it("une violation de contrainte (23514) n'est JAMAIS prise pour une migration manquante", async () => {
+    const { DbError } = await import("@/lib/server/db")
+    const check = new DbError(400, "23514", 'new row violates check constraint "landing_categories_design_check"')
+    expect(isCheckViolation(check)).toBe(true)
+    expect(isMissingColumn(check)).toBe(false)
+    expect(isMissingColumn(new DbError(400, "42703", "column landing_categories.design does not exist"))).toBe(true)
+    expect(isMissingColumn(new DbError(400, "PGRST204", "Could not find the 'design' column of 'landing_categories' in the schema cache"))).toBe(true)
+    expect(isMissingColumn(new DbError(500, undefined, "boom"))).toBe(false)
   })
 })
