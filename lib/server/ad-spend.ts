@@ -4,6 +4,7 @@
 import { DbError, insertOne, select } from "@/lib/server/db"
 import { parseAmount, parseDate } from "@/lib/commission-import"
 import { tunisDay } from "@/lib/server/crm"
+import { CAMPAIGN_EXAMPLE, isConventionalCampaign, suggestCampaignName } from "@/lib/campaign-name"
 
 export interface AdSpendRow {
   id: number
@@ -17,7 +18,7 @@ export interface AdSpendRow {
   created_at: string
 }
 export interface AdSpendInput { date: string; network: string; campaign: string; amount: string; reference?: string }
-export type SpendResult = { ok: true } | { ok: false; errors: Record<string, string>; message?: string }
+export type SpendResult = { ok: true; warning?: string } | { ok: false; errors: Record<string, string>; message?: string }
 
 export const isMissingTable = (e: unknown): boolean => e instanceof DbError && (e.code === "42P01" || e.code === "PGRST205" || e.status === 404)
 
@@ -41,13 +42,14 @@ export async function addAdSpend(input: AdSpendInput, actorId: string | null): P
   if (input.network !== "meta" && input.network !== "tiktok") errors.network = "Réseau : Meta ou TikTok."
   const campaign = String(input.campaign ?? "").trim().replace(/\s+/g, " ")
   if (campaign.length < 1 || campaign.length > 255) errors.campaign = "Campagne requise (255 caractères maximum)."
+  else if (!isConventionalCampaign(campaign)) errors.campaign = `Nom hors convention (minuscules, chiffres et tirets, sans espace ni accent, ex. ${CAMPAIGN_EXAMPLE}). Proposition : ${suggestCampaignName(campaign) || CAMPAIGN_EXAMPLE}. Utilisez le même nom dans Meta / TikTok Ads Manager.`
   const amount = parseAmount(String(input.amount ?? ""))
   if (amount === null) errors.amount = "Montant en TND invalide (supérieur à 0)."
   const reference = String(input.reference ?? "").trim().slice(0, 200)
   if (Object.keys(errors).length) return { ok: false, errors }
   try {
     await insertOne("landing_ad_spend", { spend_date: date, network: input.network, campaign, amount_tnd: amount, reference: reference || null, source: "manuel", created_by: actorId })
-    return { ok: true }
+    return { ok: true, warning: await unmatchedCampaignWarning(campaign) }
   } catch (e) {
     if (isMissingTable(e)) return { ok: false, errors: {}, message: "La migration 0016 n'est pas encore appliquée dans Supabase." }
     console.error("[ad-spend] enregistrement impossible", e instanceof Error ? e.message : "erreur")
@@ -82,4 +84,26 @@ function nextDay(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + 1)
   return d.toISOString().slice(0, 10)
+}
+
+/** Avertit (sans bloquer) si aucun lead ne porte ce nom de campagne : la dépense ne serait rattachée à aucun prospect. */
+export async function unmatchedCampaignWarning(campaign: string): Promise<string | undefined> {
+  try {
+    const hit = await select<{ id: string }>("landing_leads", `select=id&utm_campaign=ilike.${encodeURIComponent(campaign.replace(/[%*_]/g, ""))}&limit=1`)
+    return hit[0] ? undefined : `Aucun prospect n'a encore le nom de campagne « ${campaign} » : la dépense est enregistrée mais ne sera rattachée à aucun prospect tant que l'annonce n'utilise pas exactement ce nom (utm_campaign).`
+  } catch {
+    return undefined
+  }
+}
+
+/** Noms de campagne observés sur les prospects récents (suggestions de saisie) et indication de conformité. */
+export async function knownCampaigns(days = 120): Promise<{ name: string; conventional: boolean }[]> {
+  const from = new Date(Date.now() - days * 86400_000).toISOString()
+  try {
+    const rows = await select<{ utm_campaign: string | null }>("landing_leads", `select=utm_campaign&utm_campaign=not.is.null&created_at=gte.${from}&limit=5000`)
+    const names = Array.from(new Set(rows.map((r) => (r.utm_campaign ?? "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"))
+    return names.map((name) => ({ name, conventional: isConventionalCampaign(name) }))
+  } catch {
+    return []
+  }
 }

@@ -18,7 +18,7 @@ beforeEach(() => {
   resetTenantModeCache(); resetPublicOrgCache()
   spend = []; coms = []; seq = 0; absent = false
   leads = [
-    { id: "lead-e1", ref: "E2B-ABC234", first_name: "Sami", phone: "21698140514", organization_id: E2B },
+    { id: "lead-e1", ref: "E2B-ABC234", first_name: "Sami", phone: "21698140514", utm_campaign: "omra-2027", organization_id: E2B },
     { id: "lead-e2", ref: "E2B-DEF567", first_name: "Amel", phone: "21622123456", organization_id: E2B },
     { id: "lead-e3", ref: "E2B-GHJ789", first_name: "Doublon", phone: "21655000111", organization_id: E2B },
     { id: "lead-e4", ref: "E2B-KMN234", first_name: "Doublon2", phone: "21655000111", organization_id: E2B },
@@ -74,6 +74,8 @@ beforeEach(() => {
     }
     if (table === "landing_leads") {
       let rows = leads.filter((l) => l.organization_id === org)
+      const camp = dec.match(/utm_campaign=ilike\.([^&]+)/)?.[1]
+      if (camp) rows = rows.filter((l) => String(l.utm_campaign ?? "").toLowerCase() === camp.toLowerCase())
       const refs = inVals("ref"), phones = inVals("phone"), ids = inVals("id")
       if (refs) rows = rows.filter((l) => refs.includes(String(l.ref)))
       if (phones) rows = rows.filter((l) => phones.includes(String(l.phone)))
@@ -90,10 +92,10 @@ const H = "reservation_ref;nature;montant_tnd;date;lead_ref;telephone;ligne"
 const today = new Date().toISOString().slice(0, 10)
 
 describe("dépenses publicitaires (saisie manuelle, ajout seul)", () => {
-  const ok = { date: "2026-11-05", network: "meta", campaign: "Omra 2027", amount: "250,5", reference: "Facture 12" }
+  const ok = { date: "2026-11-05", network: "meta", campaign: "omra-2027", amount: "250,5", reference: "Facture 12" }
   it("enregistre une dépense manuelle dans l'entreprise du contexte, jamais celle d'un formulaire", async () => {
-    expect(await as(BOB, () => addAdSpend(ok, "u1"))).toEqual({ ok: true })
-    expect(spend[0]).toMatchObject({ organization_id: BOB, spend_date: "2026-11-05", network: "meta", campaign: "Omra 2027", amount_tnd: 250.5, source: "manuel", reference: "Facture 12", created_by: "u1" })
+    expect(await as(BOB, () => addAdSpend(ok, "u1"))).toMatchObject({ ok: true })
+    expect(spend[0]).toMatchObject({ organization_id: BOB, spend_date: "2026-11-05", network: "meta", campaign: "omra-2027", amount_tnd: 250.5, source: "manuel", reference: "Facture 12", created_by: "u1" })
     expect((await as(E2B, () => listAdSpend())).rows).toHaveLength(0)
     expect((await as(BOB, () => listAdSpend())).rows).toHaveLength(1)
   })
@@ -109,7 +111,7 @@ describe("dépenses publicitaires (saisie manuelle, ajout seul)", () => {
   it("annulation : écriture opposée exacte ; une dépense annulée ne s'annule pas deux fois ; une annulation ne s'annule pas", async () => {
     await as(E2B, () => addAdSpend(ok, null))
     expect(await as(E2B, () => voidAdSpend(1, "u1"))).toEqual({ ok: true })
-    expect(spend[1]).toMatchObject({ amount_tnd: -250.5, voids_id: 1, campaign: "Omra 2027", spend_date: "2026-11-05" })
+    expect(spend[1]).toMatchObject({ amount_tnd: -250.5, voids_id: 1, campaign: "omra-2027", spend_date: "2026-11-05" })
     expect(await as(E2B, () => voidAdSpend(1, null))).toMatchObject({ ok: false, message: expect.stringMatching(/déjà annulée/) })
     expect(await as(E2B, () => voidAdSpend(2, null))).toMatchObject({ ok: false, message: expect.stringMatching(/ne s'annule pas/) })
     expect(await as(E2B, () => voidAdSpend(999, null))).toMatchObject({ ok: false })
@@ -126,6 +128,23 @@ describe("dépenses publicitaires (saisie manuelle, ajout seul)", () => {
     absent = true
     expect(await as(E2B, () => addAdSpend(ok, null))).toMatchObject({ ok: false, message: expect.stringMatching(/0016/) })
     expect(await as(E2B, () => listAdSpend())).toEqual({ rows: [], migrationApplied: false })
+  })
+})
+
+describe("convention de nommage des campagnes", () => {
+  const ok = { date: "2026-11-05", network: "meta", amount: "100" }
+  it("un nom hors convention est refusé, avec une proposition conforme", async () => {
+    const r = await as(E2B, () => addAdSpend({ ...ok, campaign: "Omra Ramadan 2027" }, null))
+    expect(r).toMatchObject({ ok: false, errors: { campaign: expect.stringMatching(/hors convention[\s\S]*omra-ramadan-2027/) } })
+    expect(spend).toHaveLength(0)
+    expect(await as(E2B, () => addAdSpend({ ...ok, campaign: "Séjour_Été 2027!" }, null))).toMatchObject({ ok: false, errors: { campaign: expect.stringMatching(/sejour-ete-2027/) } })
+  })
+  it("nom conforme mais inconnu des prospects : enregistré AVEC avertissement ; nom connu : sans avertissement", async () => {
+    const unknown = await as(E2B, () => addAdSpend({ ...ok, campaign: "omra-ramadan-2027" }, null))
+    expect(unknown).toMatchObject({ ok: true, warning: expect.stringMatching(/Aucun prospect/) })
+    const known = await as(E2B, () => addAdSpend({ ...ok, campaign: "omra-2027" }, null))
+    expect(known).toEqual({ ok: true })
+    expect(spend).toHaveLength(2)
   })
 })
 

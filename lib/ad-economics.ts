@@ -62,6 +62,8 @@ export interface Metrics {
   variableCosts: number
   /** réservations dont la commission nette CONFIRMÉE est positive */
   confirmedBookings: number
+  /** réservations (dossiers réservés) sans AUCUNE ligne de commission importée : marge non représentative tant qu'elles ne sont pas importées */
+  bookingsWithoutCommission: number
   /** marge nette sur commissions CONFIRMÉES seulement : seule base d'un bénéfice définitif */
   marginConfirmed: number
   /** marge nette si les commissions provisoires se confirment : estimation, jamais un bénéfice définitif */
@@ -83,6 +85,8 @@ export interface GroupRow {
   label: string
   metrics: Metrics
   spendBasis: SpendBasis
+  /** coûts variables : « estimee » si une part vient d'une répartition au prorata des leads (jamais une preuve par produit / niche) */
+  costBasis: SpendBasis
   /** assez de réservations pour comparer sérieusement (seuil minBookings) */
   sufficient: boolean
   /** une partie de la commission nette n'est pas encore confirmée */
@@ -130,8 +134,8 @@ const tnd = (m: number): number => Math.round(m) / 1000
 const div = (a: number, b: number): number | null => (b > 0 ? a / b : null)
 const pct = (a: number, b: number): number | null => (b > 0 ? Math.round((1000 * a) / b) / 10 : null)
 
-interface Acc { costs: number; confirmedBookings: number; spend: number; leads: number; qualified: number; quotes: number; bookings: number; comConfirmed: number; comProvisional: number }
-const empty = (): Acc => ({ costs: 0, confirmedBookings: 0, spend: 0, leads: 0, qualified: 0, quotes: 0, bookings: 0, comConfirmed: 0, comProvisional: 0 })
+interface Acc { costs: number; confirmedBookings: number; noCommission: number; spend: number; leads: number; qualified: number; quotes: number; bookings: number; comConfirmed: number; comProvisional: number }
+const empty = (): Acc => ({ costs: 0, confirmedBookings: 0, noCommission: 0, spend: 0, leads: 0, qualified: 0, quotes: 0, bookings: 0, comConfirmed: 0, comProvisional: 0 })
 
 function metrics(a: Acc): Metrics {
   const net = a.comConfirmed + a.comProvisional
@@ -141,7 +145,7 @@ function metrics(a: Acc): Metrics {
     spend: tnd(a.spend), leads: a.leads, qualified: a.qualified, quotes: a.quotes, bookings: a.bookings,
     commissionConfirmed: tnd(a.comConfirmed), commissionProvisional: tnd(a.comProvisional), commissionNet: tnd(net),
     result: tnd(net - a.spend),
-    variableCosts: tnd(a.costs), confirmedBookings: a.confirmedBookings,
+    variableCosts: tnd(a.costs), confirmedBookings: a.confirmedBookings, bookingsWithoutCommission: a.noCommission,
     marginConfirmed: tnd(a.comConfirmed - a.spend - a.costs), marginWithProvisional: tnd(net - a.spend - a.costs),
     profitabilityPct: a.spend > 0 ? Math.round((1000 * net) / a.spend) / 10 : null,
     cpl: perUnit(a.leads), costPerQualified: perUnit(a.qualified), costPerQuote: perUnit(a.quotes), costPerBooking: perUnit(a.bookings),
@@ -149,7 +153,7 @@ function metrics(a: Acc): Metrics {
   }
 }
 
-interface LeadFacts { lead: EconLead; qualified: boolean; quote: boolean; booked: boolean; confirmedBooking: boolean; comConfirmed: number; comProvisional: number; net: Network; campKey: string }
+interface LeadFacts { lead: EconLead; qualified: boolean; quote: boolean; booked: boolean; confirmedBooking: boolean; hasCommission: boolean; comConfirmed: number; comProvisional: number; net: Network; campKey: string }
 
 function groupKeyOf(f: LeadFacts, dim: Dimension): { key: string; label: string } {
   const l = f.lead
@@ -180,7 +184,7 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
     const rank = maxRank({ id: lead.id, created_at: lead.created_at, status: lead.status, booking_value: lead.booking_value, booked_at: lead.booked_at }, actsByLead.get(lead.id) ?? [])
     const c = com.get(lead.id)
     return {
-      lead, qualified: rank >= RANK_QUALIFIED, quote: rank >= RANK_QUOTE, booked: isBooking(lead.status), confirmedBooking: isBooking(lead.status) && (c?.c ?? 0) > 0,
+      lead, qualified: rank >= RANK_QUALIFIED, quote: rank >= RANK_QUOTE, booked: isBooking(lead.status), confirmedBooking: isBooking(lead.status) && (c?.c ?? 0) > 0, hasCommission: c !== undefined,
       comConfirmed: c?.c ?? 0, comProvisional: c?.p ?? 0, net: leadNetwork(lead.channel), campKey: normalizeCampaign(lead.utm_campaign),
     }
   })
@@ -194,8 +198,8 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
     spendBy.set(k, e)
   }
 
-  const groups = new Map<string, { label: string; acc: Acc; basis: SpendBasis }>()
-  const group = (key: string, label: string) => groups.get(key) ?? groups.set(key, { label, acc: empty(), basis: "aucune" }).get(key)!
+  const groups = new Map<string, { label: string; acc: Acc; basis: SpendBasis; costEst: boolean }>()
+  const group = (key: string, label: string) => groups.get(key) ?? groups.set(key, { label, acc: empty(), basis: "aucune", costEst: false }).get(key)!
   const total = empty()
 
   // chaque campagne : ses leads par groupe (pour répartir la dépense)
@@ -207,6 +211,7 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
     if (f.qualified) { grp.acc.qualified++; total.qualified++ }
     if (f.quote) { grp.acc.quotes++; total.quotes++ }
     if (f.booked) { grp.acc.bookings++; total.bookings++ }
+    if (f.booked && !f.hasCommission) { grp.acc.noCommission++; total.noCommission++ }
     if (f.confirmedBooking) { grp.acc.confirmedBookings++; total.confirmedBookings++ }
     grp.acc.comConfirmed += f.comConfirmed; grp.acc.comProvisional += f.comProvisional
     total.comConfirmed += f.comConfirmed; total.comProvisional += f.comProvisional
@@ -220,8 +225,9 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
   /** rattache un montant de campagne (dépense ou coût) aux groupes de la dimension ; renvoie false si aucun lead sur la campagne */
   const allocate = (ck: string, network: "meta" | "tiktok", campaign: string, milli: number, field: "spend" | "costs"): boolean => {
     const leadsOfCampaign = campGroups.get(ck)
-    const touch = (g: { acc: Acc; basis: SpendBasis }, part: number, exact: boolean) => {
+    const touch = (g: { acc: Acc; basis: SpendBasis; costEst: boolean }, part: number, exact: boolean) => {
       g.acc[field] += part
+      if (field === "costs" && !exact) g.costEst = true
       if (field === "spend") g.basis = exact && g.basis !== "estimee" ? "exacte" : "estimee"
     }
     if (!leadsOfCampaign || leadsOfCampaign.size === 0) {
@@ -268,11 +274,11 @@ export function economics(input: EconomicsInput, dim: Dimension): EconomicsResul
 
   const rows: GroupRow[] = Array.from(groups.entries()).map(([key, g]) => {
     const m = metrics(g.acc)
-    return { key, label: g.label, metrics: m, spendBasis: g.acc.spend > 0 ? g.basis : "aucune", sufficient: m.confirmedBookings >= minBookings, hasProvisional: g.acc.comProvisional !== 0 }
+    return { key, label: g.label, metrics: m, spendBasis: g.acc.spend > 0 ? g.basis : "aucune", costBasis: g.acc.costs !== 0 ? (g.costEst ? "estimee" : "exacte") : "aucune", sufficient: m.confirmedBookings >= minBookings, hasProvisional: g.acc.comProvisional !== 0 }
   })
   rows.sort((a, b) => b.metrics.marginConfirmed - a.metrics.marginConfirmed || b.metrics.bookings - a.metrics.bookings || a.label.localeCompare(b.label, "fr"))
   const totalRow: GroupRow = {
-    key: "total", label: "Total", metrics: metrics(total), spendBasis: total.spend > 0 ? "exacte" : "aucune",
+    key: "total", label: "Total", metrics: metrics(total), spendBasis: total.spend > 0 ? "exacte" : "aucune", costBasis: total.costs !== 0 ? "exacte" : "aucune",
     sufficient: total.confirmedBookings >= minBookings, hasProvisional: total.comProvisional !== 0,
   }
 

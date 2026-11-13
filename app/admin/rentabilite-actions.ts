@@ -33,7 +33,7 @@ export async function addSpendAction(_prev: SpendFormState | undefined, fd: Form
   )
   if (!res.ok) return { ok: false, errors: res.errors, message: res.message }
   revalidatePath("/admin/rentabilite")
-  return { ok: true, message: "Dépense enregistrée." }
+  return { ok: true, message: res.warning ? `Dépense enregistrée. Attention : ${res.warning}` : "Dépense enregistrée." }
 }
 
 export async function voidSpendAction(id: number): Promise<{ ok: boolean; message?: string }> {

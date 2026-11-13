@@ -136,3 +136,31 @@ describe("4. campagne gagnante", () => {
     expect(r.rows.find((x) => x.key === r.winnerKey)?.label).toContain("B")
   })
 })
+
+describe("estimations jamais confondues avec les chiffres réels", () => {
+  it("campagne / réseau : dépense exacte ; produit / niche : estimation dès que la campagne couvre plusieurs groupes", () => {
+    const a = lead({ product: "omra" }), b = lead({ product: "turquie" })
+    const campaign = run({ leads: [a, b], spends: [spend(100)], costs: [cost(20, { network: "meta", campaign: "Omra 2027" })] }, "campaign").rows[0]
+    expect(campaign.spendBasis).toBe("exacte"); expect(campaign.costBasis).toBe("exacte")
+    for (const r of run({ leads: [a, b], spends: [spend(100)], costs: [cost(20, { network: "meta", campaign: "Omra 2027" })] }, "product").rows) {
+      expect(r.spendBasis).toBe("estimee"); expect(r.costBasis).toBe("estimee")
+    }
+  })
+  it("un coût lié à une réservation reste exact même en vue produit ; un groupe unique reste exact", () => {
+    const a = lead({ product: "omra" }), b = lead({ product: "turquie" })
+    const rows = run({ leads: [a, b], costs: [cost(20, { lead_id: a.id })] }, "product").rows
+    expect(rows.find((r) => r.key === "omra")?.costBasis).toBe("exacte")
+    const single = run({ leads: [lead()], spends: [spend(50)] }, "product").rows[0]
+    expect(single.spendBasis).toBe("exacte")
+  })
+})
+
+describe("réservations sans commission importée", () => {
+  it("compte les dossiers réservés sans aucune ligne de commission (marge non représentative)", () => {
+    const a = lead(), b = lead(), c = lead({ status: "nouveau", booked_at: null })
+    const m = run({ leads: [a, b, c], spends: [spend(100)], commissions: [com(a.id, 300)] }, "network").total.metrics
+    expect(m.bookings).toBe(2)
+    expect(m.bookingsWithoutCommission).toBe(1)
+    expect(run({ leads: [a, b], commissions: [] }, "network").total.metrics.bookingsWithoutCommission).toBe(2)
+  })
+})
