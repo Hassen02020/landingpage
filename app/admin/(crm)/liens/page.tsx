@@ -1,16 +1,20 @@
 import { SITE_URL, SOCIAL_LINKS } from "@/lib/config"
-import { bioLinks, destinationsFor, LINK_SOURCES } from "@/lib/links"
-import { dbConfigured } from "@/lib/server/db"
+import { bioLinks, companyDestinations, destinationsFor, LINK_SOURCES } from "@/lib/links"
+import { dbConfigured, isPlatformOrg } from "@/lib/server/db"
+import { currentStaff } from "@/lib/server/auth"
 import { publicCategories } from "@/lib/server/catalog"
 import { CopyButton, LinkBuilder } from "./LinkBuilder"
 
 export const dynamic = "force-dynamic"
 
 export default async function LinksPage() {
+  // Easy2Book (plateforme) : pages fixes + catalogue. Toute AUTRE entreprise : uniquement SA page de collecte /o/<identifiant> — jamais une page ni un catalogue d'une autre entreprise.
+  const platform = await isPlatformOrg()
+  const staff = platform ? null : await currentStaff()
   let categories: { slug: string; name: string }[] = []
-  if (dbConfigured()) categories = await publicCategories().catch(() => [])
-  const destinations = destinationsFor(categories)
-  const bios = bioLinks(SITE_URL)
+  if (platform && dbConfigured()) categories = await publicCategories().catch(() => [])
+  const destinations = platform ? destinationsFor(categories) : companyDestinations(staff?.organizationSlug, staff?.organizationName)
+  const bios = platform ? bioLinks(SITE_URL) : []
   const profile: Record<string, string> = { Instagram: SOCIAL_LINKS.instagram, TikTok: SOCIAL_LINKS.tiktok, Facebook: SOCIAL_LINKS.facebook }
   const card = "bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3"
 
@@ -21,12 +25,18 @@ export default async function LinksPage() {
         <p className="text-sm text-gray-600">Un lien par source : chaque demande reçue sait d&apos;où elle vient (réseau, support, campagne). Aucune publicité n&apos;est lancée ici.</p>
       </div>
 
+      {!platform && (
+        <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900" role="note" data-testid="company-links-note">
+          Votre lien publicitaire mène à <strong>votre page de collecte</strong>{destinations[0] ? <> (<code dir="ltr">{destinations[0].path}</code>)</> : null}. Les pages et le catalogue d&apos;Easy2Book ne vous sont pas proposés : ils conduiraient vos visiteurs vers le site d&apos;une autre entreprise.
+        </p>
+      )}
+
       <section className={card}>
         <h2 className="font-black">Créer un lien</h2>
         <LinkBuilder destinations={destinations} base={SITE_URL} />
       </section>
 
-      <section className={card}>
+      {platform && (      <section className={card}>
         <h2 className="font-black">Liens de bio des comptes officiels</h2>
         <p className="text-sm text-gray-600">À coller dans la bio de chaque profil. Le lien de la bio Instagram / TikTok est la seule façon de reconnaître ces visiteurs : ces applications ne transmettent pas toujours leur origine.</p>
         <ul className="divide-y text-sm">
@@ -39,7 +49,7 @@ export default async function LinksPage() {
             </li>
           ))}
         </ul>
-      </section>
+      </section>)}
 
       <section className={card}>
         <h2 className="font-black">Règles de nommage</h2>
@@ -59,7 +69,7 @@ export default async function LinksPage() {
         </div>
         <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
           <li>Noms en minuscules, sans accent ni espace (<code>omra-ramadan-2027</code>) : « Omra » et « omra » sont comptés ensemble.</li>
-          <li>Une seule adresse par contenu : la catégorie <code>omra-2027</code> est servie par <code>/omra</code>.</li>
+          {platform && <li>Une seule adresse par contenu : la catégorie <code>omra-2027</code> est servie par <code>/omra</code>.</li>}
           <li>Facebook et Instagram sont tous deux comptés dans le canal « meta » ; la colonne « Source » des statistiques les distingue.</li>
           <li>Le consentement aux traceurs reste demandé : sans accord, aucune donnée n&apos;est transmise à Meta ni à TikTok.</li>
         </ul>

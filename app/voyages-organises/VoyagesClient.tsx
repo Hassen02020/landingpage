@@ -10,6 +10,7 @@ import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
 import { VOYAGES, VOYAGE_CATEGORIES, type Voyage, type VoyageCategory } from "./data"
+import { voyageAnchor } from "@/lib/anchors"
 
 function trackWhatsAppClick(event: { currentTarget: HTMLAnchorElement }, location: string, tripName: string = "") {
   const voyage = VOYAGES.find((v) => v.title === tripName)
@@ -66,7 +67,7 @@ function VoyageCard({ voyage, today }: { voyage: Voyage; today: string | null })
   const style = CATEGORY_STYLE[voyage.category]
   const days = today ? daysBetween(today, voyage.departIso) : null
   return (
-    <article className="bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col">
+    <article id={voyageAnchor(voyage.id)} className="scroll-mt-28 bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col">
       <div className={`relative bg-gradient-to-br ${style.bg} p-5 text-white`}>
         <div className="flex items-start justify-between gap-2">
           <span className="bg-white/20 border border-white/30 text-xs font-bold px-3 py-1 rounded-full">{style.label}</span>

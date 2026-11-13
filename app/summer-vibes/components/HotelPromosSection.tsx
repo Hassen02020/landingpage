@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { HOTEL_PROMOS } from "../data/hotel-promos"
 import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
 import { waText } from "@/lib/wa-text"
+import { hotelAnchor } from "@/lib/anchors"
 import { CITY_PHOTOS } from "../data/city-photos"
 
 const CITIES = ["Toutes", ...Array.from(new Set(HOTEL_PROMOS.map((h) => h.city))).sort((a, b) => a.localeCompare(b, "fr"))]
@@ -53,7 +54,7 @@ export function HotelPromosSection({ whatsappNumber }: { whatsappNumber: string 
               waText(`Bonjour Easy2Book, je souhaite réserver l'hôtel "${h.name}" (${h.city}) — promo -${h.discount}%.\n\nMerci de me préciser :\n- Dates de séjour\n- Nombre d'adultes et d'enfants\n- Formule souhaitée`)
             )
             return (
-              <li key={h.name} className="flex flex-col bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
+              <li key={h.name} id={hotelAnchor(h.name)} className="scroll-mt-28 flex flex-col bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
                 {CITY_PHOTOS[h.city.toLowerCase()] && (
                   <div className="relative h-32 w-full overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

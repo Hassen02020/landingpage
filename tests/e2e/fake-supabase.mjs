@@ -207,6 +207,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
   }
   const bearer = (req) => (req.headers.authorization || "").replace(/^Bearer /, "")
 
+  let down = false
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://x")
     const p = url.pathname
@@ -217,6 +218,8 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
       json = text && (req.headers["content-type"] || "").includes("json") ? JSON.parse(text) : {}
     } catch {}
     calls.push(`${req.method} ${p}${url.search}`)
+    // panne simulée de la base (tests de rétablissement) : toute lecture / écriture REST échoue en 503
+    if (down && p.startsWith("/rest/v1/")) return send(res, 503, { code: "PGRST000", message: "panne simulée" })
 
     // ---------------- Auth
     if (p === "/auth/v1/token") {
@@ -361,6 +364,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     invites,
     SUPER,
     MANAGER,
+    setDown: (v) => { down = Boolean(v) },
     listen: (port) => new Promise((ok) => server.listen(port, "127.0.0.1", () => ok(server))),
     close: () => new Promise((ok) => server.close(ok)),
   }

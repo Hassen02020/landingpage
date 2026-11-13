@@ -1,7 +1,7 @@
 import { can } from "@/lib/permissions"
 import Link from "next/link"
 import { currentStaff } from "@/lib/server/auth"
-import { select } from "@/lib/server/db"
+import { isPlatformOrg, select } from "@/lib/server/db"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { listCategories, listOffers, seatsLeft, type Category, type Offer } from "@/lib/server/catalog"
 import { archiveOfferAction, duplicateOfferAction } from "../../catalog-actions"
@@ -33,6 +33,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Re
   const crmPeople = new Map<string, number>()
   crm.forEach((l) => crmPeople.set(l.offer_id, (crmPeople.get(l.offer_id) ?? 0) + (l.adults ?? 1) + (l.children ?? 0)))
 
+  const platform = await isPlatformOrg()
   const active = offers.filter((o) => !o.archived_at)
   const seatsTotal = active.reduce((a, o) => a + (o.seats_total ?? 0), 0)
   const seatsSold = active.reduce((a, o) => a + o.seats_sold, 0)
@@ -46,6 +47,11 @@ export default async function CataloguePage({ searchParams }: { searchParams: Re
 
   return (
     <div className="space-y-5">
+      {!platform && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="note" data-testid="catalogue-company-note">
+          Les pages du catalogue sont publiées uniquement sur le site d&apos;Easy2Book : elles ne sont pas encore diffusées pour votre entreprise. Votre page publique est votre formulaire de collecte (onglet Formulaire).
+        </p>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black">Catalogue</h1>

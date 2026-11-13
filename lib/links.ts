@@ -50,6 +50,14 @@ export const LINK_SOURCES: LinkSource[] = [
     ],
   },
   {
+    // Google Ads STATIQUE : nom de campagne obligatoire, aucun paramètre dynamique. Le balisage automatique de Google Ads ajoute le gclid tout seul.
+    // (La conservation du gclid sur le prospect nécessite une migration : chantier distinct, non inclus.)
+    id: "google",
+    label: "Google Ads",
+    utm_source: "google",
+    mediums: [{ id: "cpc", label: "Publicité payante (Google Ads)", utm_medium: "cpc" }],
+  },
+  {
     id: "whatsapp",
     label: "WhatsApp",
     utm_source: "whatsapp",
@@ -77,6 +85,16 @@ export function destinationsFor(categories: { slug: string; name: string }[]): D
   // omra-2027 est servie par /omra (une seule adresse officielle par contenu)
   const extra = categories.filter((c) => c.slug !== "omra-2027").map((c) => ({ path: `/c/${c.slug}`, label: `Catégorie : ${c.name}` }))
   return [...FIXED_DESTINATIONS, ...extra]
+}
+
+/**
+ * Destinations proposées à une ENTREPRISE CLIENTE (autre qu'Easy2Book) : uniquement SA page de collecte /o/<identifiant>.
+ * Les pages fixes (/, /omra…) et le catalogue (/c/…) sont ceux d'Easy2Book : ils mèneraient le visiteur vers le site et le CRM d'une autre entreprise.
+ */
+export function companyDestinations(orgSlug: string | null | undefined, orgName?: string | null): Destination[] {
+  const slug = String(orgSlug ?? "")
+  if (!/^[a-z0-9][a-z0-9-]{1,62}$/.test(slug) || slug === "easy2book") return []
+  return [{ path: `/o/${slug}`, label: `Page de collecte${orgName ? ` de ${orgName}` : ""}` }]
 }
 
 /** « Été 2027 — Turquie ! » → « ete-2027-turquie » (a-z, 0-9, - et _ ; 64 caractères max). */
