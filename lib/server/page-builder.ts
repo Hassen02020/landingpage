@@ -6,7 +6,7 @@ import { can } from "@/lib/permissions"
 import { insertOne, isPlatformOrg, update } from "@/lib/server/db"
 import { archiveOffer, getCategory, listCategories, listOffers, saveCategory, saveOffer, slugify, validateCategory, validateOffer, categorySlugLock, type Category, type Offer, type PublicOffer } from "@/lib/server/catalog"
 import { tunisDay } from "@/lib/server/crm"
-import { pageStatus, type PageStatus } from "@/lib/page-status"
+import { isOfferExpired, pageStatus, type PageStatus } from "@/lib/page-status"
 import { readiness, type Readiness } from "@/lib/page-builder/readiness"
 import { themeById, type Theme } from "@/lib/page-builder/themes"
 import { rateLimited } from "@/lib/server/guard"
@@ -188,4 +188,26 @@ export async function loadPageStats(slug: string, p: Period): Promise<PageStatsR
     visitors = new Set(ev.map((e) => e.visitor_ref).filter(Boolean)).size
   } catch { visitors = null }
   return { cards: pageStats({ metrics: row?.metrics ?? null, spendBasis: row?.spendBasis ?? "aucune", ledgerAvailable: prof.migrationApplied, consentingVisitors: visitors }), leadsInPeriod: prof.leadCount, truncated: prof.truncated }
+}
+
+// ------------------------------------------------------------------------------------------------ reprise d'offres du catalogue existant
+export interface CatalogueOffer {
+  id: string; name: string; destination: string | null; departure_date: string | null; nights: number | null; nights_detail: string | null
+  price: number | string; price_before: number | string | null; seats_total: number | null; tag: string | null; description: string | null
+  features: string[]; image_url: string | null; page: string; expired: boolean
+}
+
+/** Offres RÉELLES du catalogue (hors archivées et hors page en cours), sans le coût ni les places vendues : seul le serveur voit les marges. */
+export async function catalogueOffers(excludeCategoryId?: string): Promise<CatalogueOffer[]> {
+  const today = tunisDay()
+  const [offers, cats] = await Promise.all([listOffers(), listCategories()])
+  const name = new Map(cats.map((c) => [c.id, c.name]))
+  return offers
+    .filter((o) => !o.archived_at && o.category_id !== excludeCategoryId)
+    .slice(0, 200)
+    .map((o) => ({
+      id: o.id, name: o.name, destination: o.destination, departure_date: o.departure_date, nights: o.nights, nights_detail: o.nights_detail,
+      price: o.price, price_before: o.price_before, seats_total: o.seats_total, tag: o.tag, description: o.description, features: o.features ?? [],
+      image_url: o.image_url, page: o.category_id ? name.get(o.category_id) ?? "Sans page" : "Sans page", expired: isOfferExpired(o.departure_date, today),
+    }))
 }

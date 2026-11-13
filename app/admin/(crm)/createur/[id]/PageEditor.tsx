@@ -7,6 +7,7 @@ import { Field, inputCls } from "../../catalogue/Field"
 import { OFFER_FIELD_LABELS, type OfferField, type Theme } from "@/lib/page-builder/themes"
 import { slugify } from "@/lib/catalog-slug"
 import type { Category, Offer } from "@/lib/server/catalog"
+import type { CatalogueOffer } from "@/lib/server/page-builder"
 
 type Row = { key: number; id?: string; removed: boolean; v: Record<string, string>; features: string; image: string }
 const v = (x: unknown) => (x === null || x === undefined ? "" : String(x))
@@ -26,7 +27,7 @@ function SaveButtons({ canContinue }: { canContinue: boolean }) {
   )
 }
 
-export function PageEditor({ theme, category, offers, slugLock }: { theme: Theme; category: Category | null; offers: Offer[]; slugLock: { locked: boolean; message?: string } }) {
+export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }: { theme: Theme; category: Category | null; offers: Offer[]; slugLock: { locked: boolean; message?: string }; catalogue?: CatalogueOffer[] }) {
   const [state, action] = useFormState(saveDraftAction, undefined)
   const [tab, setTab] = useState<"infos" | "perso">("infos")
   const [name, setName] = useState(category?.name ?? "")
@@ -37,6 +38,11 @@ export function PageEditor({ theme, category, offers, slugLock }: { theme: Theme
   const req = (f: OfferField) => f === "name" || f === "price" || theme.offerRequired.includes(f)
   const lbl = (f: OfferField) => `${OFFER_FIELD_LABELS[f]}${req(f) ? " *" : ""}`
   const setField = (key: number, k: string, val: string) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, v: { ...r.v, [k]: val } } : r)))
+  const [pick, setPick] = useState("")
+  const fromCatalogue = (o: CatalogueOffer, key: number): Row => ({
+    key, removed: false, image: v(o.image_url), features: (o.features ?? []).join("\n"),
+    v: { name: v(o.name), destination: v(o.destination), departure_date: v(o.departure_date), nights: v(o.nights), nights_detail: v(o.nights_detail), price: v(o.price), price_before: v(o.price_before), seats_total: v(o.seats_total), tag: v(o.tag), description: v(o.description) },
+  })
   const nextKey = rows.reduce((m, r) => Math.max(m, r.key), -1) + 1
   const visibleRows = rows.filter((r) => !(r.removed && !r.id))
   const tabBtn = (id: "infos" | "perso", text: string) => (
@@ -97,6 +103,18 @@ export function PageEditor({ theme, category, offers, slugLock }: { theme: Theme
               </fieldset>
             )
           })}
+          {rows.length < 10 && catalogue.length > 0 && (
+            <div className="bg-white rounded-2xl border p-4 flex flex-wrap items-end gap-3" data-testid="catalogue-import">
+              <label className="flex-1 min-w-[220px] text-sm"><span className="font-bold">Reprendre une offre du catalogue</span>
+                <select value={pick} onChange={(ev) => setPick(ev.target.value)} className={`${inputCls} mt-1`} aria-label="Offre du catalogue">
+                  <option value="">Choisir une offre existante…</option>
+                  {catalogue.map((o) => <option key={o.id} value={o.id}>{o.name}{o.departure_date ? ` — ${o.departure_date}` : ""} — {o.price} TND ({o.page}){o.expired ? " — expirée" : ""}</option>)}
+                </select>
+              </label>
+              <button type="button" disabled={!pick} onClick={() => { const o = catalogue.find((x) => x.id === pick); if (o) { setRows((rs) => [...rs.filter((r) => !(r.v.name === "" && r.v.price === "" && !r.id)), fromCatalogue(o, nextKey)]); setPick("") } }} className="px-4 py-2 rounded-xl border font-bold min-h-[44px] disabled:opacity-50">Reprendre</button>
+              <p className="w-full text-xs text-gray-500">Les prix, dates et prestations sont copiés tels quels depuis le catalogue (rien n&apos;est inventé). Vous pouvez les ajuster ; l&apos;offre d&apos;origine n&apos;est pas modifiée.</p>
+            </div>
+          )}
           {rows.length < 10 && <button type="button" onClick={() => setRows((rs) => [...rs, emptyRow(nextKey, theme)])} className="bg-white border-2 border-dashed rounded-2xl px-5 py-3 font-bold text-violet-800 hover:bg-violet-50 w-full">+ Ajouter une offre (un autre départ, une autre formule)</button>}
         </section>
       </div>

@@ -196,6 +196,7 @@ export function LandingView({ category, offers, preview = false, design = null }
                     offerValue={offer}
                     onOfferChange={setOffer}
                     showPromo
+                    askEmail={design?.form.email === true}
                     askTravelers={family === "voyage" || family === "hotel" || family === "omra"}
                   />
                 </fieldset>

@@ -25,6 +25,7 @@ export interface PageDesign {
   background: "famille" | "blanc" | "teinte"
   cta: { label: string; whatsapp: boolean }
   price: { prefix: boolean; showBefore: boolean }
+  form: { email: boolean }
   sections: { key: DesignSection; visible: boolean }[]
   faq: { q: string; a: string }[]
   testimonials: { name: string; text: string; place: string }[]
@@ -39,7 +40,7 @@ export const SECTION_DEFAULTS: Record<Family, DesignSection[]> = {
 }
 
 export const defaultDesign = (family: Family): PageDesign => ({
-  v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true },
+  v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true }, form: { email: false },
   sections: SECTION_DEFAULTS[family].map((key) => ({ key, visible: true })), faq: [], testimonials: [], program: [],
 })
 
@@ -92,6 +93,8 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
   d.cta = { label: clean(cta.label, 40), whatsapp: cta.whatsapp === true }
   const price = obj(r.price)
   d.price = { prefix: price.prefix !== false, showBefore: price.showBefore !== false }
+
+  d.form = { email: obj(r.form).email === true }
 
   // ordre des sections : permutation des sections autorisées pour la famille ; « form » toujours présent et visible
   const allowed = SECTION_DEFAULTS[family]

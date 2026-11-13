@@ -14,6 +14,7 @@ vi.mock("@/lib/server/auth", () => ({ currentStaff: async () => (role ? { userId
 import { configureAll } from "./helpers"
 import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/server/db"
 import { loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
+import { catalogueOffers } from "@/lib/server/page-builder"
 import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
 import * as actions from "@/app/admin/createur-actions"
@@ -335,5 +336,21 @@ describe("personnalisation : stockage (colonne design, migration proposée non a
     const r = await as(BOB, () => saveDesign(id, "voyage", D, "u1")).catch((e) => e)
     expect(T.landing_categories[0].design).toBeUndefined()
     void r
+  })
+})
+
+describe("reprise d'offres du catalogue", () => {
+  it("liste les offres réelles non archivées d'AUTRES pages, sans coût ni places vendues ; exclut la page en cours et les archivées", async () => {
+    const a = await makeComplete()
+    const b = (await as(E2B, () => saveDraft({ themeId: "omra", category: cat({ name: "Autre page" }), offers: [offerIn({ name: "Départ B", price: "1900" })] }, "u1")))
+    if (!b.ok) throw new Error("setup")
+    T.landing_offers.forEach((o) => { o.cost = 1234; o.seats_sold = 5 })
+    T.landing_offers.push({ id: "00000000-0000-4000-8000-0000000000f1", category_id: null, name: "Archivée", price: 10, archived_at: "2026-01-01", features: [], organization_id: E2B })
+    const list = await as(E2B, () => catalogueOffers(a))
+    expect(list.map((o) => o.name)).toEqual(["Départ B"])
+    expect(list[0]).toMatchObject({ price: 1900, page: "Autre page" })
+    expect(JSON.stringify(list)).not.toContain("1234")
+    expect(Object.keys(list[0])).not.toContain("cost")
+    expect(Object.keys(list[0])).not.toContain("seats_sold")
   })
 })
