@@ -57,6 +57,7 @@ export function CategoryView({ category, offers, preview = false }: { category: 
       case "highlights":
         return info.highlights.length >= 2 ? (
           <section key={key} className="max-w-5xl mx-auto px-4 pt-2 pb-4" aria-label={t.highlights}>
+            <h2 className={`text-center text-sm font-black uppercase tracking-wide mb-3 ${st.sectionTitle}`}>{t.highlights}</h2>
             <ul className="flex flex-wrap gap-2 justify-center">{info.highlights.map((f) => <li key={f} className={`text-sm font-bold px-3 py-1.5 rounded-full ${st.chip}`}>✓ {f}</li>)}</ul>
           </section>
         ) : null
@@ -191,7 +192,7 @@ export function CategoryView({ category, offers, preview = false }: { category: 
         ) : (
           <div className={`w-full h-56 sm:h-64 ${st.heroNoImage}`} />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
+        <div className={`absolute inset-0 flex items-end ${category.banner_desktop || category.banner_mobile ? "bg-gradient-to-t from-black/60 to-transparent" : "bg-gradient-to-t from-black/25 to-transparent"}`}>
           <div className="max-w-5xl mx-auto w-full px-4 pb-6 text-white">
             {family === "autre" && hasPromo && <span className="inline-block mb-2 text-xs font-black bg-amber-300 text-amber-950 px-3 py-1 rounded-full">{t.promo}</span>}
             <h1 className="text-3xl sm:text-4xl font-black">{category.name}</h1>
