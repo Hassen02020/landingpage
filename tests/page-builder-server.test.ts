@@ -13,7 +13,7 @@ vi.mock("@/lib/server/auth", () => ({ currentStaff: async () => (role ? { userId
 
 import { configureAll } from "./helpers"
 import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/server/db"
-import { builderAccess, loadBuilderPage, publishPage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
+import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
 import * as actions from "@/app/admin/createur-actions"
 import { checkDestinationAction } from "@/app/admin/liens-actions"
@@ -245,5 +245,43 @@ describe("test du lien (action serveur)", () => {
     const r = await as(BOB, () => checkDestinationAction("/omra"))
     expect(r.state).toBe("refused")
     expect(vi.mocked(fetch).mock.calls.some((c) => !String(c[0]).includes("/rest/v1/"))).toBe(false)
+  })
+})
+
+describe("duplication et archivage (tableau de bord)", () => {
+  it("duplication : nouvelle page en BROUILLON, adresse « -copie », offres copiées sans places vendues ni SKU ; l'original est intact", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    T.landing_offers[0].seats_sold = 7; T.landing_offers[0].sku = "SKU-1"
+    const before = JSON.stringify(T.landing_categories[0])
+    const r = await as(E2B, () => duplicatePage(id, "u1"))
+    expect(r.ok).toBe(true)
+    expect(T.landing_categories).toHaveLength(2)
+    expect(T.landing_categories[1]).toMatchObject({ slug: "turquie-ete-2027-copie", name: "Turquie Été 2027 (copie)", visible: false, position: 0, organization_id: E2B })
+    expect(T.landing_offers).toHaveLength(2)
+    expect(T.landing_offers[1]).toMatchObject({ category_id: T.landing_categories[1].id, seats_sold: 0, sku: null, name: "Départ 1" })
+    expect(JSON.stringify(T.landing_categories[0])).toBe(before)
+    expect(T.landing_offers[0]).toMatchObject({ seats_sold: 7, sku: "SKU-1" })
+    const again = await as(E2B, () => duplicatePage(id, "u1"))
+    expect(again.ok).toBe(true)
+    expect(T.landing_categories[2].slug).toBe("turquie-ete-2027-copie-2")
+  })
+  it("archivage contrôlé : refusé tant que la page est publiée ; accepté pour un brouillon ; adresse conservée ; restauration en brouillon", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    const refused = await as(E2B, () => archivePage(id, "u1"))
+    expect(refused.ok).toBe(false)
+    expect(T.landing_categories[0]).toMatchObject({ visible: true, position: 0 })
+    await as(E2B, () => unpublishPage(id, "u1"))
+    expect((await as(E2B, () => archivePage(id, "u1"))).ok).toBe(true)
+    expect(T.landing_categories[0]).toMatchObject({ visible: false, position: -1000, slug: "turquie-ete-2027" })
+    expect((await as(E2B, () => restorePage(id, "u1"))).ok).toBe(true)
+    expect(T.landing_categories[0]).toMatchObject({ visible: false, position: 0 })
+    expect((await as(E2B, () => restorePage(id, "u1"))).ok).toBe(false)
+  })
+  it("pages inconnues refusées ; les écritures restent dans l'organisation du contexte", async () => {
+    expect((await as(E2B, () => duplicatePage("00000000-0000-4000-8000-0000000000aa", "u1"))).ok).toBe(false)
+    expect((await as(E2B, () => archivePage("00000000-0000-4000-8000-0000000000aa", "u1"))).ok).toBe(false)
+    expect(writes()).toHaveLength(0)
   })
 })

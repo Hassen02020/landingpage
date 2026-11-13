@@ -3,7 +3,7 @@
 // Réservé à l'organisation de la PLATEFORME : /p/<adresse> (comme /c/<adresse>) n'est servie que pour elle (constat du chantier 1) ; toute autre entreprise est refusée côté serveur.
 import { currentStaff } from "@/lib/server/auth"
 import { can } from "@/lib/permissions"
-import { isPlatformOrg, update } from "@/lib/server/db"
+import { insertOne, isPlatformOrg, update } from "@/lib/server/db"
 import { archiveOffer, getCategory, listCategories, listOffers, saveCategory, saveOffer, slugify, validateCategory, validateOffer, categorySlugLock, type Category, type Offer, type PublicOffer } from "@/lib/server/catalog"
 import { tunisDay } from "@/lib/server/crm"
 import { pageStatus, type PageStatus } from "@/lib/page-status"
@@ -11,6 +11,7 @@ import { readiness, type Readiness } from "@/lib/page-builder/readiness"
 import { themeById, type Theme } from "@/lib/page-builder/themes"
 import { rateLimited } from "@/lib/server/guard"
 import type { SlugLock } from "@/lib/catalog-slug"
+import { ARCHIVED_POSITION, copySlug, isArchived } from "@/lib/page-builder/dashboard"
 
 export type BuilderAccess = { ok: true; staff: NonNullable<Awaited<ReturnType<typeof currentStaff>>> } | { ok: false; reason: "droits" | "entreprise" | "debit"; message: string }
 
@@ -128,3 +129,43 @@ export async function unpublishPage(id: string, actorId: string | null): Promise
   return { ok: true }
 }
 
+
+// ------------------------------------------------------------------------------------------------ duplication, archivage
+export type LifecycleResult = { ok: true; id: string } | { ok: false; message: string }
+
+/** Copie d'une page : NOUVEL id, adresse libre (« -copie »), toujours en BROUILLON ; offres copiées sans places vendues ni SKU. Jamais d'effet sur l'original. */
+export async function duplicatePage(id: string, actorId: string | null): Promise<LifecycleResult> {
+  const src = await getCategory(id)
+  if (!src) return { ok: false, message: "Page introuvable." }
+  const [cats, offers] = await Promise.all([listCategories(), listOffers({ categoryId: id })])
+  const stamp = { updated_at: new Date().toISOString(), updated_by: actorId }
+  const created = await insertOne<{ id: string }>("landing_categories", {
+    slug: copySlug(src.slug, cats.map((c) => c.slug)), name: `${src.name} (copie)`.slice(0, 120), product: src.product, lang: src.lang,
+    headline: src.headline, description: src.description, banner_desktop: src.banner_desktop, banner_mobile: src.banner_mobile,
+    seo_title: src.seo_title, seo_description: src.seo_description, visible: false, position: 0, ...stamp,
+  })
+  for (const o of offers) {
+    const { id: _i, archived_at: _a, updated_at: _u, ...rest } = o
+    void _i; void _a; void _u
+    await insertOne("landing_offers", { ...rest, category_id: created.id, sku: null, seats_sold: 0, ...stamp })
+  }
+  return { ok: true, id: created.id }
+}
+
+/** Archivage CONTRÔLÉ : une page publiée doit d'abord être désactivée (son adresse cesserait sinon de répondre sans prévenir). L'adresse reste réservée. */
+export async function archivePage(id: string, actorId: string | null): Promise<LifecycleResult> {
+  const page = await getCategory(id)
+  if (!page) return { ok: false, message: "Page introuvable." }
+  if (page.visible) return { ok: false, message: "Cette page est publiée : désactivez-la d'abord, puis archivez-la." }
+  await update("landing_categories", `id=eq.${id}`, { position: ARCHIVED_POSITION, visible: false, updated_at: new Date().toISOString(), updated_by: actorId })
+  return { ok: true, id }
+}
+
+/** Restauration : retour en BROUILLON (jamais publiée d'office). */
+export async function restorePage(id: string, actorId: string | null): Promise<LifecycleResult> {
+  const page = await getCategory(id)
+  if (!page) return { ok: false, message: "Page introuvable." }
+  if (!isArchived(page)) return { ok: false, message: "Cette page n'est pas archivée." }
+  await update("landing_categories", `id=eq.${id}`, { position: 0, visible: false, updated_at: new Date().toISOString(), updated_by: actorId })
+  return { ok: true, id }
+}

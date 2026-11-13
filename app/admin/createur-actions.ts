@@ -3,7 +3,7 @@
 // Actions du Créateur de Landing Pages. Chaque action revérifie CÔTÉ SERVEUR : session, droit « catalogue », organisation de la plateforme, débit.
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
-import { builderAccess, publishPage, saveDraft, unpublishPage, type OfferInput } from "@/lib/server/page-builder"
+import { archivePage, builderAccess, duplicatePage, publishPage, restorePage, saveDraft, unpublishPage, type OfferInput } from "@/lib/server/page-builder"
 import { uploadImage } from "@/lib/server/catalog"
 
 export interface CreatorState { ok?: boolean; message?: string; errors?: Record<string, string> }
@@ -82,4 +82,40 @@ export async function unpublishAction(_prev: CreatorState | undefined, fd: FormD
   if (!res.ok) return { ok: false, message: res.message }
   refreshPublicPages()
   return { ok: true, message: "Page masquée. Les liens déjà diffusés ne mèneront plus à une page visible." }
+}
+
+// Actions du tableau de bord (formulaires simples : fonctionnent sans JavaScript). Retour au tableau avec un message.
+const back = (msg: string, ok: boolean, extra = "") => redirect(`/admin/createur?${ok ? "ok" : "erreur"}=${encodeURIComponent(msg)}${extra}`)
+
+export async function duplicateAction(fd: FormData): Promise<void> {
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return back(access.message, false)
+  const res = await duplicatePage(str(fd, "id"), access.staff.userId)
+  if (!res.ok) return back(res.message, false)
+  refreshPublicPages()
+  redirect(`/admin/createur/${res.id}?etape=infos&ok=1&copie=1`)
+}
+
+export async function archiveAction(fd: FormData): Promise<void> {
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return back(access.message, false)
+  const res = await archivePage(str(fd, "id"), access.staff.userId)
+  refreshPublicPages()
+  return res.ok ? back("Page archivée. Son adresse reste réservée.", true) : back(res.message, false)
+}
+
+export async function restoreAction(fd: FormData): Promise<void> {
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return back(access.message, false)
+  const res = await restorePage(str(fd, "id"), access.staff.userId)
+  refreshPublicPages()
+  return res.ok ? back("Page restaurée en brouillon.", true, "&vue=brouillon") : back(res.message, false)
+}
+
+export async function unpublishFromListAction(fd: FormData): Promise<void> {
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return back(access.message, false)
+  const res = await unpublishPage(str(fd, "id"), access.staff.userId)
+  refreshPublicPages()
+  return res.ok ? back("Page désactivée (masquée). Vous pouvez maintenant l'archiver.", true, "&vue=brouillon") : back(res.message, false)
 }
