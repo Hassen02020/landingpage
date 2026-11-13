@@ -54,7 +54,7 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }
       <input type="hidden" name="theme" value={theme.id} />
       {category && <input type="hidden" name="id" value={category.id} />}
       <input type="hidden" name="offer_count" value={rows.length} />
-      <div className="flex flex-wrap gap-2">{tabBtn("infos", "2. Informations du produit")}{tabBtn("perso", "3. Personnalisation de la page")}</div>
+      <div className="flex flex-wrap gap-2">{tabBtn("infos", "2. Informations du produit")}{tabBtn("perso", "Adresse, bannière et référencement")}</div>
       {state?.message && <div role="status" className={`rounded-xl p-3 text-sm ${state.ok ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"}`}>{state.message}</div>}
 
       <div className={tab === "infos" ? "space-y-5" : "hidden"}>
@@ -146,7 +146,7 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }
           <Field label="Titre (70 caractères max)" error={e("seo_title")}><input name="seo_title" defaultValue={v(category?.seo_title)} maxLength={70} className={inputCls} /></Field>
           <Field label="Description (160 caractères max)" error={e("seo_description")}><input name="seo_description" defaultValue={v(category?.seo_description)} maxLength={160} className={inputCls} /></Field>
         </section>
-        <p className="text-xs text-gray-500 bg-gray-50 border rounded-xl p-3">Couleurs, ordre des sections, galerie libre, FAQ et conditions personnalisées ne sont pas encore modifiables : la page prend l&apos;apparence de sa famille et affiche automatiquement les sections pour lesquelles vous avez saisi des informations.</p>
+        <p className="text-xs text-gray-500 bg-gray-50 border rounded-xl p-3">Couleurs, ordre des sections, FAQ, témoignages et programme se règlent à l'étape « 3. Personnaliser ».</p>
       </div>
 
       <SaveButtons canContinue />
