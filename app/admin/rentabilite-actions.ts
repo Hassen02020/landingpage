@@ -7,6 +7,7 @@ import { rateLimited } from "@/lib/server/guard"
 import { runWithOrg } from "@/lib/server/db"
 import { addAdSpend, voidAdSpend } from "@/lib/server/ad-spend"
 import { commitCommissionImport, confirmCommissions, previewCommissionImport, type CommitResult, type PreviewResult } from "@/lib/server/commissions"
+import { addVariableCost, voidVariableCost } from "@/lib/server/variable-costs"
 import { MAX_IMPORT_BYTES } from "@/lib/commission-import"
 
 export interface SpendFormState { ok?: boolean; message?: string; errors?: Record<string, string> }
@@ -71,4 +72,29 @@ export async function confirmCommissionsAction(ids: number[]): Promise<{ confirm
   const res = await runWithOrg(staff.organizationId, () => confirmCommissions(clean, staff.userId))
   revalidatePath("/admin/rentabilite")
   return res
+}
+
+export async function addCostAction(_prev: SpendFormState | undefined, fd: FormData): Promise<SpendFormState> {
+  const staff = await manager()
+  if (!staff) return { ok: false, message: "Réservé aux administrateurs." }
+  if (rateLimited(`ads-cost:${staff.userId}`, 60, 10 * 60 * 1000)) return { ok: false, message: "Trop de saisies. Réessayez dans quelques minutes." }
+  const res = await runWithOrg(staff.organizationId, () =>
+    addVariableCost({
+      date: String(fd.get("date") ?? ""), category: String(fd.get("category") ?? ""), amount: String(fd.get("amount") ?? ""),
+      leadRef: String(fd.get("leadRef") ?? ""), network: String(fd.get("network") ?? ""), campaign: String(fd.get("campaign") ?? ""), reference: String(fd.get("reference") ?? ""),
+    }, staff.userId),
+  )
+  if (!res.ok) return { ok: false, errors: res.errors, message: res.message }
+  revalidatePath("/admin/rentabilite")
+  return { ok: true, message: "Coût enregistré." }
+}
+
+export async function voidCostAction(id: number): Promise<{ ok: boolean; message?: string }> {
+  const staff = await manager()
+  if (!staff) return { ok: false, message: "Réservé aux administrateurs." }
+  if (rateLimited(`ads-cost-void:${staff.userId}`, 30, 10 * 60 * 1000)) return { ok: false, message: "Trop d'annulations. Réessayez plus tard." }
+  const res = await runWithOrg(staff.organizationId, () => voidVariableCost(Number(id), staff.userId))
+  if (!res.ok) return { ok: false, message: res.message }
+  revalidatePath("/admin/rentabilite")
+  return { ok: true }
 }

@@ -40,3 +40,14 @@ PR 2 : saisie des dépenses + import des commissions (aperçu avant validation).
 - **Droits** : `ads.manage` (admin) écrit ; `ads.view` (manager) lit. Employé : aucun accès. Isolation par entreprise.
 - **Prérequis** : migration 0016 (non appliquée par Claude). Sans elle, l'écran est en lecture seule et l'indique.
 - Tests : `commission-import`, `ad-spend-commissions` (isolation, idempotence, conflits, confirmation unique, migration absente).
+
+## Marge nette réellement conservée (migration 0017)
+
+**Marge nette = commission nette − publicité − coûts variables.** Une publicité n'est gagnante que si elle rapporte une marge nette conservée, pas des réservations ni du chiffre d'affaires.
+
+1. **Pas de double comptage** : un coût variable se rattache à UNE réservation (dossier `E2B-XXXXXX`) OU à UNE campagne OU à rien (« non attribué », compté au total, jamais réparti en silence). Réservation + campagne : refusé (contrainte en base) ; dans le calcul, la réservation l'emporte.
+2. **Remboursements** : le remboursement client est une ligne négative du registre des commissions, donc déjà déduit de la commission nette. Il n'est pas une catégorie de coût (refusé en base, écarté dans le calcul). Seul le geste commercial hors commission se saisit comme coût. La publicité non plus n'est pas un coût variable (table `landing_ad_spend`).
+3. **Provisoire / confirmé** : deux marges distinctes — `marginConfirmed` (commissions confirmées seulement, seule base d'un bénéfice définitif) et `marginWithProvisional` (estimation si les provisoires se confirment).
+4. **Gagnante** : marge nette confirmée > 0 ET au moins 5 réservations à commission confirmée ET marge strictement supérieure à celle des autres lignes comparables (égalité exacte : pas de gagnante). Sinon la raison est affichée.
+- Sans coût variable saisi, l'écran l'indique : la marge est « avant coûts variables non saisis ».
+- Catégories : frais de paiement, prime du conseiller, messagerie, geste commercial, autre.

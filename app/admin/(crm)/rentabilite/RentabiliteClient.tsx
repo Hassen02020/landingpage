@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react"
 import { useFormState, useFormStatus } from "react-dom"
-import { addSpendAction, commitImportAction, confirmCommissionsAction, previewImportAction, voidSpendAction } from "../../rentabilite-actions"
+import { addCostAction, voidCostAction, addSpendAction, commitImportAction, confirmCommissionsAction, previewImportAction, voidSpendAction } from "../../rentabilite-actions"
 import type { PreviewResult } from "@/lib/server/commissions"
+import { COST_CATEGORIES, COST_LABELS } from "@/lib/variable-cost-categories"
 
 interface SpendRow { id: number; date: string; network: string; campaign: string; amount: number; voids: number | null; reference: string | null }
+interface CostRowUi { id: number; date: string; category: string; amount: number; voids: number | null; target: string; reference: string | null }
 interface ComRow { id: number; leadRef: string | null; reservation: string; kind: string; amount: number; status: "provisoire" | "confirme"; date: string }
 
 const tnd = (n: number) => `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 3 })} TND`
@@ -17,8 +19,10 @@ function Submit({ children }: { children: string }) {
   return <button type="submit" disabled={pending} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-60">{pending ? "…" : children}</button>
 }
 
-export function RentabiliteClient({ canManage, spend, commissions }: { canManage: boolean; spend: SpendRow[]; commissions: ComRow[] }) {
+export function RentabiliteClient({ canManage, spend, commissions, costs, costsEnabled }: { canManage: boolean; spend: SpendRow[]; commissions: ComRow[]; costs: CostRowUi[]; costsEnabled: boolean }) {
   const [state, add] = useFormState(addSpendAction, undefined)
+  const [cstate, addCost] = useFormState(addCostAction, undefined)
+  const costVoided = new Set(costs.filter((c) => c.voids != null).map((c) => c.voids))
   const [pending, start] = useTransition()
   const [msg, setMsg] = useState<string | null>(null)
   const [csv, setCsv] = useState("")
@@ -26,6 +30,7 @@ export function RentabiliteClient({ canManage, spend, commissions }: { canManage
   const [validated, setValidated] = useState<string[]>([])
   const voided = new Set(spend.filter((s) => s.voids != null).map((s) => s.voids))
   const err = (k: string) => state?.errors?.[k]
+  const cerr = (k: string) => cstate?.errors?.[k]
   const today = new Date().toISOString().slice(0, 10)
 
   const runPreview = () => start(async () => {
@@ -63,6 +68,34 @@ export function RentabiliteClient({ canManage, spend, commissions }: { canManage
               <tr key={s.id} className={`border-t ${s.voids != null || voided.has(s.id) ? "text-gray-400" : ""}`}>
                 <td className="py-1.5 pr-3">{s.date}</td><td className="pr-3">{s.network}</td><td className="pr-3">{s.campaign}{s.voids != null && " (annulation)"}</td><td className="pr-3 text-right">{tnd(s.amount)}</td><td className="pr-3">{s.reference}</td>
                 <td>{canManage && s.voids == null && !voided.has(s.id) && <button type="button" disabled={pending} className="text-xs font-bold text-red-600 hover:underline" onClick={() => start(async () => { const r = await voidSpendAction(s.id); setMsg(r.ok ? "Dépense annulée." : r.message ?? "Échec.") })}>Annuler</button>}</td>
+              </tr>
+            ))}
+          </tbody></table></div>
+      </section>
+
+      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+        <h2 className="font-black">Coûts variables (hors publicité)</h2>
+        <p className="text-sm text-gray-600">Rattachez un coût à <strong>une réservation</strong> (référence dossier) <strong>ou</strong> à <strong>une campagne</strong>, jamais aux deux : il serait compté deux fois. La publicité se saisit plus haut ; un remboursement client passe par l&apos;import des commissions (il est déjà déduit de la commission nette). Ici : seulement les gestes commerciaux hors commission, frais de paiement, primes, messagerie.</p>
+        {canManage && costsEnabled && (
+          <form action={addCost} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
+            <label className="text-sm">Date<input type="date" name="date" max={today} defaultValue={today} required className={input} />{cerr("date") && <span className="text-red-600 text-xs">{cerr("date")}</span>}</label>
+            <label className="text-sm">Catégorie<select name="category" className={input} defaultValue="frais_paiement">{COST_CATEGORIES.map((c) => <option key={c} value={c}>{COST_LABELS[c]}</option>)}</select>{cerr("category") && <span className="text-red-600 text-xs">{cerr("category")}</span>}</label>
+            <label className="text-sm">Montant (TND)<input name="amount" inputMode="decimal" required className={input} />{cerr("amount") && <span className="text-red-600 text-xs">{cerr("amount")}</span>}</label>
+            <label className="text-sm">Référence (facultatif)<input name="reference" maxLength={200} className={input} /></label>
+            <label className="text-sm">Réservation (E2B-XXXXXX)<input name="leadRef" className={input} dir="ltr" />{cerr("leadRef") && <span className="text-red-600 text-xs">{cerr("leadRef")}</span>}</label>
+            <label className="text-sm">…ou réseau<select name="network" className={input} defaultValue=""><option value="">—</option><option value="meta">Meta</option><option value="tiktok">TikTok</option></select>{cerr("network") && <span className="text-red-600 text-xs">{cerr("network")}</span>}</label>
+            <label className="text-sm">…et campagne<input name="campaign" maxLength={255} className={input} />{cerr("campaign") && <span className="text-red-600 text-xs">{cerr("campaign")}</span>}</label>
+            <div className="flex items-end gap-3"><Submit>Enregistrer le coût</Submit></div>
+            {cstate?.message && <p className={`md:col-span-4 text-sm ${cstate.ok ? "text-green-700" : "text-red-600"}`}>{cstate.message}</p>}
+          </form>
+        )}
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th className="py-1 pr-3">Date</th><th className="pr-3">Catégorie</th><th className="pr-3">Rattaché à</th><th className="pr-3 text-right">Montant</th><th /></tr></thead>
+          <tbody>
+            {costs.length === 0 && <tr><td colSpan={5} className="py-3 text-gray-500">Aucun coût variable saisi : la marge affichée est « avant coûts variables non saisis ».</td></tr>}
+            {costs.map((c) => (
+              <tr key={c.id} className={`border-t ${c.voids != null || costVoided.has(c.id) ? "text-gray-400" : ""}`}>
+                <td className="py-1.5 pr-3">{c.date}</td><td className="pr-3">{COST_LABELS[c.category as keyof typeof COST_LABELS] ?? c.category}{c.voids != null && " (annulation)"}</td><td className="pr-3">{c.target}</td><td className="pr-3 text-right">{tnd(c.amount)}</td>
+                <td>{canManage && c.voids == null && !costVoided.has(c.id) && <button type="button" disabled={pending} className="text-xs font-bold text-red-600 hover:underline" onClick={() => start(async () => { const r = await voidCostAction(c.id); setMsg(r.ok ? "Coût annulé." : r.message ?? "Échec.") })}>Annuler</button>}</td>
               </tr>
             ))}
           </tbody></table></div>
