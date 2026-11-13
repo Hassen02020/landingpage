@@ -45,8 +45,21 @@ export const defaultDesign = (family: Family): PageDesign => ({
 })
 
 const HEX = /^#[0-9a-fA-F]{6}$/
+/** Retire les « demi-caractères » (substituts UTF-16 isolés) : PostgreSQL les refuse dans un JSON (« invalid input syntax for type json »). */
+function stripLoneSurrogates(t: string): string {
+  let out = ""
+  for (let i = 0; i < t.length; i++) {
+    const c = t.charCodeAt(i)
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const n = t.charCodeAt(i + 1)
+      if (n >= 0xdc00 && n <= 0xdfff) { out += t[i] + t[i + 1]; i++ }
+    } else if (c < 0xdc00 || c > 0xdfff) out += t[i]
+  }
+  return out
+}
+// Texte brut : caractères de contrôle retirés (sauf tabulation et retours à la ligne), coupe SANS casser un caractère composé (emoji), puis aucun substitut isolé.
 // eslint-disable-next-line no-control-regex
-const clean = (v: unknown, max: number): string => (typeof v === "string" ? v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").trim().slice(0, max) : "")
+const clean = (v: unknown, max: number): string => (typeof v === "string" ? stripLoneSurrogates(stripLoneSurrogates(v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")).trim().slice(0, max)).trim() : "")
 
 /** Luminance relative WCAG (0 = noir, 1 = blanc). */
 export function luminance(hex: string): number {
@@ -70,9 +83,22 @@ export function tint(hex: string, ratio = 0.9): string {
 
 export type DesignErrors = Record<string, string>
 
-/** Taille maximale du design sérialisé, en OCTETS (la base refuse au-delà de 16 000 : marge de sécurité). */
+/**
+ * Représentation TEXTE d'un JSONB telle que PostgreSQL la produit : `value::text` met une espace après chaque « : » et après chaque « , »
+ * (plus long que JSON.stringify, qui est compact). L'ordre des clés n'a pas d'effet sur la taille. Les chaînes sont échappées comme JSON.stringify
+ * (guillemet, antislash, \b \f \n \r \t, autres contrôles en \u00XX ; tout le reste, y compris les emojis, en UTF-8 brut).
+ * La contrainte de la base mesure octet_length(design::text) : c'est CETTE mesure que le serveur applique (tests.design-jsonb-size : égalité exacte
+ * avec PostgreSQL sur des centaines de cas).
+ */
+export function pgJsonText(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(pgJsonText).join(", ")}]`
+  if (v && typeof v === "object") return `{${Object.entries(v as Record<string, unknown>).filter(([, x]) => x !== undefined).map(([k, x]) => `${JSON.stringify(k)}: ${pgJsonText(x)}`).join(", ")}}`
+  return JSON.stringify(v)
+}
+
+/** Taille maximale du design stocké, en OCTETS de sa forme PostgreSQL (la base refuse au-delà de 16 000 : 1 000 octets de marge). */
 export const MAX_DESIGN_BYTES = 15000
-export const designBytes = (d: PageDesign): number => new TextEncoder().encode(JSON.stringify(d)).length
+export const designBytes = (d: PageDesign): number => new TextEncoder().encode(pgJsonText(d)).length
 
 /** Nettoie ET valide : renvoie le design sûr et la liste des problèmes (les champs invalides sont écartés, jamais corrigés en silence). */
 export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesign; errors: DesignErrors } {
