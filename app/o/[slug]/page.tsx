@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { runWithOrg } from "@/lib/server/db"
-import { loadFormConfig, loadPublicOrg, publicOfferNames } from "@/lib/server/org-public"
+import { loadFormConfig, loadPublicOrg, lookupPublicOrg, publicOfferNames } from "@/lib/server/org-public"
+import { fallbackTarget } from "@/lib/fallback"
 import { OrgLeadForm } from "./OrgLeadForm"
 
 // Rendu à chaque requête : une page d'entreprise ne doit jamais être servie depuis le cache d'une autre.
@@ -15,9 +16,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     : { title: "Page introuvable" }
 }
 
-export default async function OrgPage({ params }: { params: { slug: string } }) {
-  const org = await loadPublicOrg(params.slug)
-  if (!org) notFound()
+export default async function OrgPage({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | string[] | undefined> }) {
+  const found = await lookupPublicOrg(params.slug)
+  // inconnue ou suspendue : même secours, aucune différence visible (cible D1 par défaut : l'accueil) ; panne de base : 404 conservé
+  if (found.status === "not_found") redirect(fallbackTarget(`/o/${params.slug}`, searchParams) ?? "/")
+  if (found.status !== "found") notFound()
+  const org = found.org
   if (org.slug === "easy2book") redirect("/")
   const { config, offers } = await runWithOrg(org.id, async () => ({ config: await loadFormConfig(), offers: await publicOfferNames() }))
   return (

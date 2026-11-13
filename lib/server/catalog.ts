@@ -68,6 +68,18 @@ export async function publicCategory(slug: string): Promise<{ category: Category
   return { category, offers }
 }
 
+export type CategoryLookup = { status: "found"; data: { category: Category; offers: PublicOffer[] } } | { status: "not_found" } | { status: "error" }
+
+/** Recherche à trois états : « introuvable » (slug inconnu ou masqué) se distingue d'une panne de base (« error »), qui ne doit jamais déclencher un secours. */
+export async function lookupPublicCategory(slug: string): Promise<CategoryLookup> {
+  try {
+    const data = await publicCategory(slug)
+    return data ? { status: "found", data } : { status: "not_found" }
+  } catch {
+    return { status: "error" }
+  }
+}
+
 export async function publicCategories(): Promise<Pick<Category, "slug" | "name" | "product" | "headline" | "banner_mobile">[]> {
   return select("landing_categories", "select=slug,name,product,headline,banner_mobile&visible=eq.true&order=position.asc&limit=50")
 }

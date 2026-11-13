@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { dbConfigured, withPublicOrg } from "@/lib/server/db"
-import { publicCategory } from "@/lib/server/catalog"
+import { lookupPublicCategory, publicCategory } from "@/lib/server/catalog"
+import { fallbackTarget } from "@/lib/fallback"
 import { SITE_URL } from "@/lib/config"
 import { CategoryView } from "./CategoryView"
 
@@ -45,7 +46,10 @@ export default async function CategoryPage({ params, searchParams }: { params: {
     for (const [k, v] of Object.entries(searchParams)) for (const x of Array.isArray(v) ? v : v === undefined ? [] : [v]) qs.append(k, x)
     redirect(`/omra${qs.toString() ? `?${qs}` : ""}`)
   }
-  const data = await load(params.slug)
-  if (!data) notFound()
-  return <CategoryView category={data.category} offers={data.offers} />
+  if (!dbConfigured()) notFound() // base non configurée : situation d'environnement, pas un « introuvable » (aucun secours)
+  const found = await withPublicOrg(() => lookupPublicCategory(params.slug))
+  // secours UNIQUEMENT pour un « introuvable » ; une panne de base garde le 404 actuel (aucune redirection qui masquerait l'incident)
+  if (found.status === "not_found") redirect(fallbackTarget(`/c/${params.slug}`, searchParams) ?? "/voyages-organises")
+  if (found.status !== "found") notFound()
+  return <CategoryView category={found.data.category} offers={found.data.offers} />
 }
