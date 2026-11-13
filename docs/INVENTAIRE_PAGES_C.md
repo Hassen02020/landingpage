@@ -47,3 +47,21 @@ Relever l'adresse de destination de chaque annonce **active** ou récente et not
 | Des offres expirées encore affichées | sujet traité séparément (décision : ne pas modifier l'affichage dans ce chantier) |
 
 Ne communiquez pas de données personnelles : ces requêtes ne renvoient que des agrégats.
+
+## Sondes publiques en lecture seule (exécutées par Claude, requêtes GET sans donnée personnelle)
+
+Cible : alias de production actuel. Aucune écriture, aucun accès à la base. Ces résultats décrivent la version **actuellement déployée**, pas la branche locale.
+
+| Adresse | Résultat | Lecture |
+|---|---|---|
+| `/`, `/omra`, `/voyages-organises`, `/summer-vibes` | 200 | pages fixes en ligne |
+| `/c/omra-2027` | 307 → `/omra` | redirection existante en place |
+| `/omra-2027` | 404 | la règle 307 de la branche n'est PAS déployée |
+| `/p/omra-2027`, `/p/<inconnue>` | 404 | route `/p` non déployée (branche locale uniquement) |
+| `/c/<inconnue>`, `/o/<inconnue>` | 404 | comportement actuellement déployé (avant phase A) |
+| `/admin/createur` | 307 → connexion | protégé ; ne prouve pas que le Créateur soit déployé |
+| `robots.txt` | interdit `/admin`, `/api/`, `/o/`, `/c/` | `/p/` à interdire : prévu dans la branche |
+| `sitemap.xml` | 6 adresses fixes, aucune `/c/…` | aucune catégorie listée |
+| liens `/c/…` dans l'accueil et `/voyages-organises` | aucun | aucune catégorie visible n'y est liée |
+
+**NON VÉRIFIÉ** (exige vos requêtes `SELECT` ci-dessus) : catégories publiées en base, catégories masquées, liens publicitaires réellement utilisés, collisions d'adresses, volumes de prospects par page.

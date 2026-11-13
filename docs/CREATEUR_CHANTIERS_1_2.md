@@ -51,3 +51,15 @@ GROUP BY 1,2 ORDER BY evenements DESC;
 SELECT slug, visible, updated_at FROM landing_categories ORDER BY slug;
 ```
 À compléter par vous : les adresses de destination des annonces actives dans Meta / TikTok Ads Manager. Ces listes ne couvrent que les visiteurs ayant rempli le formulaire.
+
+## Statut des défauts après correction locale (suite de la décision du propriétaire)
+
+| # | Défaut | Statut | Preuve | Reste à décider |
+|---|--------|--------|--------|-----------------|
+| 1 | Catégorie de B proposée mais non servie | **CORRIGÉ (côté générateur)** : B ne reçoit plus que `/o/<son-slug>` | `tests/e2e/multi-links.e2e.mjs` (15 ✓), `tests/links-context.test.ts` | Servir réellement les catalogues d'entreprises (`/c`, `/p` hors Easy2Book) = décision d'architecture (hors MVP) |
+| 2 | Pages fixes d'Easy2Book proposées à B | **CORRIGÉ** : aucune page fixe, aucun lien de bio, aucun `/c/…` pour une entreprise | idem | — |
+| 3 | Collision d'adresse | **ATTÉNUÉ SANS MIGRATION** : B n'obtient aucun lien `/c/…` ; la collision au niveau des données n'est pas bloquée sans décision d'architecture | idem | Unicité globale des adresses de pages ou préfixe par entreprise (migration éventuelle, non créée) |
+| 4 | Paramètres de campagne perdus sur `/o` | **CORRIGÉ** : l'attribution est lue dans l'adresse à l'envoi (sans identifiants de clic ni jeton) | `tests/url-attribution.test.ts` (7), e2e multi-links | — |
+| 5 | Secours `/c` vers une page d'Easy2Book pour l'adresse de B | **NON MODIFIÉ** (rendu `/c` protégé avant inventaire) ; sans effet pour B puisqu'il n'obtient plus de lien `/c/…` | — | À traiter avec le service multi-entreprises des catalogues |
+
+Défaut supplémentaire trouvé et corrigé pendant la vérification : la destination initiale du générateur était codée « `/` », absente de la liste d'une entreprise → aucun lien généré pour B. Corrigé (`LinkBuilder.tsx`), couvert par le e2e.
