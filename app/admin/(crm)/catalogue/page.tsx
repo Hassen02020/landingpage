@@ -106,7 +106,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Re
                   <td className={`${td} font-bold`}>{c.name}</td>
                   <td className={td}><a href={c.slug === "omra-2027" ? "/omra" : `/c/${c.slug}`} target="_blank" className="underline" dir="ltr">{c.slug === "omra-2027" ? "/omra" : `/c/${c.slug}`}</a></td>
                   <td className={td}>{PRODUCTS[c.product as Product]}</td>
-                  <td className={td}>{c.lang === "ar" ? "Arabe" : "Français"}</td>
+                  <td className={td}>{c.lang === "ar" ? "Arabe" : c.lang === "en" ? "Anglais" : "Français"}</td>
                   <td className={td}><span className={`text-xs font-bold px-2 py-1 rounded-full ${c.visible ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}>{c.visible ? "Affichée" : "Masquée"}</span></td>
                   <td className={td}><Link href={`/admin/catalogue/categories/${c.id}`} className="underline">Modifier</Link></td>
                 </tr>

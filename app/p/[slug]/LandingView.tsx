@@ -16,6 +16,11 @@ import { resolvePrimary, tint, visibleSections, type DesignSection, type PageDes
 import { Countdown } from "./Countdown"
 
 const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+const enDate = (iso: string) => {
+  const [y, m, d] = iso.split("-").map(Number)
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+  return `${months[m - 1]} ${d}, ${y}`
+}
 const frDate = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number)
   const months = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
@@ -24,6 +29,7 @@ const frDate = (iso: string) => {
 
 const T = {
   fr: { from: "À partir de", perPerson: "/ pers.", nights: "nuits", reserve: "Réserver cette offre", ask: "Question sur WhatsApp", full: "Complet", left: (n: number) => `Plus que ${n} place${n > 1 ? "s" : ""}`, formTitle: "Réservez votre place", formSub: "Moins d'une minute — un conseiller vous rappelle", included: "Inclus", call: "Appeler", highlights: "Les points forts", includedTitle: "Prestations incluses", programme: "Programme", gallery: "En images", faq: "Questions fréquentes", dates: "Départs et prix", promo: "Promotion", testimonials: "Ils nous ont fait confiance", servicesTitle: "Ce qui est inclus", conditionsTitle: "Avantages et conditions", whatsappCta: "Écrire sur WhatsApp", preview: "Aperçu : les boutons et le formulaire sont désactivés." },
+  en: { from: "From", perPerson: "/ person", nights: "nights", reserve: "Book this offer", ask: "Ask on WhatsApp", full: "Sold out", left: (n: number) => `Only ${n} place${n > 1 ? "s" : ""} left`, formTitle: "Book your place", formSub: "Less than a minute — an advisor calls you back", included: "Included", call: "Call", highlights: "Highlights", includedTitle: "What is included", programme: "Programme", gallery: "Gallery", faq: "Frequently asked questions", dates: "Departures and prices", promo: "Special offer", testimonials: "What our customers say", servicesTitle: "What the programme includes", conditionsTitle: "Benefits and conditions", whatsappCta: "Write on WhatsApp", preview: "Preview: buttons and form are disabled." },
   ar: { from: "ابتداءً من", perPerson: "/ للشخص", nights: "ليلة", reserve: "احجز هذا العرض", ask: "اسأل على واتساب", full: "مكتمل", left: (n: number) => `بقي ${n} أماكن فقط`, formTitle: "احجز مكانك الآن", formSub: "أقل من دقيقة — مستشارنا يتصل بيك", included: "يشمل", call: "اتصل", highlights: "أبرز المميزات", includedTitle: "الخدمات المشمولة", programme: "البرنامج", gallery: "صور", faq: "أسئلة شائعة", dates: "الرحلات والأسعار", promo: "عرض خاص", testimonials: "آراء عملائنا", servicesTitle: "ما يشمله البرنامج", conditionsTitle: "المزايا والشروط", whatsappCta: "راسلنا على واتساب", preview: "معاينة: الأزرار والنموذج معطّلة." },
 }
 
@@ -43,7 +49,7 @@ export function LandingView({ category, offers, preview = false, design = null }
   const showBefore = design ? design.price.showBefore : true
   const showFrom = design ? design.price.prefix : true
   const [offer, setOffer] = useState("")
-  const label = (o: PublicOffer) => (o.departure_date ? `${o.name} — ${lang === "ar" ? arDate(o.departure_date).full : frDate(o.departure_date)}` : o.name)
+  const label = (o: PublicOffer) => (o.departure_date ? `${o.name} — ${lang === "ar" ? arDate(o.departure_date).full : lang === "en" ? enDate(o.departure_date) : frDate(o.departure_date)}` : o.name)
   const left = (o: PublicOffer) => (o.seats_total === null ? null : Math.max(0, o.seats_total - o.seats_sold))
   const from = offers.length ? Math.min(...offers.map((o) => Number(o.price))) : null
   const info = derive(offers)
@@ -93,7 +99,7 @@ export function LandingView({ category, offers, preview = false, design = null }
                       </div>
                       <div className="text-sm text-gray-600 space-y-0.5 mb-3">
                         {o.destination && <div>📍 {o.destination}</div>}
-                        {o.departure_date && <div>🗓️ {lang === "ar" ? arDate(o.departure_date).full : frDate(o.departure_date)}</div>}
+                        {o.departure_date && <div>🗓️ {lang === "ar" ? arDate(o.departure_date).full : lang === "en" ? enDate(o.departure_date) : frDate(o.departure_date)}</div>}
                         {o.nights !== null && <div>🛏️ {o.nights} {t.nights}{o.nights_detail ? ` — ${o.nights_detail}` : ""}</div>}
                       </div>
                       {o.features.length > 0 && (

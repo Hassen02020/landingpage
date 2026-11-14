@@ -21,7 +21,7 @@ const T = {
 }
 
 export function CategoryView({ category, offers }: { category: Category; offers: PublicOffer[] }) {
-  const lang = category.lang
+  const lang: "fr" | "ar" = category.lang === "ar" ? "ar" : "fr" // « en » n'existe que pour les pages /p ; ancien rendu /c : français
   const t = T[lang]
   const dir = lang === "ar" ? "rtl" : "ltr"
   const [offer, setOffer] = useState("")

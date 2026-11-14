@@ -27,7 +27,7 @@ export default async function ThemeChoice() {
             <div className="p-4">
               <h2 className="font-black group-hover:text-violet-700">{t.label}</h2>
               <p className="text-sm text-gray-600 mt-1">{t.tagline}</p>
-              <p className="text-xs text-gray-500 mt-2">Langue : {t.lang === "ar" ? "arabe" : "français"} · à fournir : {t.offerRequired.length ? "prix" + t.offerRequired.map((f) => ({ departure_date: ", date", nights: ", nuits", destination: ", destination", description: ", programme", price_before: ", prix barré" } as Record<string, string>)[f] ?? "").join("") : "nom et prix"}</p>
+              <p className="text-xs text-gray-500 mt-2">Langue : {t.lang === "ar" ? "arabe" : t.lang === "en" ? "anglais" : "français"} · à fournir : {t.offerRequired.length ? "prix" + t.offerRequired.map((f) => ({ departure_date: ", date", nights: ", nuits", destination: ", destination", description: ", programme", price_before: ", prix barré" } as Record<string, string>)[f] ?? "").join("") : "nom et prix"}</p>
             </div>
           </Link>
         ))}

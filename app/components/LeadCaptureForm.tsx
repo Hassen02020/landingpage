@@ -7,7 +7,7 @@ import { hasTrackingConsent } from "@/lib/consent"
 import { PRODUCTS, TURNSTILE_SITE_KEY, type Product } from "@/lib/config"
 import { buildWhatsAppUrl, generateEventId, trackEvent } from "@/lib/tracking"
 
-type Lang = "fr" | "ar"
+type Lang = "fr" | "ar" | "en"
 
 const T = {
   fr: {
@@ -37,6 +37,34 @@ const T = {
     nameError: "Merci d'indiquer votre nom.",
     consentError: "Merci de cocher la case d'accord.",
     genericError: "Une erreur est survenue. Vous pouvez nous écrire directement sur WhatsApp.",
+  },
+  en: {
+    name: "Full name",
+    phone: "Phone (e.g. 98 140 514)",
+    product: "I am interested in",
+    offer: "Offer",
+    anyOffer: "I don't know yet",
+    destination: "Destination",
+    date: "Preferred departure date",
+    period: "Preferred period",
+    adults: "Adults",
+    children: "Children",
+    budget: "Approximate budget",
+    message: "Details (optional)",
+    promo: "Promo code (optional)",
+    email: "E-mail (optional)",
+    more: "Promo code or note (optional)",
+    hint: "We reply on WhatsApp.",
+    consent: "I agree that Easy2Book may contact me by phone / WhatsApp about my request. (required)",
+    marketing: "I agree to receive Easy2Book offers and promotions by WhatsApp / phone (optional).",
+    submit: "🟢 Send and continue on WhatsApp",
+    sending: "Sending…",
+    success: "✓ Request recorded! Your reference:",
+    openWa: "Open WhatsApp",
+    phoneError: "Invalid number: 8 digits (e.g. 98 140 514) or international format (+33…).",
+    nameError: "Please enter your name.",
+    consentError: "Please tick the agreement box.",
+    genericError: "Something went wrong. You can write to us directly on WhatsApp.",
   },
   ar: {
     name: "الاسم واللقب",

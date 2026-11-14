@@ -119,3 +119,17 @@ describe("rendu du clone Ramadan (famille omra avec services, conditions, témoi
     expect(h).not.toContain('name="email"')
   })
 })
+
+describe("langue anglaise (pages /p)", () => {
+  const en = () => renderToStaticMarkup(createElement(CategoryView, { category: category({ lang: "en", name: "Ramadan Umrah", product: "omra" }), offers: [offer({ product: "omra", name: "Double room", departure_date: "2027-02-08", price: 6900 })] }))
+  it("textes, dates et sens de lecture en anglais ; FAQ générique en anglais ; aucun texte français ni arabe de l'interface", () => {
+    const h = en()
+    expect(h).toContain('dir="ltr"'); expect(h).toContain("Book this offer"); expect(h).toContain("February 8, 2027")
+    expect(h).toContain("How do I book?"); expect(h).toContain("Frequently asked questions")
+    expect(h).not.toContain("Réserver cette offre"); expect(h).not.toContain("احجز هذا العرض"); expect(h).not.toContain("Questions fréquentes")
+  })
+  it("le formulaire du CRM est en anglais (champs, consentements)", () => {
+    const h = en()
+    expect(h).toContain("Full name"); expect(h).toContain("I agree that Easy2Book may contact me"); expect(h).not.toContain("Nom complet")
+  })
+})

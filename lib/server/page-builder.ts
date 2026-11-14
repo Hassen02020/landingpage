@@ -78,7 +78,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
   // le produit et la langue viennent du modèle à la création ; ensuite ceux de la page (changer de produit changerait la famille visuelle publique)
   const catFields: Record<string, string> = {
     name: input.category.name ?? "", slug: (input.category.slug || "").trim() || slugify(input.category.name ?? "") || (!existing ? theme.preset?.slug ?? theme.id : ""),
-    product: existing?.product ?? theme.product, lang: input.category.lang === "ar" || input.category.lang === "fr" ? input.category.lang : existing?.lang ?? theme.lang,
+    product: existing?.product ?? theme.product, lang: input.category.lang === "ar" || input.category.lang === "fr" || input.category.lang === "en" ? input.category.lang : existing?.lang ?? theme.lang,
     headline: input.category.headline ?? "", description: input.category.description ?? "",
     banner_desktop: input.category.banner_desktop ?? existing?.banner_desktop ?? "", banner_mobile: input.category.banner_mobile ?? existing?.banner_mobile ?? "",
     seo_title: input.category.seo_title ?? existing?.seo_title ?? "", seo_description: input.category.seo_description ?? existing?.seo_description ?? "",

@@ -10,8 +10,11 @@ const read = (f: string) => readFileSync(ROOT + f, "utf8")
 const MAIN_CATEGORYVIEW_SHA256 = "9b963bc067ee04f4f95fb669e6e887b41980b1ec7b004c7d1f040128b5834a34"
 
 describe("pages /c/… : rendu historique inchangé", () => {
-  it("app/c/[slug]/CategoryView.tsx est strictement identique à celui de main (60eb82e)", () => {
-    expect(createHash("sha256").update(read("app/c/[slug]/CategoryView.tsx")).digest("hex")).toBe(MAIN_CATEGORYVIEW_SHA256)
+  it("app/c/[slug]/CategoryView.tsx est identique à celui de main (60eb82e), à UNE ligne de typage près (langue « en » : l'ancien rendu /c retombe sur le français ; fr et ar inchangés)", () => {
+    const TYPING = '  const lang: "fr" | "ar" = category.lang === "ar" ? "ar" : "fr" // « en » n\'existe que pour les pages /p ; ancien rendu /c : français\n'
+    const src = read("app/c/[slug]/CategoryView.tsx")
+    expect(src.split(TYPING).length - 1).toBe(1)
+    expect(createHash("sha256").update(src.replace(TYPING, "  const lang = category.lang\n")).digest("hex")).toBe(MAIN_CATEGORYVIEW_SHA256)
   })
   it("la page /c/<adresse> affiche toujours CategoryView (jamais LandingView) ; LandingView n'est utilisé que par /p et par l'aperçu du Créateur", () => {
     const c = read("app/c/[slug]/page.tsx")

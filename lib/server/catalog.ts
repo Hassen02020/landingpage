@@ -9,7 +9,7 @@ export interface Category {
   slug: string
   name: string
   product: Product
-  lang: "fr" | "ar"
+  lang: "fr" | "ar" | "en"
   headline: string | null
   description: string | null
   banner_desktop: string | null
@@ -188,7 +188,7 @@ export function validateCategory(f: Record<string, string>): { row?: Record<stri
   if (!SLUG.test(slug) || slug.length > 60) e.slug = "Adresse : lettres minuscules, chiffres et tirets (ex. omra-2027)."
   const product = PRODUCTS.includes(f.product) ? f.product : null
   if (!product) e.product = "Produit requis."
-  const lang = f.lang === "ar" ? "ar" : "fr"
+  const lang = f.lang === "ar" ? "ar" : f.lang === "en" ? "en" : "fr"
   for (const k of ["banner_desktop", "banner_mobile"]) {
     const v = (f[k] || "").trim()
     if (v && !safeUrl(v)) e[k] = "Lien https:// ou chemin /… attendu."
