@@ -7,6 +7,7 @@ import { archivePage, builderAccess, duplicatePage, publishPage, restorePage, sa
 import { uploadImage, getCategory } from "@/lib/server/catalog"
 import { saveDesign } from "@/lib/server/page-design"
 import { recordVersion, restoreVersion } from "@/lib/server/page-versions"
+import { clearSchedule, runDueSchedules, setSchedule } from "@/lib/server/page-schedule"
 import type { DesignErrors } from "@/lib/page-builder/design"
 
 export interface CreatorState { ok?: boolean; message?: string; errors?: Record<string, string> }
@@ -151,4 +152,37 @@ export async function restoreVersionAction(fd: FormData): Promise<void> {
   if (!res.ok) return back(res.message, false)
   refreshPublicPages()
   return back(`Version restaurée (${res.restoredOffers} offre${res.restoredOffers > 1 ? "s" : ""} remise${res.restoredOffers > 1 ? "s" : ""} à l'état de la version${res.skippedOffers ? `, ${res.skippedOffers} ignorée${res.skippedOffers > 1 ? "s" : ""} car supprimée${res.skippedOffers > 1 ? "s" : ""}` : ""}).`, true)
+}
+
+// ---------------------------------------------------------------------------------------------- publication programmée
+const backToPublication = (id: string, msg: string, ok: boolean) => redirect(`/admin/createur/${encodeURIComponent(id)}?etape=publication&${ok ? "okp" : "erreurp"}=${encodeURIComponent(msg)}`)
+
+export async function scheduleAction(fd: FormData): Promise<void> {
+  const id = str(fd, "id")
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return backToPublication(id, access.message, false)
+  const res = await setSchedule(id, { publishAt: str(fd, "publish_at"), unpublishAt: str(fd, "unpublish_at") }, access.staff.userId)
+  refreshPublicPages()
+  return res.ok ? backToPublication(id, "Programmation enregistrée (heure de Tunis).", true) : backToPublication(id, res.message, false)
+}
+
+export async function clearScheduleAction(fd: FormData): Promise<void> {
+  const id = str(fd, "id")
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return backToPublication(id, access.message, false)
+  const res = await clearSchedule(id, access.staff.userId)
+  refreshPublicPages()
+  return res.ok ? backToPublication(id, "Programmation annulée.", true) : backToPublication(id, res.message, false)
+}
+
+/** « Appliquer les programmations échues » : même exécution que la route protégée, à la demande d'un administrateur connecté. */
+export async function runSchedulesAction(): Promise<void> {
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return back(access.message, false)
+  const r = await runDueSchedules()
+  refreshPublicPages()
+  if (!r.available) return back("La publication programmée nécessite la migration 0021 (fichier prêt, à appliquer par le propriétaire).", false)
+  const parts = [`${r.published} publiée${r.published > 1 ? "s" : ""}`, `${r.unpublished} masquée${r.unpublished > 1 ? "s" : ""}`]
+  if (r.blocked.length) return back(`${parts.join(", ")} ; ${r.blocked.length} bloquée${r.blocked.length > 1 ? "s" : ""} (page incomplète ou offres expirées : ouvrez-la pour corriger).`, false)
+  return back(`Programmations échues appliquées : ${parts.join(", ")}.`, true)
 }

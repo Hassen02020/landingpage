@@ -16,6 +16,7 @@ import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/ser
 import { isCheckViolation, isMissingColumn, loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
 import { catalogueOffers, listMedia } from "@/lib/server/page-builder"
 import { listVersions, recordVersion, restoreVersion, canon } from "@/lib/server/page-versions"
+import { clearSchedule, listSchedules, loadSchedule, parseTunisLocal, runDueSchedules, setSchedule, toTunisLocal } from "@/lib/server/page-schedule"
 import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
 import * as actions from "@/app/admin/createur-actions"
@@ -29,6 +30,7 @@ let calls: { method: string; table: string; url: string; body?: unknown }[]
 let multi = false
 let noDesign = false
 let noVersions = false
+let noSchedule = false
 let seq = 0
 let vseq = 0
 
@@ -53,7 +55,7 @@ function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
 
 beforeEach(() => {
   configureAll(); resetTenantModeCache(); resetPublicOrgCache()
-  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; seq = 0; vseq = 0; calls = []
+  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; noSchedule = false; seq = 0; vseq = 0; calls = []
   T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [], landing_page_versions: [] }
   vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
     const u = new URL(String(url))
@@ -66,6 +68,7 @@ beforeEach(() => {
       return json(multi ? [{ id: E2B }, { id: BOB }] : [{ id: E2B }])
     }
     if (noDesign && ((method === "GET" && /select=design/.test(u.search)) || (method === "PATCH" && String(init.body ?? "").includes('"design"')))) return json({ code: "42703", message: "column landing_categories.design does not exist" }, 400)
+    if (noSchedule && table === "landing_categories" && ((method === "GET" && /publish_at/.test(u.search)) || (method === "PATCH" && /publish_at/.test(String(init.body ?? ""))))) return json({ code: "42703", message: "column landing_categories.publish_at does not exist" }, 400)
     if (noVersions && table === "landing_page_versions") return json({ code: "42P01", message: "relation does not exist" }, 404)
     calls.push({ method, table, url: decodeURIComponent(u.search), body: init.body ? JSON.parse(String(init.body)) : undefined })
     const org = u.searchParams.get("organization_id")?.replace("eq.", "")
@@ -545,4 +548,107 @@ describe("historique des versions (migration 0020 locale)", () => {
     expect(await redirected(as(E2B, () => actions.restoreVersionAction(fd("1"))))).toMatch(/REDIRECT:.*ok=/)
   })
   it("canon : comparaison indépendante de l'ordre des clés", () => { expect(canon({ b: 1, a: { d: 1, c: 2 } })).toBe(canon({ a: { c: 2, d: 1 }, b: 1 })) })
+})
+
+describe("publication programmée (migration 0021 locale)", () => {
+  const NOW = Date.parse("2026-11-14T10:00:00Z")
+  const iso = (minutes: number) => new Date(NOW + minutes * 60_000).toISOString()
+  const tunis = (minutes: number) => toTunisLocal(iso(minutes))
+  it("heure saisie = heure de TUNIS (UTC+1) ; dates impossibles refusées", () => {
+    expect(new Date(parseTunisLocal("2026-12-01T09:00")!).toISOString()).toBe("2026-12-01T08:00:00.000Z")
+    for (const bad of ["", "2026-02-31T10:00", "2026-12-01T25:00", "demain", "2026-12-01", "2026-12-01 09:00", "<script>"]) expect(parseTunisLocal(bad), bad).toBeNull()
+    expect(toTunisLocal("2026-12-01T08:00:00.000Z")).toBe("2026-12-01T09:00")
+  })
+  it("programmation d'une page prête : stockée en UTC ; lecture ; annulation", async () => {
+    const id = await makeComplete()
+    expect(await as(E2B, () => setSchedule(id, { publishAt: tunis(120), unpublishAt: tunis(60 * 48) }, "u1", NOW))).toEqual({ ok: true })
+    expect(await as(E2B, () => loadSchedule(id))).toMatchObject({ available: true, schedule: { publishAt: iso(120), unpublishAt: iso(60 * 48) } })
+    expect(Object.keys((await as(E2B, () => listSchedules())).byId)).toEqual([id])
+    expect((await as(E2B, () => clearSchedule(id, "u1"))).ok).toBe(true)
+    expect((await as(E2B, () => loadSchedule(id))).schedule).toEqual({ publishAt: null, unpublishAt: null })
+  })
+  it("refus : passé, moins d'une minute, au-delà d'un an, masquage avant publication, page incomplète, page déjà publiée (publication), page masquée (masquage seul), archivée", async () => {
+    const id = await makeComplete()
+    const msg = async (i: { publishAt?: string; unpublishAt?: string }) => { const r = await as(E2B, () => setSchedule(id, i, "u1", NOW)); return r.ok ? "OK" : r.message }
+    expect(await msg({ publishAt: tunis(-10) })).toMatch(/futur/)
+    expect(await msg({ publishAt: tunis(0) })).toMatch(/futur/)
+    expect(await msg({ publishAt: tunis(60 * 24 * 400) })).toMatch(/année/)
+    expect(await msg({ publishAt: tunis(120), unpublishAt: tunis(60) })).toMatch(/après la publication/)
+    expect(await msg({})).toMatch(/au moins une date/)
+    expect(await msg({ unpublishAt: tunis(120) })).toMatch(/programmez d'abord sa publication/)
+    T.landing_categories[0].description = "court"
+    expect(await msg({ publishAt: tunis(120) })).toMatch(/incomplète/)
+    T.landing_categories[0].description = "Un voyage organisé complet en Turquie."
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    expect(await msg({ publishAt: tunis(120) })).toMatch(/déjà publiée/)
+    expect(await msg({ unpublishAt: tunis(120) })).toBe("OK")
+    T.landing_categories[0].visible = false; T.landing_categories[0].position = -1000
+    expect(await msg({ publishAt: tunis(120) })).toMatch(/archivée/)
+    expect(T.landing_categories[0].publish_at ?? null).toBeNull()
+  })
+  it("exécution : publication échue appliquée avec les contrôles habituels (version « publication »), programmation effacée ; non échue intacte ; idempotent", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    let r = await as(E2B, () => runDueSchedules(NOW + 60 * 60_000))
+    expect(r).toMatchObject({ published: 0, unpublished: 0, cleared: 0 }); expect(T.landing_categories[0].visible).toBe(false)
+    r = await as(E2B, () => runDueSchedules(NOW + 121 * 60_000))
+    expect(r).toMatchObject({ available: true, published: 1, blocked: [] })
+    expect(T.landing_categories[0]).toMatchObject({ visible: true, publish_at: null })
+    expect(T.landing_page_versions.some((v) => v.reason === "publication")).toBe(true)
+    const again = await as(E2B, () => runDueSchedules(NOW + 200 * 60_000))
+    expect(again).toMatchObject({ published: 0, unpublished: 0 })
+  })
+  it("exécution : une page DEVENUE incomplète (offres expirées) n'est PAS publiée ; la programmation reste et la page est signalée bloquée", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    T.landing_offers[0].departure_date = "2020-01-01"
+    const r = await as(E2B, () => runDueSchedules(NOW + 200 * 60_000))
+    expect(r.published).toBe(0); expect(r.blocked).toHaveLength(1); expect(r.blocked[0].id).toBe(id)
+    expect(T.landing_categories[0]).toMatchObject({ visible: false, publish_at: iso(120) })
+  })
+  it("exécution : masquage échu appliqué ; fenêtre entièrement passée = rien n'est publié ; page déjà publiée = programmation simplement effacée", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    await as(E2B, () => setSchedule(id, { unpublishAt: tunis(60) }, "u1", NOW))
+    expect((await as(E2B, () => runDueSchedules(NOW + 90 * 60_000))).unpublished).toBe(1)
+    expect(T.landing_categories[0]).toMatchObject({ visible: false, unpublish_at: null })
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(60 * 5), unpublishAt: tunis(60 * 6) }, "u1", NOW + 120 * 60_000))
+    const r = await as(E2B, () => runDueSchedules(NOW + 60 * 24 * 60_000))
+    expect(r).toMatchObject({ published: 0, cleared: 1 }); expect(T.landing_categories[0]).toMatchObject({ visible: false, publish_at: null, unpublish_at: null })
+    T.landing_categories[0].visible = true; T.landing_categories[0].publish_at = iso(-5)
+    expect((await as(E2B, () => runDueSchedules(NOW))).cleared).toBe(1)
+    expect(T.landing_categories[0].visible).toBe(true)
+  })
+  it("sans les colonnes (migration 0021 absente) : lecture « indisponible », programmation refusée avec message clair, exécution sans effet, aucune exception", async () => {
+    const id = await makeComplete(); noSchedule = true
+    expect(await as(E2B, () => listSchedules())).toEqual({ available: false, byId: {} })
+    expect(await as(E2B, () => loadSchedule(id))).toMatchObject({ available: false })
+    const r = await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    expect(r.ok).toBe(false); if (!r.ok) expect(r.message).toMatch(/migration 0021/)
+    expect(await as(E2B, () => runDueSchedules(NOW))).toMatchObject({ available: false, published: 0 })
+    expect(T.landing_categories[0].visible).toBe(false)
+  })
+  it("cloisonnement : une autre entreprise ne voit ni n'applique les programmations de la plateforme", async () => {
+    multi = true; resetTenantModeCache(); resetPublicOrgCache()
+    const id = await makeComplete()
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    expect(Object.keys((await as(BOB, () => listSchedules())).byId)).toEqual([])
+    const r = await as(BOB, () => runDueSchedules(NOW + 500 * 60_000))
+    expect(r).toMatchObject({ published: 0 }); expect(T.landing_categories[0]).toMatchObject({ visible: false, publish_at: iso(120) })
+  })
+  it("droits : programmer, annuler et appliquer refusés pour employé, manager, non connecté et autre entreprise (aucune écriture)", async () => {
+    const id = await makeComplete()
+    const fd = () => { const f = new FormData(); f.set("id", id); f.set("publish_at", tunis(120)); return f }
+    const outcome = async (p: Promise<unknown>) => p.then(() => "OK", (e) => (e instanceof Error ? e.message : "ERR"))
+    for (const r of ["employee", "manager", null] as Role[]) {
+      role = r; calls = []
+      expect(await outcome(as(E2B, () => actions.scheduleAction(fd()))), String(r)).toMatch(/erreurp=/)
+      expect(await outcome(as(E2B, () => actions.clearScheduleAction(fd())))).toMatch(/erreurp=/)
+      expect(await outcome(as(E2B, () => actions.runSchedulesAction()))).toMatch(/erreur=/)
+      expect(writes()).toHaveLength(0)
+    }
+    multi = true; role = "admin"; orgId = BOB; resetTenantModeCache(); resetPublicOrgCache(); calls = []
+    expect(await outcome(as(BOB, () => actions.scheduleAction(fd())))).toMatch(/erreurp=/)
+    expect(writes()).toHaveLength(0)
+  })
 })

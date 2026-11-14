@@ -53,3 +53,12 @@ Application **Vite + React, entièrement côté navigateur** (≈ 11 000 lignes)
 ## Avancement de l'intégration (lots, sans migration)
 - **Lot A — Médiathèque : FAIT.** Page `/admin/createur/medias` (images déjà utilisées par les pages et offres de l'entreprise, avec leurs usages) et sélecteur « Choisir une image déjà utilisée » dans l'éditeur (bannières et photos d'offres). Lecture du catalogue cloisonné uniquement : le bucket de stockage est partagé entre entreprises, il n'est jamais listé (sinon une entreprise verrait les images d'une autre). Limite : une image téléversée mais jamais enregistrée sur une page ou une offre n'apparaît pas.
 - Lots B (blocs), C (versions), D (programmation), E (anglais) : voir les décisions de migration à présenter séparément ; rien n'est créé.
+
+## Lots E, C, D — fichiers de migration LOCAUX (non appliqués) et état
+| Lot | Migration (fichier local) | Effet | Sans la migration |
+|---|---|---|---|
+| E — Anglais | `0019_page_lang_en.sql` | `landing_categories.lang` accepte `en` | l'anglais est proposé mais refusé à l'enregistrement par la base |
+| C — Versions | `0020_page_versions.sql` | table `landing_page_versions` (ajout seul, sans coût ni SKU ni places vendues) | onglet « Historique » : message « indisponible », aucune erreur |
+| D — Programmation | `0021_page_schedule.sql` | colonnes `publish_at` / `unpublish_at` (NULL) | panneau « Programmer » : message « indisponible » |
+
+**Publication programmée — décision restante pour le propriétaire :** la base ne publie rien seule. L'application des programmations échues se fait (1) par le bouton « Appliquer les programmations échues » du tableau de bord, ou (2) par la route `/api/cron/publish-scheduled`, protégée par `CRON_SECRET` (échec fermé : sans secret de 16 caractères minimum, 503 ; sans l'en-tête exact, 401). **Aucune tâche planifiée n'est déclarée dans le dépôt** : l'activer suppose une variable d'environnement et un cron Vercel, donc votre décision.

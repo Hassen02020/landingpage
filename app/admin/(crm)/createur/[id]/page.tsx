@@ -12,6 +12,8 @@ import { PublishPanel } from "./PublishPanel"
 import { AdLinkBlock } from "./AdLinkBlock"
 import { DesignEditor } from "./DesignEditor"
 import { listVersions, REASON_LABELS } from "@/lib/server/page-versions"
+import { loadSchedule, toTunisLocal } from "@/lib/server/page-schedule"
+import { clearScheduleAction, scheduleAction } from "@/app/admin/createur-actions"
 import { restoreVersionAction } from "@/app/admin/createur-actions"
 import { loadDesign } from "@/lib/server/page-design"
 import { parsePeriod } from "@/lib/server/stats"
@@ -22,7 +24,7 @@ export const dynamic = "force-dynamic"
 const defaultTheme = (product: string): Theme => THEMES.find((t) => t.product === product) ?? THEMES[THEMES.length - 1]
 const TONE = { ok: "bg-green-100 text-green-800", warn: "bg-amber-100 text-amber-800", bad: "bg-red-100 text-red-800" } as const
 
-export default async function CreatorEditor({ params, searchParams }: { params: { id: string }; searchParams: { etape?: string; theme?: string; ok?: string; erreur?: string; from?: string; to?: string } }) {
+export default async function CreatorEditor({ params, searchParams }: { params: { id: string }; searchParams: { etape?: string; theme?: string; ok?: string; erreur?: string; okp?: string; erreurp?: string; from?: string; to?: string } }) {
   const access = await builderAccess()
   if (!access.ok) return <p className="bg-white rounded-2xl p-6 text-gray-700">{access.message}</p>
   const isNew = params.id === "nouvelle"
@@ -38,6 +40,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   const period = parsePeriod(searchParams.from, searchParams.to, 30)
   const catalogue = etape === "infos" ? await catalogueOffers(page?.category.id).catch(() => []) : []
   const media = etape === "infos" ? await listMedia().catch(() => []) : []
+  const sched = etape === "publication" && page ? await loadSchedule(page.category.id).catch(() => null) : null
   const versions = etape === "versions" && page ? await listVersions(page.category.id).catch(() => null) : null
   const stats = etape === "stats" && page ? await loadPageStats(page.category.slug, period).catch(() => null) : null
 
@@ -92,6 +95,31 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
       {etape === "publication" && page && (
         <div className="space-y-5">
           <PublishPanel id={params.id} theme={theme.id} visible={page.category.visible} ready={page.readiness.ready} publicUrl={`${SITE_URL}${path}`} />
+          <section className="bg-white rounded-2xl border p-5 space-y-3" aria-label="Programmation" data-testid="schedule-panel">
+            <h2 className="font-black">Programmer la publication</h2>
+            {searchParams.okp && <p role="status" className="rounded-xl p-3 text-sm bg-green-50 text-green-800 border border-green-200" data-testid="schedule-ok">{searchParams.okp}</p>}
+            {searchParams.erreurp && <p role="alert" className="rounded-xl p-3 text-sm bg-red-50 text-red-800 border border-red-200" data-testid="schedule-error">{searchParams.erreurp}</p>}
+            {sched === null ? <p className="text-sm text-amber-800">Programmation indisponible pour le moment.</p> : !sched.available ? (
+              <p className="text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3" data-testid="schedule-unavailable">La publication programmée sera disponible après l&apos;application de la migration 0021 (fichier prêt, à appliquer par le propriétaire).</p>
+            ) : (
+              <>
+                {(sched.schedule.publishAt || sched.schedule.unpublishAt) && (
+                  <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm" data-testid="schedule-current">
+                    {sched.schedule.publishAt && <div>Publication prévue le <strong>{toTunisLocal(sched.schedule.publishAt).replace("T", " à ")}</strong> (heure de Tunis).</div>}
+                    {sched.schedule.unpublishAt && <div>Masquage prévu le <strong>{toTunisLocal(sched.schedule.unpublishAt).replace("T", " à ")}</strong> (heure de Tunis).</div>}
+                    <form action={clearScheduleAction} className="mt-2"><input type="hidden" name="id" value={page.category.id} /><button className="px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white">Annuler la programmation</button></form>
+                  </div>
+                )}
+                <form action={scheduleAction} className="grid gap-3 sm:grid-cols-2">
+                  <input type="hidden" name="id" value={page.category.id} />
+                  {!page.category.visible && <label className="text-sm block"><span className="font-bold">Publier le</span><input type="datetime-local" name="publish_at" defaultValue={toTunisLocal(sched.schedule.publishAt)} className="w-full border rounded-xl px-3 py-2 min-h-[44px] mt-1" aria-label="Publier le" /></label>}
+                  <label className="text-sm block"><span className="font-bold">Masquer le (facultatif)</span><input type="datetime-local" name="unpublish_at" defaultValue={toTunisLocal(sched.schedule.unpublishAt)} className="w-full border rounded-xl px-3 py-2 min-h-[44px] mt-1" aria-label="Masquer le" /></label>
+                  <div className="sm:col-span-2"><button className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="schedule-save">Enregistrer la programmation</button></div>
+                </form>
+                <p className="text-xs text-gray-500">Heure de Tunis. Une page incomplète ne peut pas être programmée, et une programmation échue est appliquée avec les mêmes contrôles que la publication manuelle (le bouton « Appliquer les programmations échues » du tableau de bord ou, si le propriétaire l&apos;active, la tâche planifiée).</p>
+              </>
+            )}
+          </section>
           <AdLinkBlock key={`${path}-${page.category.visible}`} path={path} defaultCampaign={page.category.slug} status={page.status} base={SITE_URL} />
         </div>
       )}
