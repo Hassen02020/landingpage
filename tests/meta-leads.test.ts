@@ -25,12 +25,12 @@ const graphLead = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-interface World { leads: Record<string, unknown>[]; graphCalls: string[]; pages: Record<string, unknown>[] }
+interface World { leads: Record<string, unknown>[]; graphCalls: string[]; pages: Record<string, unknown>[]; events: Record<string, unknown>[] }
 let w: World
 let graph: (leadgenId: string) => Response
 
 function install(pages: Record<string, unknown>[]) {
-  w = { leads: [], graphCalls: [], pages }
+  w = { leads: [], graphCalls: [], pages, events: [] }
   vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
     const u = String(url)
     const dec = decodeURIComponent(u)
@@ -56,6 +56,7 @@ function install(pages: Record<string, unknown>[]) {
         w.leads.push(body)
         return json([{ id: "lead-" + w.leads.length }], 201)
       }
+      if (table === "landing_inbound_events") { w.events.push(body); return json([], 201) }
       return json([], 201)
     }
     if (table === "landing_leads") return json(w.leads.map((l) => ({ ref: l.ref, id: "x" })))
@@ -217,5 +218,53 @@ describe("réception d'un lead (plateforme simulée)", () => {
     graph = () => new Response(JSON.stringify(graphLead({ field_data: [{ name: "full_name", values: ["Client Deux"] }, { name: "phone_number", values: ["22222222"] }] })), { status: 200 })
     await handleMetaLeadsPost(b, sign(b))
     expect(w.leads.map((l) => [l.first_name, l.organization_id])).toEqual([["Client", E2B], ["Client", BOB]])
+  })
+})
+
+describe("journal des événements (migration 0023) — sans donnée personnelle", () => {
+  const issue = () => w.events.map((e) => [e.status, e.reason])
+  it("lead créé puis rejeu : « created » puis « duplicate » ; l'identifiant et la page sont journalisés, jamais le nom, le téléphone ni l'e-mail", async () => {
+    const body = payload("300000000000001")
+    await handleMetaLeadsPost(body, sign(body)); await handleMetaLeadsPost(body, sign(body))
+    expect(issue()).toEqual([["created", "cree"], ["duplicate", "deja_recu"]])
+    expect(w.events[0]).toMatchObject({ platform: "facebook", external_id: "300000000000001", source_ref: PAGE_E2B })
+    const dump = JSON.stringify(w.events)
+    for (const secret of ["Amine", "Gharbi", "22123456", "amine@example.com", "Sfax", "PAGE-TOKEN"]) expect(dump).not.toContain(secret)
+  })
+  it("Instagram : plateforme « instagram » dans le journal", async () => {
+    graph = () => new Response(JSON.stringify(graphLead({ platform: "ig" })), { status: 200 })
+    const body = payload("300000000000002")
+    await handleMetaLeadsPost(body, sign(body))
+    expect(w.events[0]).toMatchObject({ platform: "instagram", status: "created" })
+  })
+  it("page désactivée, accord non confirmé : « ignored » avec la raison, dans l'entreprise de la page", async () => {
+    install([page(PAGE_E2B, E2B, { enabled: false })])
+    const a = payload("300000000000003"); await handleMetaLeadsPost(a, sign(a))
+    install([page(PAGE_E2B, E2B, { consent_confirmed: false })])
+    const b = payload("300000000000004"); await handleMetaLeadsPost(b, sign(b))
+    expect(issue()).toEqual([["ignored", "consentement_non_confirme"]])
+    expect(w.leads).toHaveLength(0)
+  })
+  it("page inconnue : aucune ligne en base (aucune entreprise à laquelle la rattacher)", async () => {
+    const body = payload("300000000000005", "100000000000099")
+    await handleMetaLeadsPost(body, sign(body))
+    expect(w.events).toHaveLength(0)
+  })
+  it("jeton invalide (190) : « dropped » journalisé — la perte n'est plus silencieuse ; erreur temporaire : « retry »", async () => {
+    graph = () => new Response(JSON.stringify({ error: { code: 190 } }), { status: 400 })
+    const a = payload("300000000000006"); await handleMetaLeadsPost(a, sign(a))
+    graph = () => new Response("{}", { status: 503 })
+    const b = payload("300000000000007"); await handleMetaLeadsPost(b, sign(b))
+    expect(issue()).toEqual([["dropped", "graph_190"], ["retry", "graph_erreur"]])
+  })
+  it("une panne du journal n'empêche jamais l'enregistrement du lead", async () => {
+    const real = globalThis.fetch
+    vi.stubGlobal("fetch", vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (decodeURIComponent(String(url)).includes("/rest/v1/landing_inbound_events")) return new Response(JSON.stringify({ code: "42P01" }), { status: 404 })
+      return real(url as string, init)
+    }))
+    const body = payload("300000000000008")
+    expect((await handleMetaLeadsPost(body, sign(body))).status).toBe(200)
+    expect(w.leads).toHaveLength(1)
   })
 })

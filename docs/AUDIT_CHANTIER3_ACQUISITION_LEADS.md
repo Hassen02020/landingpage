@@ -124,3 +124,39 @@ WhatsApp              →  (rien ; rattachement manuel d'un message collé)
 
 ## 6. Interdictions respectées par cet audit
 Aucune migration appliquée, aucune variable modifiée, aucun déploiement, aucune écriture en base, aucun faux lead, aucun appel à Meta, TikTok ou WhatsApp, EasyV4 non touché.
+
+---
+
+## 7. EXÉCUTION (14/11/2026) — ce qui a été fait, ce qui est prouvé, ce qui bloque
+
+Ordre d'exécution du propriétaire (14/11/2026). Les décisions G5, G7 et G8 ont été tranchées par défaut dans le sens le plus prudent (voir ci-dessous) ; elles restent modifiables.
+
+### 7.1 Réalisé
+| Écart | Réponse | Preuve |
+|---|---|---|
+| G1 journal des événements | Migration **0023** `landing_inbound_events` (sans donnée personnelle, ajout seul, cloisonnée) **appliquée en production le 14/11/2026** ; chaque événement Meta et WhatsApp y est journalisé (créé, doublon, ignoré, abandonné, à rejouer + raison) | `tests/migration-0023-0024.test.ts` (10, PGlite), `tests/inbound-journal.test.ts` (7), `tests/meta-leads.test.ts` (6 nouveaux) ; postcheck production : 4/4 OK |
+| G6, G11 santé des canaux | Écran « Leads reçus automatiquement — suivi » dans `/admin/integrations` : dernier événement et compteurs par canal sur 7 jours, alerte rouge si des événements sont abandonnés (jeton expiré, lead supprimé, données invalides) | `InboundJournal.tsx`, test de lecture et de cloisonnement |
+| G5 deuxième source le même jour | Décision : le lead existant est conservé **et la nouvelle source (campagne, formulaire) est ajoutée à son historique** (note système) ; un même événement rejoué n'ajoute rien | `inbound-journal.test.ts` (2) |
+| G2 Facebook / Instagram | Migration **0015** `landing_meta_pages` **appliquée en production le 14/11/2026** (postcheck 4/4 OK, table vide). Le webhook reste inerte (404) tant que `META_APP_SECRET` et `META_LEADS_VERIFY_TOKEN` ne sont pas définis | `tests/meta-leads.test.ts` (22), `migration-0015.test.ts` (7) |
+| G4 WhatsApp entrant | Route `/api/webhooks/whatsapp` (signature `X-Hub-Signature-256`, vérification d'abonnement), numéro → entreprise (migration **0024** `landing_whatsapp_numbers`, **appliquée en production le 14/11/2026**, vide), carte d'administration. Message avec référence `E2B-…` : rattaché au lead existant (aucun doublon) ; sinon lead « WhatsApp » avec l'origine retrouvée par le clic. **Le texte du message n'est jamais conservé** (conservation non décidée). Inerte (404) tant que `WHATSAPP_VERIFY_TOKEN` et un secret d'application ne sont pas définis | `tests/whatsapp-inbound.test.ts` (15, dont sabotages vérifiés), `whatsapp-numbers.test.ts` (3) ; postcheck production : 4/4 OK |
+| G12 cartes d'administration | Carte WhatsApp ajoutée ; carte TikTok : voir 7.3 | |
+
+### 7.2 Décisions prises par défaut (modifiables)
+- **G5** : un lead existant du même téléphone le même jour est conservé, la nouvelle source est tracée dans son historique.
+- **G7** : notification de l'équipe inchangée (organisation plateforme uniquement) ; les autres entreprises consultent le journal et la liste des leads. À revoir si elles veulent un e-mail.
+- **G8** : produit « autre » et recontact par WhatsApp conservés (décision du propriétaire : WhatsApp = canal privilégié). Une correspondance formulaire → produit sera ajoutée quand les formulaires réels existeront.
+- **Affectation** : comme pour les leads du site, un lead externe arrive **non affecté**, statut NOUVEAU ; l'affectation reste celle du CRM (manager / admin). Aucun round-robin n'existe encore.
+
+### 7.3 TikTok — BLOQUÉ, rien d'inventé
+- Le compte annonceur n'est pas vérifié ni actif ; aucune application développeur TikTok n'est disponible ; le schéma de signature des webhooks de leads TikTok n'a pas pu être confirmé dans la documentation officielle depuis cet environnement.
+- **Aucun code de réception TikTok n'a été écrit** (`verifyTimestampedHmac` reste non branché) : coder une signature supposée serait la contourner ou l'inventer.
+- Débloquage : compte annonceur actif, application développeur, un Instant Form de test, la documentation du webhook à jour. Le service central (`ingestExternalLead`) accepte déjà la plateforme `tiktok` ; il ne manque que la route signée.
+
+### 7.4 Ce qui n'est PAS prouvé
+Aucun lead ni message réel de Facebook, Instagram, TikTok ou WhatsApp n'a été reçu : toutes les charges des tests sont **simulées**. Chaque canal n'est « opérationnel » qu'après saisie des variables Vercel, abonnement du webhook dans l'application de la plateforme, activation de la page / du numéro dans l'administration, et réception d'un lead de test réel.
+
+### 7.5 Variables Vercel à définir par le propriétaire (valeurs saisies dans Vercel, jamais dans la conversation)
+| Canal | Variables |
+|---|---|
+| Facebook / Instagram | `META_APP_SECRET`, `META_LEADS_VERIFY_TOKEN` (le jeton de Page se saisit dans l'administration, chiffré) |
+| WhatsApp | `WHATSAPP_VERIFY_TOKEN` et `WHATSAPP_APP_SECRET` (ou `META_APP_SECRET` si la même application Meta) ; le numéro (`phone_number_id`) se saisit dans l'administration |

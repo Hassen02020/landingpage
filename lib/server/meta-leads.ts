@@ -11,6 +11,7 @@ import { DbError, select } from "@/lib/server/db"
 import { SecretBoxError, open } from "@/lib/server/secret-box"
 import { ingestExternalLead, type InboundPlatform } from "@/lib/server/inbound-leads"
 import { metaChallenge, verifyMetaSignature } from "@/lib/server/webhook-auth"
+import { recordInboundEvent, type InboundStatus } from "@/lib/server/inbound-events"
 
 const GRAPH = "https://graph.facebook.com/v21.0"
 const MAX_BODY = 256_000
@@ -101,28 +102,34 @@ async function fetchLead(leadgenId: string, token: string): Promise<{ lead?: Gra
   }
 }
 
-async function processEvent(e: LeadgenEvent): Promise<Outcome> {
+interface Decision { outcome: Outcome; reason: string; orgId?: string; platform?: InboundPlatform }
+
+async function decide(e: LeadgenEvent): Promise<Decision> {
   const { page, unavailable } = await loadPage(e.pageId)
-  if (unavailable) return "retry"
-  if (!page || !page.enabled) {
-    console.warn("[meta-leads] page non rattachée ou désactivée, événement ignoré", { pageId: e.pageId })
-    return "ignored"
+  if (unavailable) return { outcome: "retry", reason: "base_indisponible" }
+  if (!page) {
+    console.warn("[meta-leads] page non rattachée, événement ignoré", { pageId: e.pageId })
+    return { outcome: "ignored", reason: "page_inconnue" } // aucune entreprise connue : rien à journaliser en base
+  }
+  if (!page.enabled) {
+    console.warn("[meta-leads] page désactivée, événement ignoré", { pageId: e.pageId })
+    return { outcome: "ignored", reason: "page_desactivee", orgId: page.organization_id }
   }
   if (!page.consent_confirmed) {
     console.warn("[meta-leads] consentement de recontact non confirmé pour cette page : lead non enregistré", { pageId: e.pageId, leadgenId: e.leadgenId })
-    return "ignored"
+    return { outcome: "ignored", reason: "consentement_non_confirme", orgId: page.organization_id }
   }
   let token: string
   try {
     token = open(page.token_ciphertext)
   } catch (err) {
     console.error("[meta-leads] jeton de Page illisible", err instanceof SecretBoxError ? err.message : "erreur", { pageId: e.pageId })
-    return "dropped"
+    return { outcome: "dropped", reason: "jeton_illisible", orgId: page.organization_id }
   }
   const got = await fetchLead(e.leadgenId, token)
   if (!got.lead) {
     console.error("[meta-leads] lecture du lead impossible", { leadgenId: e.leadgenId, code: got.code, outcome: got.outcome })
-    return got.outcome ?? "dropped"
+    return { outcome: got.outcome ?? "dropped", reason: `graph_${got.code ?? "erreur"}`, orgId: page.organization_id }
   }
   const f = mapFieldData(got.lead.field_data)
   const platform: InboundPlatform = got.lead.platform === "ig" ? "instagram" : "facebook"
@@ -141,10 +148,20 @@ async function processEvent(e: LeadgenEvent): Promise<Outcome> {
     contactConsent: true, // confirmé par le propriétaire pour cette page (consent_confirmed)
     notifyTeam: page.organization_id === DEFAULT_ORG_ID,
   })
-  if (r.ok) return r.duplicate ? "duplicate" : "ok"
-  if (r.reason === "storage_unavailable" || r.reason === "storage_error") return "retry"
+  const base = { orgId: page.organization_id, platform }
+  if (r.ok) return { ...base, outcome: r.duplicate ? "duplicate" : "ok", reason: r.duplicate ? "deja_recu" : "cree" }
+  if (r.reason === "storage_unavailable" || r.reason === "storage_error") return { ...base, outcome: "retry", reason: r.reason }
   console.error("[meta-leads] lead refusé", { leadgenId: e.leadgenId, reason: r.reason, champs: r.errors ? Object.keys(r.errors) : undefined })
-  return "dropped"
+  return { ...base, outcome: "dropped", reason: r.errors ? `refuse_${Object.keys(r.errors).join("_")}`.slice(0, 100) : `refuse_${r.reason}` }
+}
+
+const STATUS_OF: Record<Outcome, InboundStatus> = { ok: "created", duplicate: "duplicate", ignored: "ignored", dropped: "dropped", retry: "retry" }
+
+async function processEvent(e: LeadgenEvent): Promise<Outcome> {
+  const d = await decide(e)
+  // journal (sans donnée personnelle) : seulement si l'entreprise est connue ; ne bloque jamais le traitement
+  if (d.orgId) await recordInboundEvent(d.orgId, { platform: d.platform ?? "facebook", externalId: e.leadgenId, sourceRef: e.pageId, status: STATUS_OF[d.outcome], reason: d.reason })
+  return d.outcome
 }
 
 /** GET : vérification d'abonnement Meta. Route inerte (404) tant que META_LEADS_VERIFY_TOKEN n'est pas défini. */

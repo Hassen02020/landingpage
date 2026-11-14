@@ -5,6 +5,10 @@ import { SITE_URL } from "@/lib/config"
 import { IntegrationCard } from "./IntegrationCard"
 import { MetaLeadsCard } from "./MetaLeadsCard"
 import { listMetaPages } from "@/lib/server/meta-pages"
+import { InboundJournal } from "./InboundJournal"
+import { WhatsAppCard } from "./WhatsAppCard"
+import { listWhatsAppNumbers } from "@/lib/server/whatsapp-numbers"
+import { loadInboundJournal } from "@/lib/server/inbound-events"
 
 export const dynamic = "force-dynamic"
 
@@ -22,6 +26,9 @@ export default async function IntegrationsPage() {
   }
   const views = await integrationViews()
   const metaPages = staff?.organizationId ? await listMetaPages(staff.organizationId) : { pages: [], migrationApplied: true }
+  const journal = staff?.organizationId ? await loadInboundJournal(staff.organizationId) : { events: [], health: [], tableMissing: false }
+  const waNumbers = staff?.organizationId ? await listWhatsAppNumbers(staff.organizationId) : { numbers: [], migrationApplied: true }
+  const waReady = Boolean(process.env.WHATSAPP_VERIFY_TOKEN && (process.env.WHATSAPP_APP_SECRET || process.env.META_APP_SECRET))
   const webhookReady = Boolean(process.env.META_APP_SECRET && process.env.META_LEADS_VERIFY_TOKEN)
   const migrationApplied = views.every((v) => v.migrationApplied)
   const host = new URL(SITE_URL).host
@@ -44,6 +51,8 @@ export default async function IntegrationsPage() {
           <IntegrationCard key={v.provider} view={v} />
         ))}
         <MetaLeadsCard pages={metaPages.pages} webhookUrl={`${SITE_URL}/api/webhooks/meta-leads`} webhookReady={webhookReady} migrationApplied={metaPages.migrationApplied} />
+        <WhatsAppCard numbers={waNumbers.numbers} webhookUrl={`${SITE_URL}/api/webhooks/whatsapp`} webhookReady={waReady} migrationApplied={waNumbers.migrationApplied} />
+        {staff?.organizationId && <InboundJournal events={journal.events} health={journal.health} tableMissing={journal.tableMissing} />}
       </div>
 
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
