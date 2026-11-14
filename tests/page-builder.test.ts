@@ -10,9 +10,9 @@ const cat = (o: Partial<CategoryLike> = {}): CategoryLike => ({ name: "Omra Rama
 const offer = (o: Partial<OfferRow> = {}): OfferRow => ({ id: "o1", name: "Départ 1", price: 5500, departure_date: "2027-02-10", nights: 14, destination: null, features: ["Vol"], description: "Programme", image_url: "https://x.test/o.jpg", seats_total: 40, seats_sold: 3, visible: true, archived_at: null, ...o })
 
 describe("thèmes", () => {
-  it("dix thèmes aux identifiants uniques, chacun avec produit, famille et langue valides", () => {
-    expect(THEMES).toHaveLength(10)
-    expect(new Set(THEMES.map((t) => t.id)).size).toBe(10)
+  it("onze thèmes aux identifiants uniques, chacun avec produit, famille et langue valides", () => {
+    expect(THEMES).toHaveLength(11)
+    expect(new Set(THEMES.map((t) => t.id)).size).toBe(11)
     for (const t of THEMES) {
       expect(["omra", "voyage", "hotel", "autre"]).toContain(t.product)
       expect(familyOf(t.product)).toBe(t.family)

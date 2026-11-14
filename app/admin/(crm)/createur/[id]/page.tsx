@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { builderAccess, catalogueOffers, loadBuilderPage, loadPageStats } from "@/lib/server/page-builder"
+import { builderAccess, catalogueOffers, listMedia, loadBuilderPage, loadPageStats } from "@/lib/server/page-builder"
 import { THEMES, themeById, familyOf, type Theme } from "@/lib/page-builder/themes"
 import { SITE_URL } from "@/lib/config"
 import { creatorPath } from "@/lib/page-builder/paths"
@@ -35,6 +35,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
 
   const period = parsePeriod(searchParams.from, searchParams.to, 30)
   const catalogue = etape === "infos" ? await catalogueOffers(page?.category.id).catch(() => []) : []
+  const media = etape === "infos" ? await listMedia().catch(() => []) : []
   const stats = etape === "stats" && page ? await loadPageStats(page.category.slug, period).catch(() => null) : null
 
   return (
@@ -50,7 +51,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
       <Stepper current={etape} id={params.id} theme={theme.id} saved={!isNew} />
       {searchParams.ok && etape === "infos" && <div role="status" className="rounded-xl p-3 text-sm bg-green-50 text-green-800 border border-green-200">Brouillon créé. Complétez les informations puis passez à l&apos;étape suivante.</div>}
 
-      {etape === "infos" && <PageEditor key={category?.id ?? "nouvelle"} theme={theme} category={category} offers={page?.offers.filter((o) => !o.archived_at) ?? []} slugLock={page?.lock.locked ? { locked: true, message: page.lock.message } : { locked: false }} catalogue={catalogue} />}
+      {etape === "infos" && <PageEditor key={category?.id ?? "nouvelle"} theme={theme} category={category} offers={page?.offers.filter((o) => !o.archived_at) ?? []} slugLock={page?.lock.locked ? { locked: true, message: page.lock.message } : { locked: false }} catalogue={catalogue} media={media} />}
 
       {etape === "design" && page && (
         <DesignStep id={params.id} product={page.category.product} theme={theme.id} />
