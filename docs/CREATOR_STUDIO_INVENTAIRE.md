@@ -49,3 +49,7 @@ Application **Vite + React, entièrement côté navigateur** (≈ 11 000 lignes)
 2. Ordre de priorité des lots 2 à 5 (blocs, médiathèque, versions, programmation).
 3. Autorisation d'ajouter `lucide-react` (icônes) ; `motion` et Gemini sont écartés par défaut.
 4. Migrations : stockage des blocs et des versions (plus grand que 16 000 octets), anglais, publication programmée — à présenter séparément.
+
+## Avancement de l'intégration (lots, sans migration)
+- **Lot A — Médiathèque : FAIT.** Page `/admin/createur/medias` (images déjà utilisées par les pages et offres de l'entreprise, avec leurs usages) et sélecteur « Choisir une image déjà utilisée » dans l'éditeur (bannières et photos d'offres). Lecture du catalogue cloisonné uniquement : le bucket de stockage est partagé entre entreprises, il n'est jamais listé (sinon une entreprise verrait les images d'une autre). Limite : une image téléversée mais jamais enregistrée sur une page ou une offre n'apparaît pas.
+- Lots B (blocs), C (versions), D (programmation), E (anglais) : voir les décisions de migration à présenter séparément ; rien n'est créé.

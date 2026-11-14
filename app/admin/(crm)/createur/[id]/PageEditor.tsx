@@ -7,7 +7,7 @@ import { Field, inputCls } from "../../catalogue/Field"
 import { OFFER_FIELD_LABELS, type OfferField, type Theme } from "@/lib/page-builder/themes"
 import { slugify } from "@/lib/catalog-slug"
 import type { Category, Offer } from "@/lib/server/catalog"
-import type { CatalogueOffer } from "@/lib/server/page-builder"
+import type { CatalogueOffer, MediaEntry } from "@/lib/server/page-builder"
 
 type Row = { key: number; id?: string; removed: boolean; v: Record<string, string>; features: string; image: string }
 const v = (x: unknown) => (x === null || x === undefined ? "" : String(x))
@@ -22,6 +22,26 @@ const presetRow = (key: number, o: NonNullable<Theme["preset"]>["offers"][number
 })
 const emptyRow = (key: number, theme: Theme): Row => ({ key, removed: false, image: "", features: "", v: { name: "", destination: theme.id === "turquie" ? "Turquie" : "", departure_date: "", nights: "", nights_detail: "", price: "", price_before: "", seats_total: "", tag: "", description: "" } })
 
+/** Choix d'une image DÉJÀ utilisée (médiathèque) : évite de renvoyer le même fichier. Le choix remplace l'image actuelle à l'enregistrement. */
+function MediaPicker({ media, onPick, label }: { media: MediaEntry[]; onPick: (url: string) => void; label: string }) {
+  if (media.length === 0) return null
+  return (
+    <details className="text-sm" data-testid="media-picker">
+      <summary className="cursor-pointer font-bold text-violet-800">{label}</summary>
+      <ul className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-auto">
+        {media.map((m) => (
+          <li key={m.url}>
+            <button type="button" onClick={() => onPick(m.url)} title={m.uses.join(" · ")} className="block w-full border rounded-lg overflow-hidden hover:ring-2 hover:ring-violet-500 min-h-[44px]" data-testid="media-choice">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={m.url} alt={m.uses[0] ?? ""} className="w-full h-16 object-cover" loading="lazy" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+
 function SaveButtons({ canContinue }: { canContinue: boolean }) {
   const { pending } = useFormStatus()
   return (
@@ -32,7 +52,7 @@ function SaveButtons({ canContinue }: { canContinue: boolean }) {
   )
 }
 
-export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }: { theme: Theme; category: Category | null; offers: Offer[]; slugLock: { locked: boolean; message?: string }; catalogue?: CatalogueOffer[] }) {
+export function PageEditor({ theme, category, offers, slugLock, catalogue = [], media = [] }: { theme: Theme; category: Category | null; offers: Offer[]; slugLock: { locked: boolean; message?: string }; catalogue?: CatalogueOffer[]; media?: MediaEntry[] }) {
   const [state, action] = useFormState(saveDraftAction, undefined)
   const [tab, setTab] = useState<"infos" | "perso">("infos")
   const [name, setName] = useState(category?.name ?? theme.preset?.name ?? "")
@@ -44,6 +64,7 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }
   const lbl = (f: OfferField) => `${OFFER_FIELD_LABELS[f]}${req(f) ? " *" : ""}`
   const setField = (key: number, k: string, val: string) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, v: { ...r.v, [k]: val } } : r)))
   const [pick, setPick] = useState("")
+  const [banners, setBanners] = useState<Record<"banner_desktop" | "banner_mobile", string>>({ banner_desktop: v(category?.banner_desktop), banner_mobile: v(category?.banner_mobile) })
   const fromCatalogue = (o: CatalogueOffer, key: number): Row => ({
     key, removed: false, image: v(o.image_url), features: (o.features ?? []).join("\n"),
     v: { name: v(o.name), destination: v(o.destination), departure_date: v(o.departure_date), nights: v(o.nights), nights_detail: v(o.nights_detail), price: v(o.price), price_before: v(o.price_before), seats_total: v(o.seats_total), tag: v(o.tag), description: v(o.description) },
@@ -98,6 +119,7 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }
                       {r.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={r.image} alt="" className="h-14 w-20 object-cover rounded-lg border" />}
                       <input type="file" name={n("image_file")} accept="image/jpeg,image/png,image/webp" className="text-sm" />
                     </div>
+                    <MediaPicker media={media} label="Choisir une image déjà utilisée" onPick={(url) => setRows((rs) => rs.map((x) => (x.key === r.key ? { ...x, image: url } : x)))} />
                   </Field>
                 )}
                 <div className="md:col-span-3 flex justify-end">
@@ -139,10 +161,11 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }
           {(["banner_desktop", "banner_mobile"] as const).map((k) => (
             <Field key={k} label={k === "banner_desktop" ? "Ordinateur (1600 × 500)" : "Mobile (800 × 600)"} error={e(k)} help="JPG, PNG ou WebP, 4 Mo maximum.">
               <div className="flex items-center gap-3">
-                <input type="hidden" name={k} defaultValue={v(category?.[k])} />
-                {category?.[k] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={category[k]!} alt="" className="h-14 w-24 object-cover rounded-lg border" />}
+                <input type="hidden" name={k} value={banners[k]} />
+                {banners[k] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={banners[k]} alt="" className="h-14 w-24 object-cover rounded-lg border" data-testid={`${k}-preview`} />}
                 <input type="file" name={`${k}_file`} accept="image/jpeg,image/png,image/webp" className="text-sm" />
               </div>
+              <MediaPicker media={media} label="Choisir une image déjà utilisée" onPick={(url) => setBanners((b) => ({ ...b, [k]: url }))} />
             </Field>
           ))}
         </section>

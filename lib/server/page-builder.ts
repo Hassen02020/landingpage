@@ -217,3 +217,27 @@ export async function catalogueOffers(excludeCategoryId?: string): Promise<Catal
       image_url: o.image_url, page: o.category_id ? name.get(o.category_id) ?? "Sans page" : "Sans page", expired: isOfferExpired(o.departure_date, today),
     }))
 }
+
+// ------------------------------------------------------------------------------------------------ médiathèque (lecture seule, sans migration)
+export interface MediaEntry { url: string; uses: string[] }
+
+/**
+ * Images DÉJÀ UTILISÉES par les pages et offres de l'entreprise (bannières et photos d'offres, offres archivées comprises).
+ * Le bucket de stockage est partagé entre les entreprises et ses chemins ne portent pas l'entreprise : on ne LISTE donc jamais le stockage
+ * (une entreprise verrait les images d'une autre) ; seules les références lues dans la base cloisonnée sont proposées.
+ */
+export async function listMedia(): Promise<MediaEntry[]> {
+  const [cats, live, archived] = await Promise.all([listCategories(), listOffers(), listOffers({ archived: true })])
+  const byUrl: Record<string, string[]> = {}
+  const order: string[] = []
+  const add = (url: string | null | undefined, use: string) => {
+    const u = (url ?? "").trim()
+    if (!u || !(u.startsWith("https://") || u.startsWith("http://") || u.startsWith("/"))) return
+    if (!byUrl[u]) { byUrl[u] = []; order.push(u) }
+    if (byUrl[u].indexOf(use) < 0) byUrl[u].push(use)
+  }
+  for (const c of cats) { add(c.banner_desktop, `Bannière ordinateur — ${c.name}`); add(c.banner_mobile, `Bannière mobile — ${c.name}`) }
+  for (const o of live) add(o.image_url, `Offre — ${o.name}`)
+  for (const o of archived) add(o.image_url, `Offre archivée — ${o.name}`)
+  return order.map((url) => ({ url, uses: byUrl[url] }))
+}

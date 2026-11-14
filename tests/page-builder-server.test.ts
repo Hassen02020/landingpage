@@ -14,7 +14,7 @@ vi.mock("@/lib/server/auth", () => ({ currentStaff: async () => (role ? { userId
 import { configureAll } from "./helpers"
 import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/server/db"
 import { isCheckViolation, isMissingColumn, loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
-import { catalogueOffers } from "@/lib/server/page-builder"
+import { catalogueOffers, listMedia } from "@/lib/server/page-builder"
 import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
 import * as actions from "@/app/admin/createur-actions"
@@ -428,5 +428,36 @@ describe("modèle « Omra Ramadan complet » : préréglage appliqué à la cré
   it("un modèle sans préréglage (ex. Omra) n'enregistre aucune personnalisation à la création", async () => {
     await as(E2B, () => saveDraft({ themeId: "omra", category: cat({ name: "Omra simple", lang: "ar" }), offers }, "u1"))
     expect(T.landing_categories[0].design).toBeUndefined()
+  })
+})
+
+describe("médiathèque : images déjà utilisées (aucune lecture du stockage partagé)", () => {
+  it("bannières et photos d'offres (archivées comprises), dédoublonnées, avec leurs usages ; URL dangereuses ignorées", async () => {
+    const a = await makeComplete()
+    T.landing_categories[0].banner_desktop = "https://cdn.test/img/a.jpg"; T.landing_categories[0].banner_mobile = "/local/b.jpg"
+    T.landing_offers[0].image_url = "https://cdn.test/img/a.jpg"
+    T.landing_offers.push({ id: "00000000-0000-4000-8000-0000000000e1", category_id: a, name: "Vieille offre", price: 1, archived_at: "2026-01-01", image_url: "https://cdn.test/img/old.jpg", features: [], organization_id: E2B })
+    T.landing_offers.push({ id: "00000000-0000-4000-8000-0000000000e2", category_id: a, name: "Piégée", price: 1, archived_at: null, image_url: "javascript:alert(1)", features: [], organization_id: E2B })
+    const m = await as(E2B, () => listMedia())
+    expect(m.map((x) => x.url)).toEqual(["https://cdn.test/img/a.jpg", "/local/b.jpg", "https://cdn.test/img/old.jpg"])
+    expect(m[0].uses).toEqual(expect.arrayContaining(["Bannière ordinateur — Turquie Été 2027", "Offre — Départ 1"]))
+    expect(m[2].uses).toEqual(["Offre archivée — Vieille offre"])
+    expect(JSON.stringify(m)).not.toContain("javascript:")
+  })
+  it("cloisonnement : les images d'une AUTRE entreprise ne sont jamais proposées", async () => {
+    multi = true
+    await makeComplete()
+    T.landing_categories[0].banner_desktop = "https://cdn.test/img/e2b.jpg"
+    T.landing_categories.push({ id: "00000000-0000-4000-8000-0000000000c9", slug: "bob-page", name: "Bob", product: "voyage", lang: "fr", visible: true, position: 0, organization_id: BOB, banner_desktop: "https://cdn.test/img/BOB-SECRET.jpg", banner_mobile: null })
+    T.landing_offers.push({ id: "00000000-0000-4000-8000-0000000000c8", category_id: "00000000-0000-4000-8000-0000000000c9", name: "Offre Bob", price: 5, archived_at: null, image_url: "https://cdn.test/img/BOB-OFFRE.jpg", features: [], organization_id: BOB })
+    const m = await as(E2B, () => listMedia())
+    expect(JSON.stringify(m)).not.toContain("BOB")
+    expect(m.map((x) => x.url)).toEqual(["https://cdn.test/img/e2b.jpg"])
+  })
+  it("aucune requête vers le stockage : la médiathèque ne lit que le catalogue", async () => {
+    await makeComplete(); calls = []
+    await as(E2B, () => listMedia())
+    expect(calls.every((c) => c.method === "GET" && c.table.startsWith("landing_"))).toBe(true)
+    expect(writes()).toHaveLength(0)
   })
 })
