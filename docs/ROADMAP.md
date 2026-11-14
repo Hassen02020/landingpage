@@ -32,7 +32,7 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | P2 | ~~Page du formulaire non enregistrée~~ → **corrigé** (`form_page`, migration 0006) ; ~~Facebook et Instagram indiscernables dans les stats~~ → colonne « Source » | 3 |
 | P3 | ~~Deux adresses pour l'Omra (`/omra` et `/c/omra-2027`)~~ → redirection avec conservation des paramètres | 3 |
 | P2 | Customer 360, segmentation, marketing, fidélité : absents | 6–8 |
-| P3 | Lint non configuré ; Playwright non déclaré dans `package.json` | 1 |
+| P3 | ~~Lint non configuré ; Playwright non déclaré dans `package.json`~~ → **corrigé** (14/11/2026) : ESLint 8 + `next/core-web-vitals` (erreurs bloquantes en CI, 4 avertissements restants non bloquants), Playwright 1.63 déclaré en devDependency ; 5 apostrophes JSX échappées (rendu identique) | 1 |
 | ~~Opérationnel~~ | ~~Jeton Meta de production invalide (190)~~ → **résolu le 10/11/2026** : pixel + API des conversions Meta actifs et validés (événement de test reçu) ; TikTok actif | — |
 | Opérationnel | PR #1 (PETORA, août 2026) ouverte et sans rapport : à fermer par le propriétaire | — |
 

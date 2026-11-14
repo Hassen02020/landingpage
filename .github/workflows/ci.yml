@@ -21,6 +21,8 @@ jobs:
       - run: npm ci
       - name: Typecheck
         run: npm run typecheck
+      - name: Lint (les erreurs bloquent, les avertissements non)
+        run: npm run lint
       - name: Tests unitaires et migrations (PGlite)
         run: npm test
       - name: Build de production

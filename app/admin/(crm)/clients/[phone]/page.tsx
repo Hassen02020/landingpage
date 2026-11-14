@@ -41,7 +41,7 @@ export default async function ClientPage({ params }: { params: { phone: string }
       </div>
       <section className="bg-white rounded-2xl shadow-sm p-4 text-sm" data-testid="loyalty">
         <h2 className="font-bold mb-2">Fidélité</h2>
-        <p>Chiffre d'affaires cumulé à vie : <b>{tnd(s.revenue)}</b> sur {s.booked} vente(s). Niveau : <b>{s.tier ? TIER_LABELS[s.tier] : "aucun (pas encore de vente)"}</b>. {vipThreshold() === null ? "Seuil VIP non défini : personne n'est classé VIP pour l'instant." : `Seuil VIP : ${tnd(vipThreshold()!)}.`} Aucun avantage automatique (étiquette et segment seulement).</p>
+        <p>Chiffre d&apos;affaires cumulé à vie : <b>{tnd(s.revenue)}</b> sur {s.booked} vente(s). Niveau : <b>{s.tier ? TIER_LABELS[s.tier] : "aucun (pas encore de vente)"}</b>. {vipThreshold() === null ? "Seuil VIP non défini : personne n'est classé VIP pour l'instant." : `Seuil VIP : ${tnd(vipThreshold()!)}.`} Aucun avantage automatique (étiquette et segment seulement).</p>
       </section>
       <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
         <h2 className="font-bold mb-2">Consentements</h2>

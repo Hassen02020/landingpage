@@ -30,7 +30,7 @@ export default async function IntegrationsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black">Intégrations</h1>
-        <p className="text-gray-600 text-sm">Pixels et API de conversions, réglables sans passer par Vercel. Les jetons sont chiffrés avant d'être enregistrés.</p>
+        <p className="text-gray-600 text-sm">Pixels et API de conversions, réglables sans passer par Vercel. Les jetons sont chiffrés avant d&apos;être enregistrés.</p>
       </div>
 
       {!migrationApplied && (

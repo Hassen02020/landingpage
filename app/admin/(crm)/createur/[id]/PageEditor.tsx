@@ -174,7 +174,7 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [], 
           <Field label="Titre (70 caractères max)" error={e("seo_title")}><input name="seo_title" defaultValue={v(category?.seo_title)} maxLength={70} className={inputCls} /></Field>
           <Field label="Description (160 caractères max)" error={e("seo_description")}><input name="seo_description" defaultValue={v(category?.seo_description)} maxLength={160} className={inputCls} /></Field>
         </section>
-        <p className="text-xs text-gray-500 bg-gray-50 border rounded-xl p-3">Couleurs, ordre des sections, FAQ, témoignages et programme se règlent à l'étape « 3. Personnaliser ».</p>
+        <p className="text-xs text-gray-500 bg-gray-50 border rounded-xl p-3">Couleurs, ordre des sections, FAQ, témoignages et programme se règlent à l&apos;étape « 3. Personnaliser ».</p>
       </div>
 
       <SaveButtons canContinue />
