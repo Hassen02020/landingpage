@@ -68,6 +68,25 @@ PR fusionnées : #43 (Créateur lots B–E, `22a7078`), #44 (dette technique, `3
 | Lots B–E du Créateur (production, base) | Vérifiés sur la vraie base dans une transaction annulée (13 contrôles : anglais, design > 16 000 octets, plafond 64 000, programmation, versions en ajout seul, isolation par entreprise). **Parcours dans l'interface (connexion à `/admin/createur`) : NON VÉRIFIÉS**, à faire par le propriétaire |
 | Lead réel reçu d'un canal externe | **AUCUN** : aucun canal n'est certifié ; aucun faux prospect créé en production |
 
+## Activation Meta / WhatsApp — état au 14/11/2026 (soir)
+Application Meta **MarketingEasy** (ID `1103466232321935`, portefeuille « Easy2Book » `733173893138381`, mode **En développement**).
+
+| Étape | État |
+|---|---|
+| Variables Vercel `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` (production, sensibles) | **FAIT** ; jeton de vérification = celui choisi par le propriétaire |
+| Webhook Meta : objet « Whatsapp Business Account », URL `…/api/webhooks/whatsapp` (sans `/` final), champ `messages` **Abonné** | **FAIT** (vérification acceptée par Meta) |
+| Numéro de test Meta `+1 555 194 3732` (Phone Number ID `1393167267222078`, compte de test `1036944079418891`) déclaré et **activé** dans `/admin/integrations` | **FAIT** (rattaché à Easy2Book) |
+| Test « Envoyer au serveur » du tableau de bord Meta (champ `messages`) | **RÉUSSI** : requête signée reçue, signature validée, message ignoré (numéro fictif non rattaché) — preuve dans les journaux Vercel |
+| Messages réels envoyés depuis le téléphone du propriétaire au numéro de test (22:28 et 22:32) | **NON LIVRÉS à notre site** : Meta génère bien les événements (visibles dans « Vérifier les webhooks de test ») mais ne les transmet pas à l'adresse de rappel |
+| Cause retenue | Application **non publiée** : Meta ne livre à l'adresse de rappel que les webhooks de test du tableau de bord (bandeau rouge de Meta) |
+| Passage en « Live » | **BLOQUÉ** : bouton « Publier » grisé, *Vérification de l'entreprise* « Incomplet » ; confirmation d'identité **soumise le 14/11/2026**, réponse de Meta attendue sous ~48 h |
+| Numéro officiel `+216 98 140 514` | **NON relié à l'API** (Meta refuse : numéro associé à la messagerie Meta Business Suite) ; décision à prendre : numéro dédié, cohabitation, ou dissociation (déconseillée : plus de réponses manuelles, le CRM n'envoie rien) |
+| Lead réel reçu par WhatsApp | **AUCUN** |
+
+**Reprise après l'approbation de Meta :** publier l'application, renvoyer un message de test depuis un téléphone (de préférence un autre que le numéro officiel), vérifier le lead (canal WhatsApp, entreprise Easy2Book, statut NOUVEAU, non affecté, texte non conservé), le journal et l'absence de doublon, puis anonymiser le lead de test. Facebook / Instagram : même condition de publication (variables `META_APP_SECRET`, `META_LEADS_VERIFY_TOKEN`, jeton de Page via l'utilisateur système « Easy2Book CRM API », objet Page champ `leadgen`).
+
+**Écarts connus :** expéditeurs WhatsApp à nom d'utilisateur sans numéro visible (pas de lead possible) ; programmation automatique des pages limitée à un passage par jour (offre Vercel Hobby).
+
 ## Journal
 
 - 02/11/2026 — Bloc 0 : état réel vérifié (main `04de912`, 3 branches, PR #1 ouverte hors sujet, 0 workflow CI).
