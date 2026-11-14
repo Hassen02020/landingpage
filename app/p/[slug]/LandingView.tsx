@@ -70,7 +70,46 @@ export function LandingView({ category, offers, preview = false, design = null }
   }
   const title = (txt: string) => <h2 className={`text-2xl font-black mb-4 ${st.sectionTitle}`}>{txt}</h2>
 
+  /** Bloc personnalisé : TEXTE BRUT échappé par React, images en https:// ou « /… » (validées à l'enregistrement ET à la lecture), aucune ressource tierce. */
+  const block = (key: string) => {
+    const b = design?.blocks.find((x) => `block:${x.id}` === key)
+    if (!b) return null
+    const wrap = (children: React.ReactNode, narrow = false) => (
+      <section key={key} id={`bloc-${b.id}`} className={`${narrow ? "max-w-3xl" : "max-w-5xl"} mx-auto px-4 py-6 scroll-mt-4`} aria-label={b.title} data-testid="block" data-block-type={b.type}>{children}</section>
+    )
+    switch (b.type) {
+      case "text":
+        return wrap(<>{title(b.title)}<p className="text-gray-700 whitespace-pre-line leading-relaxed">{b.text}</p></>, true)
+      case "benefits":
+        return wrap(<>{title(b.title)}<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{b.items.map((x, i) => (
+          <div key={x.title + i} className="bg-white rounded-2xl border border-gray-100 p-5"><h3 className="font-black">✓ {x.title}</h3>{x.text && <p className="mt-1 text-sm text-gray-600 whitespace-pre-line">{x.text}</p>}</div>))}</div></>)
+      case "steps":
+        return wrap(<>{title(b.title)}<ol className="space-y-3">{b.items.map((x, i) => (
+          <li key={x.title + i} className="bg-white rounded-2xl border border-gray-100 p-5 flex gap-4"><span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-black text-white ${st.button.split(" ")[0]}`} dir="ltr">{i + 1}</span><div><h3 className="font-black">{x.title}</h3>{x.text && <p className="mt-1 text-sm text-gray-600 whitespace-pre-line">{x.text}</p>}</div></li>))}</ol></>, true)
+      case "gallery":
+        return wrap(<>{title(b.title)}<div className="grid grid-cols-2 md:grid-cols-3 gap-3">{b.images.map((src) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={src} src={src} alt={b.title} className="w-full h-40 sm:h-52 object-cover rounded-2xl" loading="lazy" />))}</div></>)
+      case "image_text":
+        return wrap(<div className="grid gap-5 md:grid-cols-2 items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={b.images[0]} alt={b.title} className="w-full h-56 md:h-72 object-cover rounded-2xl" loading="lazy" />
+          <div>{title(b.title)}<p className="text-gray-700 whitespace-pre-line leading-relaxed">{b.text}</p></div></div>)
+      case "cta":
+        return wrap(<div className={`rounded-3xl p-8 text-center ${st.formBand}`}>
+          <h2 className={`text-2xl font-black ${st.sectionTitle}`}>{b.title}</h2>
+          {b.text && <p className="mt-2 text-gray-700 whitespace-pre-line">{b.text}</p>}
+          {b.cta === "whatsapp"
+            ? <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: `block-${b.id}` })} className="mt-4 inline-block bg-[#25D366] text-white font-black px-6 py-3 rounded-2xl">💬 {b.ctaLabel}</a>
+            : <a href="#reservation" className={`mt-4 inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{b.ctaLabel}</a>}
+        </div>, true)
+      case "notice":
+        return wrap(<div className={`rounded-2xl p-6 ${st.formBand}`}><p className={`text-xs font-black ${st.priceText}`}>{b.title}</p><p className="mt-1 font-bold text-gray-900 whitespace-pre-line">{b.text}</p></div>, true)
+    }
+  }
+
   const section = (key: DesignSection) => {
+    if (key.startsWith("block:")) return block(key)
     switch (key) {
       case "intro":
         return category.description ? <p key={key} className="max-w-3xl mx-auto px-4 py-6 text-gray-700 whitespace-pre-line leading-relaxed">{category.description}</p> : null

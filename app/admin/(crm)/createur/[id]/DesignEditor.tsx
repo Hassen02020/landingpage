@@ -4,7 +4,9 @@ import { useState } from "react"
 import Link from "next/link"
 import { useFormState, useFormStatus } from "react-dom"
 import { saveDesignAction, type DesignState } from "@/app/admin/createur-actions"
-import { PRESETS, SECTION_LABELS, type PageDesign } from "@/lib/page-builder/design"
+import { BLOCK_TYPES, PRESETS, sectionLabel, type BlockType, type DesignBlock, type PageDesign } from "@/lib/page-builder/design"
+import { MediaPicker } from "./PageEditor"
+import type { MediaEntry } from "@/lib/server/page-builder"
 
 const inp = "w-full border border-gray-300 rounded-xl px-3 py-2 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-violet-500"
 const btn = "px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white hover:bg-gray-50"
@@ -15,11 +17,21 @@ function Save() {
 }
 
 /** Éditeur de personnalisation : l'aperçu (étape 5) montre exactement le résultat ; rien n'est publié tant que la page n'est pas publiée. */
-export function DesignEditor({ id, initial, available, theme }: { id: string; initial: PageDesign; available: boolean; theme: string }) {
+export function DesignEditor({ id, initial, available, theme, media = [] }: { id: string; initial: PageDesign; available: boolean; theme: string; media?: MediaEntry[] }) {
   const [d, setD] = useState<PageDesign>(initial)
   const [state, action] = useFormState<DesignState | undefined, FormData>(saveDesignAction, undefined)
   const errs = state?.errors ?? {}
   const move = (i: number, dir: -1 | 1) => setD((x) => { const s = x.sections.slice(); const j = i + dir; if (j < 0 || j >= s.length) return x; [s[i], s[j]] = [s[j], s[i]]; return { ...x, sections: s } })
+  const newId = () => "b" + Math.random().toString(36).slice(2, 8).replace(/[^a-z0-9]/g, "x").padEnd(5, "x")
+  const addBlock = (type: BlockType) => setD((x) => {
+    const block: DesignBlock = { id: newId(), type, title: "", text: "", items: type === "benefits" || type === "steps" ? [{ title: "", text: "" }] : [], images: [], cta: "form", ctaLabel: type === "cta" ? "Réserver" : "" }
+    const sections = x.sections.slice(); const at = sections.findIndex((s) => s.key === "faq"); const i = at >= 0 ? at : Math.max(0, sections.length - 1)
+    sections.splice(i, 0, { key: `block:${block.id}`, visible: true })
+    return { ...x, blocks: [...x.blocks, block], sections }
+  })
+  const updBlock = (bid: string, patch: Partial<DesignBlock>) => setD((x) => ({ ...x, blocks: x.blocks.map((b) => (b.id === bid ? { ...b, ...patch } : b)) }))
+  const removeBlock = (bid: string) => setD((x) => ({ ...x, blocks: x.blocks.filter((b) => b.id !== bid), sections: x.sections.filter((s) => s.key !== `block:${bid}`) }))
+  const [newType, setNewType] = useState<BlockType>("text")
   const upd = <K extends keyof PageDesign>(k: K, v: PageDesign[K]) => setD((x) => ({ ...x, [k]: v }))
 
   return (
@@ -63,14 +75,73 @@ export function DesignEditor({ id, initial, available, theme }: { id: string; in
         <ol className="space-y-2" data-testid="section-order">
           {d.sections.map((s, i) => (
             <li key={s.key} data-section={s.key} className="flex items-center gap-2 border rounded-xl px-3 py-2">
-              <span className="flex-1 font-bold text-sm">{SECTION_LABELS[s.key]}{s.key === "testimonials" && d.testimonials.length === 0 ? <span className="font-normal text-gray-500"> (s&apos;affiche dès qu&apos;un témoignage est saisi)</span> : null}</span>
-              <label className="text-sm flex items-center gap-1"><input type="checkbox" disabled={s.key === "form"} checked={s.visible} onChange={(e) => upd("sections", d.sections.map((x, j) => (j === i ? { ...x, visible: e.target.checked } : x)))} aria-label={`Afficher ${SECTION_LABELS[s.key]}`} /> Afficher</label>
-              <button type="button" className={btn} onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter ${SECTION_LABELS[s.key]}`}>↑</button>
-              <button type="button" className={btn} onClick={() => move(i, 1)} disabled={i === d.sections.length - 1} aria-label={`Descendre ${SECTION_LABELS[s.key]}`}>↓</button>
+              <span className="flex-1 font-bold text-sm">{sectionLabel(d, s.key)}{s.key === "testimonials" && d.testimonials.length === 0 ? <span className="font-normal text-gray-500"> (s&apos;affiche dès qu&apos;un témoignage est saisi)</span> : null}</span>
+              <label className="text-sm flex items-center gap-1"><input type="checkbox" disabled={s.key === "form"} checked={s.visible} onChange={(e) => upd("sections", d.sections.map((x, j) => (j === i ? { ...x, visible: e.target.checked } : x)))} aria-label={`Afficher ${sectionLabel(d, s.key)}`} /> Afficher</label>
+              <button type="button" className={btn} onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter ${sectionLabel(d, s.key)}`}>↑</button>
+              <button type="button" className={btn} onClick={() => move(i, 1)} disabled={i === d.sections.length - 1} aria-label={`Descendre ${sectionLabel(d, s.key)}`}>↓</button>
             </li>
           ))}
         </ol>
         <p className="text-xs text-gray-500">Une section sans contenu ne s&apos;affiche pas. Le formulaire de réservation reste toujours visible.</p>
+      </section>
+
+      <section className="bg-white rounded-2xl border p-5 space-y-4" aria-label="Blocs personnalisés" data-testid="blocks-editor">
+        <h2 className="font-black">Blocs personnalisés</h2>
+        <p className="text-xs text-gray-500">Ajoutez vos propres sections (texte, avantages, étapes, galerie, image et texte, appel à l&apos;action, encadré) puis placez-les avec « Sections de la page ». Texte réel uniquement. {d.blocks.length}/12.</p>
+        {errs.blocks && <p role="alert" className="text-red-700 text-xs">{errs.blocks}</p>}
+        {d.blocks.map((b, i) => (
+          <div key={b.id} className="border rounded-xl p-4 space-y-3" data-block-editor={b.type} data-testid="block-editor">
+            <div className="flex items-center justify-between gap-2"><span className="font-bold text-sm">{BLOCK_TYPES[b.type].label}</span><button type="button" className={btn} onClick={() => removeBlock(b.id)} aria-label={`Supprimer le bloc ${i + 1}`}>Supprimer</button></div>
+            <label className="block text-sm"><span className="font-bold">Titre</span><input value={b.title} maxLength={120} onChange={(e) => updBlock(b.id, { title: e.target.value })} className={`${inp} mt-1`} aria-label={`Bloc ${i + 1} — titre`} /></label>
+            {(b.type === "text" || b.type === "image_text" || b.type === "notice" || b.type === "cta") && (
+              <label className="block text-sm"><span className="font-bold">{b.type === "cta" ? "Message (facultatif)" : "Texte"}</span><textarea value={b.text} rows={3} maxLength={1200} onChange={(e) => updBlock(b.id, { text: e.target.value })} className={`${inp} mt-1`} aria-label={`Bloc ${i + 1} — texte`} /></label>
+            )}
+            {(b.type === "benefits" || b.type === "steps") && (
+              <div className="space-y-2">
+                {b.items.map((it, j) => (
+                  <div key={j} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto] items-start">
+                    <input value={it.title} maxLength={80} onChange={(e) => updBlock(b.id, { items: b.items.map((x, k) => (k === j ? { ...x, title: e.target.value } : x)) })} placeholder="Titre" className={inp} aria-label={`Bloc ${i + 1} — élément ${j + 1} titre`} />
+                    <textarea value={it.text} rows={2} maxLength={400} onChange={(e) => updBlock(b.id, { items: b.items.map((x, k) => (k === j ? { ...x, text: e.target.value } : x)) })} placeholder="Texte (facultatif)" className={inp} aria-label={`Bloc ${i + 1} — élément ${j + 1} texte`} />
+                    <button type="button" className={btn} onClick={() => updBlock(b.id, { items: b.items.filter((_, k) => k !== j) })} aria-label={`Retirer l'élément ${j + 1}`}>✕</button>
+                  </div>
+                ))}
+                {b.items.length < 12 && <button type="button" className={btn} onClick={() => updBlock(b.id, { items: [...b.items, { title: "", text: "" }] })}>+ Ajouter un élément</button>}
+              </div>
+            )}
+            {(b.type === "gallery" || b.type === "image_text") && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">{b.images.map((u) => (
+                  <div key={u} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={u} alt="" className="h-16 w-24 object-cover rounded-lg border" />
+                    <button type="button" onClick={() => updBlock(b.id, { images: b.images.filter((x) => x !== u) })} className="absolute -top-2 -right-2 bg-white border rounded-full w-6 h-6 text-xs" aria-label="Retirer l'image">✕</button>
+                  </div>))}</div>
+                {b.images.length === 0 && <p className="text-xs text-gray-500">Aucune image : choisissez-en une dans la médiathèque.</p>}
+                {(b.type === "gallery" ? b.images.length < 8 : b.images.length < 1) && (
+                  <MediaPicker media={media} label="Choisir une image de la médiathèque" onPick={(url) => updBlock(b.id, { images: b.images.includes(url) ? b.images : [...b.images, url] })} />
+                )}
+              </div>
+            )}
+            {b.type === "cta" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm"><span className="font-bold">Texte du bouton</span><input value={b.ctaLabel} maxLength={40} onChange={(e) => updBlock(b.id, { ctaLabel: e.target.value })} className={`${inp} mt-1`} aria-label={`Bloc ${i + 1} — texte du bouton`} /></label>
+                <label className="block text-sm"><span className="font-bold">Le bouton mène à</span><select value={b.cta} onChange={(e) => updBlock(b.id, { cta: e.target.value as "form" | "whatsapp" })} className={`${inp} mt-1 bg-white`} aria-label={`Bloc ${i + 1} — destination du bouton`}><option value="form">Le formulaire de réservation</option><option value="whatsapp">WhatsApp</option></select></label>
+              </div>
+            )}
+            {errs[`block${i}`] && <p role="alert" className="text-red-700 text-xs">{errs[`block${i}`]}</p>}
+          </div>
+        ))}
+        {d.blocks.length < 12 && (
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-sm"><span className="font-bold block">Type de bloc</span>
+              <select value={newType} onChange={(e) => setNewType(e.target.value as BlockType)} className={`${inp} bg-white min-w-[220px]`} aria-label="Type de bloc à ajouter">
+                {(Object.keys(BLOCK_TYPES) as BlockType[]).map((t) => <option key={t} value={t}>{BLOCK_TYPES[t].label}</option>)}
+              </select>
+            </label>
+            <button type="button" className={btn} onClick={() => addBlock(newType)} data-testid="add-block">+ Ajouter ce bloc</button>
+            <p className="w-full text-xs text-gray-500">{BLOCK_TYPES[newType].hint}</p>
+          </div>
+        )}
       </section>
 
       {d.sections.some((x) => x.key === "services") && (

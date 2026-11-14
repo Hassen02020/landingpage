@@ -31,6 +31,7 @@ let multi = false
 let noDesign = false
 let noVersions = false
 let noSchedule = false
+let check16k = false
 let seq = 0
 let vseq = 0
 
@@ -55,7 +56,7 @@ function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
 
 beforeEach(() => {
   configureAll(); resetTenantModeCache(); resetPublicOrgCache()
-  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; noSchedule = false; seq = 0; vseq = 0; calls = []
+  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; noSchedule = false; check16k = false; seq = 0; vseq = 0; calls = []
   T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [], landing_page_versions: [] }
   vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
     const u = new URL(String(url))
@@ -69,6 +70,7 @@ beforeEach(() => {
     }
     if (noDesign && ((method === "GET" && /select=design/.test(u.search)) || (method === "PATCH" && String(init.body ?? "").includes('"design"')))) return json({ code: "42703", message: "column landing_categories.design does not exist" }, 400)
     if (noSchedule && table === "landing_categories" && ((method === "GET" && /publish_at/.test(u.search)) || (method === "PATCH" && /publish_at/.test(String(init.body ?? ""))))) return json({ code: "42703", message: "column landing_categories.publish_at does not exist" }, 400)
+    if (check16k && method === "PATCH" && table === "landing_categories" && String(init.body ?? "").length > 16000) return json({ code: "23514", message: "violates check constraint landing_categories_design_check" }, 400)
     if (noVersions && table === "landing_page_versions") return json({ code: "42P01", message: "relation does not exist" }, 404)
     calls.push({ method, table, url: decodeURIComponent(u.search), body: init.body ? JSON.parse(String(init.body)) : undefined })
     const org = u.searchParams.get("organization_id")?.replace("eq.", "")
@@ -389,13 +391,24 @@ describe("personnalisation : droits côté serveur (action)", () => {
 })
 
 describe("personnalisation : distinction colonne absente / contrainte violée", () => {
-  it("un design trop volumineux est refusé AVANT toute écriture (aucun PATCH)", async () => {
+  it("un design de plus de 60 000 octets est refusé AVANT toute écriture (aucun PATCH)", async () => {
     const id = await makeComplete(); calls = []
-    const big = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })) }
+    const big = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })), blocks: Array.from({ length: 12 }, (_, i) => ({ id: `blk${String(i).padStart(3, "0")}`, type: "text", title: "B", text: "😀".repeat(600) })) }
     const r = await as(E2B, () => saveDesign(id, "voyage", big, "u1"))
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.errors.size).toMatch(/volumineuse/)
     expect(writes()).toHaveLength(0)
+  })
+  it("un design de 15 000 à 60 000 octets est envoyé à la base ; si la base (sans 0022) le refuse, le message nomme la migration 0022 (jamais une erreur technique)", async () => {
+    const id = await makeComplete()
+    const mid = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })) }
+    expect((await as(E2B, () => saveDesign(id, "voyage", mid, "u1"))).ok).toBe(true) // base de test sans contrainte
+    check16k = true
+    const r = await as(E2B, () => saveDesign(id, "voyage", mid, "u1"))
+    expect(r.ok).toBe(false)
+    if (!r.ok) { expect(r.message).toMatch(/migration 0022/); expect(r.message).not.toMatch(/23514|violates/) }
+    const small = await as(E2B, () => saveDesign(id, "voyage", { faq: [{ q: "q", a: "a" }] }, "u1"))
+    expect(small.ok).toBe(true) // un petit design reste accepté par l'ancienne contrainte
   })
   it("une violation de contrainte (23514) n'est JAMAIS prise pour une migration manquante", async () => {
     const { DbError } = await import("@/lib/server/db")

@@ -201,10 +201,11 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
 
 async function DesignStep({ id, product, theme }: { id: string; product: Parameters<typeof loadDesign>[1]; theme: string }) {
   const loaded = await loadDesign(id, product)
+  const media = await listMedia().catch(() => [])
   return (
     <div className="space-y-3">
       <h2 className="font-black text-lg">3. Personnaliser la page</h2>
-      <DesignEditor key={id} id={id} initial={loaded.design} available={loaded.available} theme={theme} />
+      <DesignEditor key={id} id={id} initial={loaded.design} available={loaded.available} theme={theme} media={media} />
     </div>
   )
 }

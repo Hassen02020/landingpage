@@ -23,7 +23,7 @@ const presetRow = (key: number, o: NonNullable<Theme["preset"]>["offers"][number
 const emptyRow = (key: number, theme: Theme): Row => ({ key, removed: false, image: "", features: "", v: { name: "", destination: theme.id === "turquie" ? "Turquie" : "", departure_date: "", nights: "", nights_detail: "", price: "", price_before: "", seats_total: "", tag: "", description: "" } })
 
 /** Choix d'une image DÉJÀ utilisée (médiathèque) : évite de renvoyer le même fichier. Le choix remplace l'image actuelle à l'enregistrement. */
-function MediaPicker({ media, onPick, label }: { media: MediaEntry[]; onPick: (url: string) => void; label: string }) {
+export function MediaPicker({ media, onPick, label }: { media: MediaEntry[]; onPick: (url: string) => void; label: string }) {
   if (media.length === 0) return null
   return (
     <details className="text-sm" data-testid="media-picker">

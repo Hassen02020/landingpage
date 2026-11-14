@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { THEMES } from "@/lib/page-builder/themes"
-import { MAX_DESIGN_BYTES, designBytes, contrastWithWhite, defaultDesign, resolvePrimary, sanitizeDesign, tint, visibleSections } from "@/lib/page-builder/design"
+import { LEGACY_DESIGN_BYTES, MAX_DESIGN_BYTES, designBytes, sectionLabel, contrastWithWhite, defaultDesign, resolvePrimary, sanitizeDesign, tint, visibleSections } from "@/lib/page-builder/design"
 
 describe("personnalisation : validation stricte", () => {
   it("sans données : design par défaut de la famille (aucune couleur imposée, form visible)", () => {
@@ -59,17 +59,79 @@ describe("personnalisation : validation stricte", () => {
   it("teinte : mélange avec du blanc", () => { expect(tint("#000000", 0.9)).toBe("#e6e6e6") })
 })
 
-describe("taille : jamais plus que ce que la base accepte (CHECK 16 000 octets)", () => {
+describe("taille : deux paliers (0018 : 15 000 octets ; 0022 : 60 000 octets)", () => {
   const big = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), testimonials: Array.from({ length: 6 }, () => ({ name: "é".repeat(60), text: "é".repeat(400), place: "é".repeat(60) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })) }
-  it("un design maximal (≈ 44 Ko) est REFUSÉ par la validation serveur avec un message clair", () => {
+  const blocks = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `blk${String(i).padStart(3, "0")}`, type: "text", title: "Bloc", text: "😀".repeat(600) }))
+  it("un design de ≈ 44 Ko est ACCEPTÉ par le serveur (palier 0022) mais signalé comme dépassant le palier 0018", () => {
     const r = sanitizeDesign(big, "voyage")
-    expect(designBytes(r.design)).toBeGreaterThan(16000)
+    expect(r.errors.size).toBeUndefined()
+    expect(designBytes(r.design)).toBeGreaterThan(LEGACY_DESIGN_BYTES)
+    expect(designBytes(r.design)).toBeLessThan(MAX_DESIGN_BYTES)
+  })
+  it("au-delà de 60 000 octets : REFUSÉ avec un message clair, quel que soit le contenu", () => {
+    const r = sanitizeDesign({ ...big, blocks: blocks(12) }, "voyage")
+    expect(designBytes(r.design)).toBeGreaterThan(MAX_DESIGN_BYTES)
     expect(r.errors.size).toMatch(/trop volumineuse/)
   })
-  it("un design raisonnable passe et reste sous la limite de la base", () => {
+  it("un design raisonnable passe et reste sous le palier 0018", () => {
     const r = sanitizeDesign({ faq: [{ q: "Question ?", a: "Réponse." }], program: Array.from({ length: 7 }, (_, i) => ({ title: `Jour ${i + 1}`, text: "Visite et temps libre. ".repeat(10) })) }, "voyage")
     expect(r.errors).toEqual({})
-    expect(designBytes(r.design)).toBeLessThan(MAX_DESIGN_BYTES)
+    expect(designBytes(r.design)).toBeLessThan(LEGACY_DESIGN_BYTES)
+  })
+})
+
+describe("blocs personnalisés", () => {
+  const B = (o: Record<string, unknown> = {}) => ({ id: "abcd12", type: "text", title: "Notre hôtel", text: "Un hôtel calme à 200 m du Haram.", ...o })
+  it("un bloc valide est conservé ; il est placé avant la FAQ, visible ; sections existantes inchangées", () => {
+    const { design, errors } = sanitizeDesign({ blocks: [B()] }, "omra")
+    expect(errors).toEqual({})
+    expect(design.blocks).toEqual([{ id: "abcd12", type: "text", title: "Notre hôtel", text: "Un hôtel calme à 200 m du Haram.", items: [], images: [], cta: "form", ctaLabel: "" }])
+    const keys = design.sections.map((s) => s.key)
+    expect(keys.indexOf("block:abcd12")).toBe(keys.indexOf("faq") - 1)
+    expect(keys.filter((k) => !k.startsWith("block:"))).toEqual(["intro", "services", "offers", "conditions", "inclusions", "programme", "testimonials", "faq", "form"])
+    expect(visibleSections(design)).toContain("block:abcd12")
+  })
+  it("les 7 types sont validés : éléments, images, texte et bouton requis selon le type ; blocs incomplets signalés ET écartés", () => {
+    const ok = sanitizeDesign({ blocks: [
+      B({ id: "t0001", type: "benefits", text: "", items: [{ title: "Proche du Haram", text: "" }] }),
+      B({ id: "t0002", type: "steps", text: "", items: [{ title: "Jour 1", text: "Arrivée" }, { title: "Jour 2", text: "" }] }),
+      B({ id: "t0003", type: "gallery", text: "", images: ["https://cdn.test/a.jpg", "/local/b.jpg"] }),
+      B({ id: "t0004", type: "image_text", images: ["https://cdn.test/c.jpg", "https://cdn.test/ignoree.jpg"] }),
+      B({ id: "t0005", type: "cta", text: "", cta: "whatsapp", ctaLabel: "" }),
+      B({ id: "t0006", type: "notice" }),
+    ] }, "voyage")
+    expect(ok.errors).toEqual({})
+    expect(ok.design.blocks.map((b) => b.type)).toEqual(["benefits", "steps", "gallery", "image_text", "cta", "notice"])
+    expect(ok.design.blocks[3].images).toEqual(["https://cdn.test/c.jpg"])
+    expect(ok.design.blocks[4]).toMatchObject({ cta: "whatsapp", ctaLabel: "Réserver" })
+    const bad = sanitizeDesign({ blocks: [B({ id: "b0001", type: "benefits", items: [] }), B({ id: "b0002", type: "gallery", images: [] }), B({ id: "b0003", type: "image_text", images: [] }), B({ id: "b0004", text: "" }), B({ id: "b0005", title: "" }), B({ id: "b0006", type: "pirate" }), B({ id: "bad id!" })] }, "voyage")
+    expect(Object.keys(bad.errors).sort()).toEqual(["block0", "block1", "block2", "block3", "block4", "block5", "block6"])
+    expect(bad.design.blocks).toEqual([])
+  })
+  it("INJECTION : images en https:// ou « /… » seulement (javascript:, data:, http://, espaces, guillemets refusés) ; textes en texte brut", () => {
+    for (const u of ["javascript:alert(1)", "data:text/html;base64,AAAA", "http://x.test/a.jpg", "https://x.test/a b.jpg", 'https://x.test/"onerror=1', "//evil.test/a.jpg", "ftp://x/a"]) {
+      const r = sanitizeDesign({ blocks: [B({ type: "gallery", images: [u] })] }, "voyage")
+      expect(r.errors.block0, u).toMatch(/Image/); expect(r.design.blocks).toEqual([])
+    }
+    const r = sanitizeDesign({ blocks: [B({ title: "<script>alert(1)</script>", text: "<img src=x onerror=alert(2)>" })] }, "voyage")
+    expect(r.design.blocks[0].title).toBe("<script>alert(1)</script>") // conservé tel quel : il sera ÉCHAPPÉ au rendu (testé dans category-view)
+  })
+  it("bornes : 12 blocs, 12 éléments, 8 images ; identifiants uniques ; types de sections des autres familles refusés", () => {
+    const many = sanitizeDesign({ blocks: Array.from({ length: 15 }, (_, i) => B({ id: `bl${String(i).padStart(4, "0")}`, title: `B${i}` })) }, "voyage")
+    expect(many.design.blocks).toHaveLength(12); expect(many.errors.blocks).toMatch(/maximum/)
+    expect(sanitizeDesign({ blocks: [B({ type: "benefits", items: Array.from({ length: 20 }, (_, i) => ({ title: `i${i}`, text: "" })) })] }, "voyage").design.blocks[0].items).toHaveLength(12)
+    expect(sanitizeDesign({ blocks: [B({ type: "gallery", images: Array.from({ length: 12 }, (_, i) => `https://x.test/${i}.jpg`) })] }, "voyage").design.blocks[0].images).toHaveLength(8)
+    const dup = sanitizeDesign({ blocks: [B(), B({ title: "Autre" })] }, "voyage")
+    expect(dup.design.blocks).toHaveLength(1); expect(dup.errors.block1).toMatch(/dupliqué/)
+  })
+  it("ordre : un bloc se déplace librement parmi les sections, peut être masqué ; une clé « block:… » sans bloc est ignorée ; « form » reste visible", () => {
+    const { design } = sanitizeDesign({ blocks: [B()], sections: [{ key: "block:abcd12", visible: true }, { key: "block:fantome", visible: true }, { key: "form", visible: false }, { key: "offers", visible: true }] }, "voyage")
+    const keys = design.sections.map((s) => s.key)
+    expect(keys.slice(0, 3)).toEqual(["block:abcd12", "form", "offers"]); expect(keys).not.toContain("block:fantome")
+    expect(design.sections.find((s) => s.key === "form")!.visible).toBe(true)
+    const hidden = sanitizeDesign({ blocks: [B()], sections: [{ key: "block:abcd12", visible: false }] }, "voyage").design
+    expect(visibleSections(hidden)).not.toContain("block:abcd12")
+    expect(sectionLabel(design, "block:abcd12")).toBe("Bloc « Notre hôtel »")
   })
 })
 
