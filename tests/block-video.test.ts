@@ -77,3 +77,15 @@ describe("modèle « Omra Ramadan complet » : vidéo incluse", () => {
     expect(keys.indexOf("block:vid0001")).toBe(keys.indexOf("intro") + 1)
   })
 })
+
+describe("modèle « Omra Ramadan complet » : preuves sociales", () => {
+  it("les témoignages sont MASQUÉS par défaut (non confirmés) et aucune note ni pourcentage de satisfaction n'est affiché", async () => {
+    const { THEMES } = await import("@/lib/page-builder/themes")
+    const preset = THEMES.find((t) => t.id === "ramadan-complet")!.preset!
+    const r = sanitizeDesign(preset.design, "omra")
+    expect(r.design.sections.find((x) => x.key === "testimonials")!.visible).toBe(false)
+    const h = renderToStaticMarkup(createElement(View, { category: category({ product: "omra", lang: "ar" }), offers: [offer({ product: "omra" })], design: r.design }))
+    for (const nom of ["عبد الرزاق", "سميرة العيادي", "نزار", "لطفي"]) expect(h).not.toContain(nom)
+    for (const chiffre of ["4.9", "4,9", "98%", "98 %"]) expect(h).not.toContain(chiffre)
+  })
+})

@@ -60,7 +60,7 @@ const RAMADAN_PRESET: ThemePreset = {
     // vidéo publicitaire : fichier du site (public/), chargé seulement au clic ; sa carte finale annonce la même échéance que la page
     blocks: [{ id: "vid0001", type: "video", title: "الفيديو الإعلاني", text: "", items: [], images: ["/omra-ramadan-complet-poster.jpg"], cta: "form", ctaLabel: "", video: "/omra-ramadan-complet.mp4" }],
     // les cartes « services » remplacent la liste des prestations (même contenu) : masquée par défaut, réaffichable dans « Personnaliser »
-    sections: [{ key: "intro", visible: true }, { key: "block:vid0001", visible: true }, { key: "services", visible: true }, { key: "offers", visible: true }, { key: "conditions", visible: true }, { key: "inclusions", visible: false }, { key: "programme", visible: true }, { key: "testimonials", visible: true }, { key: "faq", visible: true }, { key: "form", visible: true }],
+    sections: [{ key: "intro", visible: true }, { key: "block:vid0001", visible: true }, { key: "services", visible: true }, { key: "offers", visible: true }, { key: "conditions", visible: true }, { key: "inclusions", visible: false }, { key: "programme", visible: true }, { key: "testimonials", visible: false }, { key: "faq", visible: true }, { key: "form", visible: true }],
     services: [
       { title: "طيران تونس – جدة – تونس وتأشيرة العمرة الكاملة", text: "نتكفّل بجميع إجراءات حجز التذاكر الدولية واستخراج تأشيرة العمرة والتنقلات المريحة من المطار إلى الفندق، لتنطلق رحلتك من تونس دون عناء إداري." },
       { title: "تأطير كامل مع مرشدين مرافقين", text: "مرافقة ميدانية ودينية خطوة بخطوة طيلة شهر رمضان، من مناسك العمرة الأولى حتى صلاة التراويح والقيام." },
@@ -72,6 +72,7 @@ const RAMADAN_PRESET: ThemePreset = {
       { title: "المجموعات الكبيرة", text: "مجموعات تفوق 10 أشخاص: الاتصال على 98 140 514 للحصول على الإمكانية." },
       { title: "تنبيه التوفر", text: "عدد غرف محدود جداً · عرض صالح لـ 15 ديسمبر 2026." },
     ],
+    // MASQUÉS par défaut : à réafficher (« Personnaliser » > Témoignages) seulement si ces avis sont réels et que les clients ont donné leur accord
     testimonials: [
       { name: "عبد الرزاق بن سالم وعائلته", place: "تونس العاصمة · حجز عائلي (4 أشخاص)", text: "سافرنا مع الوالدة والأسرة كاملة وكنّا متخوفين من إجراءات التأشيرة والتنقل في مكة. فريق Easy2Book استقبلنا خطوة بخطوة، الإقامة في فندق ميسان الملتزم كانت منظمة وهادئة، وتخفيض العائلات سهّل علينا الحجز من الأول." },
       { name: "سميرة العيادي", place: "صفاقس · مسافرة برفقة والدتها", text: "أكثر حاجة طمنتني هي وجود المرشدين المرافقين معنا في الطواف والسعي وكل الزيارات. حتى في أوقات الزحام في رمضان كان التنظيم محكماً والتواصل متواصلاً على مدار اليوم." },
