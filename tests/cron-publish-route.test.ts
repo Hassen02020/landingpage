@@ -34,3 +34,13 @@ describe("/api/cron/publish-scheduled", () => {
     spy.mockRestore()
   })
 })
+
+describe("cron Vercel (vercel.json)", () => {
+  it("déclare la route protégée avec une fréquence valide (5 champs) ; aucune autre tâche planifiée", async () => {
+    const { readFileSync } = await import("node:fs")
+    const cfg = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8")) as { crons?: { path: string; schedule: string }[] }
+    expect(cfg.crons).toHaveLength(1)
+    expect(cfg.crons![0].path).toBe("/api/cron/publish-scheduled")
+    expect(cfg.crons![0].schedule.trim().split(/\s+/)).toHaveLength(5)
+  })
+})
