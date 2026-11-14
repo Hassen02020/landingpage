@@ -24,7 +24,7 @@ export function DesignEditor({ id, initial, available, theme, media = [] }: { id
   const move = (i: number, dir: -1 | 1) => setD((x) => { const s = x.sections.slice(); const j = i + dir; if (j < 0 || j >= s.length) return x; [s[i], s[j]] = [s[j], s[i]]; return { ...x, sections: s } })
   const newId = () => "b" + Math.random().toString(36).slice(2, 8).replace(/[^a-z0-9]/g, "x").padEnd(5, "x")
   const addBlock = (type: BlockType) => setD((x) => {
-    const block: DesignBlock = { id: newId(), type, title: "", text: "", items: type === "benefits" || type === "steps" ? [{ title: "", text: "" }] : [], images: [], cta: "form", ctaLabel: type === "cta" ? "Réserver" : "" }
+    const block: DesignBlock = { id: newId(), type, title: "", text: "", items: type === "benefits" || type === "steps" ? [{ title: "", text: "" }] : [], images: type === "video" ? ["/omra-ramadan-complet-poster.jpg"] : [], cta: "form", ctaLabel: type === "cta" ? "Réserver" : "", video: type === "video" ? "/omra-ramadan-complet.mp4" : "" }
     const sections = x.sections.slice(); const at = sections.findIndex((s) => s.key === "faq"); const i = at >= 0 ? at : Math.max(0, sections.length - 1)
     sections.splice(i, 0, { key: `block:${block.id}`, visible: true })
     return { ...x, blocks: [...x.blocks, block], sections }
@@ -93,8 +93,8 @@ export function DesignEditor({ id, initial, available, theme, media = [] }: { id
           <div key={b.id} className="border rounded-xl p-4 space-y-3" data-block-editor={b.type} data-testid="block-editor">
             <div className="flex items-center justify-between gap-2"><span className="font-bold text-sm">{BLOCK_TYPES[b.type].label}</span><button type="button" className={btn} onClick={() => removeBlock(b.id)} aria-label={`Supprimer le bloc ${i + 1}`}>Supprimer</button></div>
             <label className="block text-sm"><span className="font-bold">Titre</span><input value={b.title} maxLength={120} onChange={(e) => updBlock(b.id, { title: e.target.value })} className={`${inp} mt-1`} aria-label={`Bloc ${i + 1} — titre`} /></label>
-            {(b.type === "text" || b.type === "image_text" || b.type === "notice" || b.type === "cta") && (
-              <label className="block text-sm"><span className="font-bold">{b.type === "cta" ? "Message (facultatif)" : "Texte"}</span><textarea value={b.text} rows={3} maxLength={1200} onChange={(e) => updBlock(b.id, { text: e.target.value })} className={`${inp} mt-1`} aria-label={`Bloc ${i + 1} — texte`} /></label>
+            {(b.type === "text" || b.type === "image_text" || b.type === "notice" || b.type === "cta" || b.type === "video") && (
+              <label className="block text-sm"><span className="font-bold">{b.type === "cta" ? "Message (facultatif)" : b.type === "video" ? "Légende (facultatif)" : "Texte"}</span><textarea value={b.text} rows={3} maxLength={1200} onChange={(e) => updBlock(b.id, { text: e.target.value })} className={`${inp} mt-1`} aria-label={`Bloc ${i + 1} — texte`} /></label>
             )}
             {(b.type === "benefits" || b.type === "steps") && (
               <div className="space-y-2">
@@ -108,7 +108,10 @@ export function DesignEditor({ id, initial, available, theme, media = [] }: { id
                 {b.items.length < 12 && <button type="button" className={btn} onClick={() => updBlock(b.id, { items: [...b.items, { title: "", text: "" }] })}>+ Ajouter un élément</button>}
               </div>
             )}
-            {(b.type === "gallery" || b.type === "image_text") && (
+            {b.type === "video" && (
+              <label className="block text-sm"><span className="font-bold">Fichier vidéo du site</span><input value={b.video} maxLength={200} dir="ltr" onChange={(e) => updBlock(b.id, { video: e.target.value })} placeholder="/omra-ramadan-2027.mp4" className={`${inp} mt-1`} aria-label={`Bloc ${i + 1} — fichier vidéo`} /><span className="text-xs text-gray-500">Chemin d&apos;un fichier .mp4 ou .webm déjà présent dans le dossier public du site (pas d&apos;adresse externe).</span></label>
+            )}
+            {(b.type === "gallery" || b.type === "image_text" || b.type === "video") && (
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2">{b.images.map((u) => (
                   <div key={u} className="relative">

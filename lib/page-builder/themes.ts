@@ -57,8 +57,10 @@ const RAMADAN_PRESET: ThemePreset = {
     colors: { preset: "famille", custom: "#0b162c" },
     cta: { label: "احجز مكانك الآن", whatsapp: true },
     deadline: "2026-12-15",
+    // vidéo publicitaire : fichier du site (public/), chargé seulement au clic ; sa carte finale annonce la même échéance que la page
+    blocks: [{ id: "vid0001", type: "video", title: "الفيديو الإعلاني", text: "", items: [], images: ["/omra-ramadan-complet-poster.jpg"], cta: "form", ctaLabel: "", video: "/omra-ramadan-complet.mp4" }],
     // les cartes « services » remplacent la liste des prestations (même contenu) : masquée par défaut, réaffichable dans « Personnaliser »
-    sections: [{ key: "intro", visible: true }, { key: "services", visible: true }, { key: "offers", visible: true }, { key: "conditions", visible: true }, { key: "inclusions", visible: false }, { key: "programme", visible: true }, { key: "testimonials", visible: true }, { key: "faq", visible: true }, { key: "form", visible: true }],
+    sections: [{ key: "intro", visible: true }, { key: "block:vid0001", visible: true }, { key: "services", visible: true }, { key: "offers", visible: true }, { key: "conditions", visible: true }, { key: "inclusions", visible: false }, { key: "programme", visible: true }, { key: "testimonials", visible: true }, { key: "faq", visible: true }, { key: "form", visible: true }],
     services: [
       { title: "طيران تونس – جدة – تونس وتأشيرة العمرة الكاملة", text: "نتكفّل بجميع إجراءات حجز التذاكر الدولية واستخراج تأشيرة العمرة والتنقلات المريحة من المطار إلى الفندق، لتنطلق رحلتك من تونس دون عناء إداري." },
       { title: "تأطير كامل مع مرشدين مرافقين", text: "مرافقة ميدانية ودينية خطوة بخطوة طيلة شهر رمضان، من مناسك العمرة الأولى حتى صلاة التراويح والقيام." },

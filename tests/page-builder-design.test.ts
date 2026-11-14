@@ -85,7 +85,7 @@ describe("blocs personnalisés", () => {
   it("un bloc valide est conservé ; il est placé avant la FAQ, visible ; sections existantes inchangées", () => {
     const { design, errors } = sanitizeDesign({ blocks: [B()] }, "omra")
     expect(errors).toEqual({})
-    expect(design.blocks).toEqual([{ id: "abcd12", type: "text", title: "Notre hôtel", text: "Un hôtel calme à 200 m du Haram.", items: [], images: [], cta: "form", ctaLabel: "" }])
+    expect(design.blocks).toEqual([{ id: "abcd12", type: "text", title: "Notre hôtel", text: "Un hôtel calme à 200 m du Haram.", items: [], images: [], cta: "form", ctaLabel: "", video: "" }])
     const keys = design.sections.map((s) => s.key)
     expect(keys.indexOf("block:abcd12")).toBe(keys.indexOf("faq") - 1)
     expect(keys.filter((k) => !k.startsWith("block:"))).toEqual(["intro", "services", "offers", "conditions", "inclusions", "programme", "testimonials", "faq", "form"])
@@ -165,7 +165,7 @@ describe("clone du modèle Ramadan : services, conditions, date limite, prérég
     expect({ services: design.services.length, conditions: design.conditions.length, testimonials: design.testimonials.length, deadline: design.deadline, wa: design.cta.whatsapp }).toEqual({ services: 4, conditions: 3, testimonials: 4, deadline: "2026-12-15", wa: true })
     expect(resolvePrimary(design)).toBe("#0b162c")
     expect(design.sections.find((x) => x.key === "inclusions")!.visible).toBe(false)
-    expect(visibleSections(design)).toEqual(["intro", "services", "offers", "conditions", "programme", "testimonials", "faq", "form"])
+    expect(visibleSections(design)).toEqual(["intro", "block:vid0001", "services", "offers", "conditions", "programme", "testimonials", "faq", "form"])
     expect(theme.preset!.offers.map((o) => [o.name, o.price])).toEqual([["غرفة رباعية أو خماسية", "5900"], ["غرفة ثلاثية", "6400"], ["غرفة ثنائية", "6900"]])
     // aucune date de départ ni nombre de nuits inventés
     expect(JSON.stringify(theme.preset!.offers)).not.toMatch(/departure_date|"nights"/)

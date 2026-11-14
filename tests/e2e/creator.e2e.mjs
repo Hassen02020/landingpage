@@ -636,7 +636,7 @@ check("annulation : la programmation est effacée sans changer l'état de la pag
 // ================================================================== LOT B — blocs personnalisés : ajout, édition, ordre, rendu public, texte échappé
 const bTurq = cats().find((c) => c.slug === "voyage-organise-turquie")
 await p.goto(`${BASE}/admin/createur/${bTurq.id}?etape=design`, { waitUntil: "networkidle" })
-check("blocs : l'éditeur propose les 7 types", (await p.locator('select[aria-label="Type de bloc à ajouter"] option').count()) === 7)
+check("blocs : l'éditeur propose les 8 types", (await p.locator('select[aria-label="Type de bloc à ajouter"] option').count()) === 8)
 await p.selectOption('select[aria-label="Type de bloc à ajouter"]', "text")
 await p.click('[data-testid="add-block"]')
 await p.fill('input[aria-label="Bloc 1 — titre"]', "Notre accompagnement <b>sur place</b>")
