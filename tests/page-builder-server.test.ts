@@ -15,6 +15,7 @@ import { configureAll } from "./helpers"
 import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/server/db"
 import { isCheckViolation, isMissingColumn, loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
 import { catalogueOffers, listMedia } from "@/lib/server/page-builder"
+import { listVersions, recordVersion, restoreVersion, canon } from "@/lib/server/page-versions"
 import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
 import * as actions from "@/app/admin/createur-actions"
@@ -27,7 +28,9 @@ let T: Record<string, Row[]>
 let calls: { method: string; table: string; url: string; body?: unknown }[]
 let multi = false
 let noDesign = false
+let noVersions = false
 let seq = 0
+let vseq = 0
 
 function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
   let out = rows
@@ -50,8 +53,8 @@ function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
 
 beforeEach(() => {
   configureAll(); resetTenantModeCache(); resetPublicOrgCache()
-  role = "admin"; orgId = E2B; multi = false; noDesign = false; seq = 0; calls = []
-  T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [] }
+  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; seq = 0; vseq = 0; calls = []
+  T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [], landing_page_versions: [] }
   vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
     const u = new URL(String(url))
     const method = (init.method ?? "GET").toUpperCase()
@@ -63,12 +66,13 @@ beforeEach(() => {
       return json(multi ? [{ id: E2B }, { id: BOB }] : [{ id: E2B }])
     }
     if (noDesign && ((method === "GET" && /select=design/.test(u.search)) || (method === "PATCH" && String(init.body ?? "").includes('"design"')))) return json({ code: "42703", message: "column landing_categories.design does not exist" }, 400)
+    if (noVersions && table === "landing_page_versions") return json({ code: "42P01", message: "relation does not exist" }, 404)
     calls.push({ method, table, url: decodeURIComponent(u.search), body: init.body ? JSON.parse(String(init.body)) : undefined })
     const org = u.searchParams.get("organization_id")?.replace("eq.", "")
     const scoped = (T[table] ?? []).filter((r) => !org || r.organization_id === org)
     if (method === "POST") {
       const b = JSON.parse(String(init.body))
-      const row = { id: `00000000-0000-4000-8000-${String(++seq).padStart(12, "0")}`, created_at: "2026-11-13T00:00:00Z", updated_at: "2026-11-13T00:00:00Z", seats_sold: 0, features: [], archived_at: null, ...b }
+      const row = { id: table === "landing_page_versions" ? ++vseq : `00000000-0000-4000-8000-${String(++seq).padStart(12, "0")}`, created_at: "2026-11-13T00:00:00Z", updated_at: "2026-11-13T00:00:00Z", seats_sold: 0, features: [], archived_at: null, ...b }
       if (table === "landing_categories" && T[table].some((r) => r.organization_id === row.organization_id && r.slug === row.slug)) return json({ code: "23505" }, 409)
       T[table].push(row)
       return json([row], 201)
@@ -101,7 +105,7 @@ describe("brouillon : réutilise le catalogue (aucune nouvelle table)", () => {
     expect(T.landing_categories[0]).toMatchObject({ name: "Turquie Été 2027", slug: "turquie-ete-2027", product: "voyage", lang: "fr", visible: false, organization_id: E2B })
     expect(T.landing_offers[0]).toMatchObject({ name: "Départ 1", category_id: T.landing_categories[0].id, price: 2350.5, nights: 7, departure_date: "2027-03-10", seats_total: 20, visible: true, product: "voyage" })
     expect(T.landing_offers[0].features).toEqual(["Vol", "Hôtel"])
-    expect(Object.keys(T).sort()).toEqual(["landing_categories", "landing_events", "landing_leads", "landing_offers"])
+    expect(Object.keys(T).sort().filter((k) => k !== "landing_page_versions")).toEqual(["landing_categories", "landing_events", "landing_leads", "landing_offers"])
   })
   it("Omra Ramadan : produit omra, langue arabe par défaut du modèle", async () => {
     await as(E2B, () => saveDraft({ themeId: "ramadan-omra", category: cat({ name: "Omra Ramadan 2027", lang: "" }), offers: [offerIn({ departure_date: "2027-02-10", nights: "14" })] }, "u1"))
@@ -460,4 +464,85 @@ describe("médiathèque : images déjà utilisées (aucune lecture du stockage p
     expect(calls.every((c) => c.method === "GET" && c.table.startsWith("landing_"))).toBe(true)
     expect(writes()).toHaveLength(0)
   })
+})
+
+describe("historique des versions (migration 0020 locale)", () => {
+  const vers = () => T.landing_page_versions
+  it("une version à chaque enregistrement, publication, désactivation ; AUCUNE version si rien n'a changé ; numéros successifs", async () => {
+    const id = await makeComplete()
+    expect(vers().map((v) => [v.version_number, v.reason])).toEqual([[1, "enregistrement"]])
+    await as(E2B, () => recordVersion(id, "enregistrement", "u1")) // rien n'a changé
+    expect(vers()).toHaveLength(1)
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    await as(E2B, () => unpublishPage(id, "u1"))
+    expect(vers().map((v) => [v.version_number, v.reason])).toEqual([[1, "enregistrement"], [2, "publication"], [3, "desactivation"]])
+    expect(vers().every((v) => v.organization_id === E2B)).toBe(true)
+  })
+  it("l'instantané ne contient NI coût, NI SKU, NI places vendues (données d'exploitation)", async () => {
+    const id = await makeComplete()
+    T.landing_offers[0].cost = 1234.5; T.landing_offers[0].sku = "SKU-SECRET"; T.landing_offers[0].seats_sold = 7
+    T.landing_categories[0].headline = "Autre accroche"
+    await as(E2B, () => recordVersion(id, "enregistrement", "u1"))
+    const text = JSON.stringify(vers().map((v) => v.snapshot))
+    expect(text).not.toContain("1234.5"); expect(text).not.toContain("SKU-SECRET"); expect(text).not.toMatch(/seats_sold|"cost"|"sku"/)
+    expect(vers()).toHaveLength(2)
+  })
+  it("la personnalisation fait partie de l'instantané", async () => {
+    const id = await makeComplete()
+    T.landing_categories[0].design = { v: 1, faq: [{ q: "q", a: "a" }] }
+    await as(E2B, () => recordVersion(id, "personnalisation", "u1"))
+    expect((vers()[1].snapshot as { design: { faq: unknown[] } }).design.faq).toHaveLength(1)
+  })
+  it("restauration : contenu et offres existantes remis à l'état choisi ; adresse et état de publication INCHANGÉS ; une version « restauration » est ajoutée", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    const v1 = Number(vers()[0].id)
+    const oldHeadline = T.landing_categories[0].headline
+    await as(E2B, () => saveDraft({ id, themeId: "turquie", category: { ...cat({ headline: "Nouvelle accroche" }), slug: "turquie-ete-2027" }, offers: [{ ...offerIn({ price: "9999" }), id: String(T.landing_offers[0].id) }] }, "u1"))
+    expect(T.landing_categories[0].headline).toBe("Nouvelle accroche"); expect(Number(T.landing_offers[0].price)).toBe(9999)
+    const r = await as(E2B, () => restoreVersion(id, v1, "u1"))
+    expect(r).toMatchObject({ ok: true, restoredOffers: 1, skippedOffers: 0 })
+    expect(T.landing_categories[0]).toMatchObject({ headline: oldHeadline, slug: "turquie-ete-2027", visible: true })
+    expect(Number(T.landing_offers[0].price)).toBe(2350.5)
+    const last = vers()[vers().length - 1]
+    expect(last.reason).toBe("restauration"); expect(String(last.note)).toMatch(/version 1/)
+  })
+  it("restauration : une offre supprimée depuis est ignorée (comptée), jamais recréée ; version ou page inconnue refusée sans écriture", async () => {
+    const id = await makeComplete()
+    const v1 = Number(vers()[0].id)
+    T.landing_offers[0].archived_at = "2026-11-14"; T.landing_offers[0].visible = false
+    const r = await as(E2B, () => restoreVersion(id, v1, "u1"))
+    expect(r).toMatchObject({ ok: true, restoredOffers: 0, skippedOffers: 1 })
+    calls = []
+    expect((await as(E2B, () => restoreVersion(id, 999, "u1"))).ok).toBe(false)
+    expect((await as(E2B, () => restoreVersion("00000000-0000-4000-8000-0000000000aa", v1, "u1"))).ok).toBe(false)
+    expect(writes()).toHaveLength(0)
+  })
+  it("sans la table (migration 0020 absente) : les actions réussissent, liste « indisponible », restauration refusée avec message clair, aucune exception", async () => {
+    noVersions = true
+    const id = await makeComplete()
+    expect((await as(E2B, () => publishPage(id, "turquie", "u1"))).ok).toBe(true)
+    expect(await as(E2B, () => listVersions(id))).toEqual({ available: false, versions: [] })
+    const r = await as(E2B, () => restoreVersion(id, 1, "u1"))
+    expect(r.ok).toBe(false); if (!r.ok) expect(r.message).toMatch(/migration 0020/)
+  })
+  it("cloisonnement : l'historique d'une page de la plateforme est invisible et non restaurable depuis une AUTRE entreprise", async () => {
+    multi = true
+    const id = await makeComplete()
+    const v1 = Number(vers()[0].id)
+    const list = await as(BOB, () => listVersions(id))
+    expect(list.versions).toEqual([])
+    expect((await as(BOB, () => restoreVersion(id, v1, "u1"))).ok).toBe(false)
+  })
+  it("droits : restauration refusée pour employé, manager, non connecté et autre entreprise ; confirmation obligatoire côté serveur", async () => {
+    const id = await makeComplete(); const v1 = String(vers()[0].id)
+    const fd = (confirm: string) => { const f = new FormData(); f.set("id", id); f.set("version", v1); if (confirm) f.set("confirm", confirm); return f }
+    const redirected = async (p: Promise<unknown>) => p.then(() => "OK", (e) => (e instanceof Error ? e.message : "ERR"))
+    for (const r of ["employee", "manager", null] as Role[]) { role = r; calls = []; expect(await redirected(as(E2B, () => actions.restoreVersionAction(fd("1")))), String(r)).toMatch(/REDIRECT:.*erreur=/); expect(writes()).toHaveLength(0) }
+    role = "admin"; calls = []
+    expect(await redirected(as(E2B, () => actions.restoreVersionAction(fd(""))))).toMatch(/erreur=.*Cochez/)
+    expect(writes()).toHaveLength(0)
+    expect(await redirected(as(E2B, () => actions.restoreVersionAction(fd("1"))))).toMatch(/REDIRECT:.*ok=/)
+  })
+  it("canon : comparaison indépendante de l'ordre des clés", () => { expect(canon({ b: 1, a: { d: 1, c: 2 } })).toBe(canon({ a: { c: 2, d: 1 }, b: 1 })) })
 })

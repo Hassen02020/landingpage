@@ -15,7 +15,7 @@ const jwt = () => {
 }
 
 const E2B_ORG = "00000000-0000-4000-8000-0000000e2b01"
-const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs"]
+const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs", "landing_page_versions"]
 
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
@@ -74,6 +74,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     c: "عمرة شوال — 15 مارس 2027",
   }
   const db = {
+    landing_page_versions: [],
     landing_staff: [
       { user_id: ADMIN_ID, email: ADMIN.email, full_name: "Direction", role: "admin", active: true, created_at: day(40) },
       { user_id: AGENT_ID, email: AGENT.email, full_name: "Agent Sami", role: "agent", active: true, created_at: day(20) },

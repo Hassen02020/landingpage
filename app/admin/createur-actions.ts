@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import { archivePage, builderAccess, duplicatePage, publishPage, restorePage, saveDraft, unpublishPage, type OfferInput } from "@/lib/server/page-builder"
 import { uploadImage, getCategory } from "@/lib/server/catalog"
 import { saveDesign } from "@/lib/server/page-design"
+import { recordVersion, restoreVersion } from "@/lib/server/page-versions"
 import type { DesignErrors } from "@/lib/page-builder/design"
 
 export interface CreatorState { ok?: boolean; message?: string; errors?: Record<string, string> }
@@ -134,6 +135,20 @@ export async function saveDesignAction(_prev: DesignState | undefined, fd: FormD
   if (!category) return { ok: false, message: "Page introuvable." }
   const res = await saveDesign(category.id, category.product, raw, access.staff.userId)
   if (!res.ok) return { ok: false, message: res.message, errors: res.errors }
+  await recordVersion(category.id, "personnalisation", access.staff.userId)
   refreshPublicPages()
   return { ok: true, message: category.visible ? "Personnalisation enregistrée : la page publiée est à jour." : "Personnalisation enregistrée." }
+}
+
+/** Restauration d'une version : jamais l'adresse ni l'état de publication ; confirmation obligatoire (case à cocher) vérifiée CÔTÉ SERVEUR. */
+export async function restoreVersionAction(fd: FormData): Promise<void> {
+  const id = str(fd, "id")
+  const back = (msg: string, ok: boolean) => redirect(`/admin/createur/${encodeURIComponent(id)}?etape=versions&${ok ? "ok" : "erreur"}=${encodeURIComponent(msg)}`)
+  const access = await builderAccess({ write: true })
+  if (!access.ok) return back(access.message, false)
+  if (str(fd, "confirm") !== "1") return back("Cochez la confirmation pour restaurer cette version.", false)
+  const res = await restoreVersion(id, parseInt(str(fd, "version"), 10), access.staff.userId)
+  if (!res.ok) return back(res.message, false)
+  refreshPublicPages()
+  return back(`Version restaurée (${res.restoredOffers} offre${res.restoredOffers > 1 ? "s" : ""} remise${res.restoredOffers > 1 ? "s" : ""} à l'état de la version${res.skippedOffers ? `, ${res.skippedOffers} ignorée${res.skippedOffers > 1 ? "s" : ""} car supprimée${res.skippedOffers > 1 ? "s" : ""}` : ""}).`, true)
 }

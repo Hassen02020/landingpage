@@ -11,6 +11,8 @@ import { PreviewPanel } from "./PreviewPanel"
 import { PublishPanel } from "./PublishPanel"
 import { AdLinkBlock } from "./AdLinkBlock"
 import { DesignEditor } from "./DesignEditor"
+import { listVersions, REASON_LABELS } from "@/lib/server/page-versions"
+import { restoreVersionAction } from "@/app/admin/createur-actions"
 import { loadDesign } from "@/lib/server/page-design"
 import { parsePeriod } from "@/lib/server/stats"
 import { formatStat, GROUP_LABELS, type StatGroup } from "@/lib/page-builder/stats"
@@ -20,7 +22,7 @@ export const dynamic = "force-dynamic"
 const defaultTheme = (product: string): Theme => THEMES.find((t) => t.product === product) ?? THEMES[THEMES.length - 1]
 const TONE = { ok: "bg-green-100 text-green-800", warn: "bg-amber-100 text-amber-800", bad: "bg-red-100 text-red-800" } as const
 
-export default async function CreatorEditor({ params, searchParams }: { params: { id: string }; searchParams: { etape?: string; theme?: string; ok?: string; from?: string; to?: string } }) {
+export default async function CreatorEditor({ params, searchParams }: { params: { id: string }; searchParams: { etape?: string; theme?: string; ok?: string; erreur?: string; from?: string; to?: string } }) {
   const access = await builderAccess()
   if (!access.ok) return <p className="bg-white rounded-2xl p-6 text-gray-700">{access.message}</p>
   const isNew = params.id === "nouvelle"
@@ -28,7 +30,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   if (!isNew && !page) notFound()
   const theme = themeById(searchParams.theme) ?? (page ? defaultTheme(page.category.product) : null)
   if (!theme) redirect("/admin/createur/modeles")
-  const etape = isNew ? "infos" : ["infos", "design", "formulaire", "apercu", "publication", "stats"].includes(searchParams.etape ?? "") ? (searchParams.etape as string) : "infos"
+  const etape = isNew ? "infos" : ["infos", "design", "formulaire", "apercu", "publication", "stats", "versions"].includes(searchParams.etape ?? "") ? (searchParams.etape as string) : "infos"
   const category = page?.category ?? null
   const path = category ? creatorPath(category.slug) : ""
   const family = familyOf(category?.product ?? theme.product)
@@ -36,6 +38,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   const period = parsePeriod(searchParams.from, searchParams.to, 30)
   const catalogue = etape === "infos" ? await catalogueOffers(page?.category.id).catch(() => []) : []
   const media = etape === "infos" ? await listMedia().catch(() => []) : []
+  const versions = etape === "versions" && page ? await listVersions(page.category.id).catch(() => null) : null
   const stats = etape === "stats" && page ? await loadPageStats(page.category.slug, period).catch(() => null) : null
 
   return (
@@ -91,6 +94,42 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
           <PublishPanel id={params.id} theme={theme.id} visible={page.category.visible} ready={page.readiness.ready} publicUrl={`${SITE_URL}${path}`} />
           <AdLinkBlock key={`${path}-${page.category.visible}`} path={path} defaultCampaign={page.category.slug} status={page.status} base={SITE_URL} />
         </div>
+      )}
+
+      {etape === "versions" && page && (
+        <section className="space-y-4" aria-label="Historique des versions" data-testid="versions">
+          <div className="bg-white rounded-2xl border p-5 space-y-2">
+            <h2 className="font-black">8. Historique des versions</h2>
+            <p className="text-sm text-gray-600">Chaque enregistrement, personnalisation, publication, désactivation ou restauration crée une version. Restaurer remet le <strong>contenu</strong> (textes, images, personnalisation, offres existantes) dans l&apos;état choisi ; l&apos;<strong>adresse</strong> et l&apos;<strong>état de publication</strong> ne changent jamais, et l&apos;état actuel reste dans l&apos;historique.</p>
+          </div>
+          {searchParams.ok && <p role="status" className="rounded-xl p-3 text-sm bg-green-50 text-green-800 border border-green-200" data-testid="versions-ok">{searchParams.ok}</p>}
+          {searchParams.erreur && <p role="alert" className="rounded-xl p-3 text-sm bg-red-50 text-red-800 border border-red-200" data-testid="versions-error">{searchParams.erreur}</p>}
+          {versions === null ? (
+            <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">Historique indisponible pour le moment.</p>
+          ) : !versions.available ? (
+            <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm" data-testid="versions-unavailable">L&apos;historique des versions sera disponible après l&apos;application de la migration 0020 (fichier prêt, à appliquer par le propriétaire). Rien n&apos;est perdu en attendant : vos pages fonctionnent normalement.</p>
+          ) : versions.versions.length === 0 ? (
+            <div className="bg-white rounded-2xl border p-8 text-center text-gray-600" data-testid="versions-empty">Aucune version pour l&apos;instant : la première sera créée au prochain enregistrement.</div>
+          ) : (
+            <ul className="space-y-2">
+              {versions.versions.map((v, i) => (
+                <li key={v.id} className="bg-white rounded-2xl border p-4 flex flex-wrap items-center gap-3" data-testid="version-row" data-version={v.version_number}>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold">Version {v.version_number}{i === 0 ? <span className="ml-2 text-xs bg-green-100 text-green-800 rounded-full px-2 py-0.5">actuelle</span> : null}</div>
+                    <div className="text-xs text-gray-500">{REASON_LABELS[v.reason] ?? v.reason} · {v.created_at.slice(0, 16).replace("T", " ")} UTC{v.note ? ` · ${v.note}` : ""}</div>
+                  </div>
+                  {i > 0 && (
+                    <form action={restoreVersionAction} className="flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="id" value={page.category.id} /><input type="hidden" name="version" value={v.id} />
+                      <label className="text-xs flex items-center gap-1"><input type="checkbox" name="confirm" value="1" required aria-label={`Confirmer la restauration de la version ${v.version_number}`} /> Je confirme</label>
+                      <button className="px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white">Restaurer</button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       {etape === "stats" && page && (

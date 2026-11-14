@@ -8,6 +8,7 @@ export const STEPS = [
   { id: "apercu", n: 5, label: "Aperçu" },
   { id: "publication", n: 6, label: "Publication" },
   { id: "stats", n: 7, label: "Statistiques" },
+  { id: "versions", n: 8, label: "Historique" },
 ] as const
 
 /** Barre de progression : les étapes 2 et 3 (informations, personnalisation) sont deux onglets du même formulaire. */

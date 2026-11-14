@@ -11,6 +11,7 @@ import { readiness, type Readiness } from "@/lib/page-builder/readiness"
 import { themeById, type Theme } from "@/lib/page-builder/themes"
 import { rateLimited } from "@/lib/server/guard"
 import { saveDesign } from "@/lib/server/page-design"
+import { recordVersion } from "@/lib/server/page-versions"
 import type { Product } from "@/lib/config"
 import type { SlugLock } from "@/lib/catalog-slug"
 import { ARCHIVED_POSITION, copySlug, isArchived } from "@/lib/page-builder/dashboard"
@@ -113,6 +114,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
     const r = await saveOffer(o.id ?? null, f, o.features, actorId)
     if (!r.ok) return { ok: false, errors: Object.fromEntries(Object.entries(r.errors).map(([k, v]) => [`o${i}_${k}`, v])), message: "Vérifiez les champs signalés." }
   }
+  await recordVersion(categoryId, "enregistrement", actorId)
   return { ok: true, id: categoryId }
 }
 
@@ -125,6 +127,7 @@ export async function publishPage(id: string, themeId: string | null, actorId: s
   if (!page) return { ok: false, message: "Page introuvable." }
   if (!page.readiness.ready) return { ok: false, message: "La page est incomplète : corrigez les points signalés avant de publier.", readiness: page.readiness }
   await update("landing_categories", `id=eq.${id}`, { visible: true, updated_at: new Date().toISOString(), updated_by: actorId })
+  await recordVersion(id, "publication", actorId)
   return { ok: true }
 }
 
@@ -132,6 +135,7 @@ export async function unpublishPage(id: string, actorId: string | null): Promise
   const page = await getCategory(id)
   if (!page) return { ok: false, message: "Page introuvable." }
   await update("landing_categories", `id=eq.${id}`, { visible: false, updated_at: new Date().toISOString(), updated_by: actorId })
+  await recordVersion(id, "desactivation", actorId)
   return { ok: true }
 }
 
