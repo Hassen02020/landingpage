@@ -103,6 +103,14 @@ export function LandingView({ category, offers, preview = false, design = null }
             ? <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: `block-${b.id}` })} className="mt-4 inline-block bg-[#25D366] text-white font-black px-6 py-3 rounded-2xl">💬 {b.ctaLabel}</a>
             : <a href="#reservation" className={`mt-4 inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{b.ctaLabel}</a>}
         </div>, true)
+      case "video":
+        // fichier du site (chemin validé à l'enregistrement ET à la lecture), chargé à la demande : rien n'est téléchargé avant le clic
+        return wrap(<>{title(b.title)}<figure>
+          <video controls playsInline preload="none" poster={b.images[0]} className="w-full rounded-2xl bg-black" aria-label={b.title} data-testid="block-video">
+            <source src={b.video} type={b.video.endsWith(".webm") ? "video/webm" : "video/mp4"} />
+          </video>
+          {b.text && <figcaption className="mt-2 text-sm text-gray-600 whitespace-pre-line">{b.text}</figcaption>}
+        </figure></>)
       case "notice":
         return wrap(<div className={`rounded-2xl p-6 ${st.formBand}`}><p className={`text-xs font-black ${st.priceText}`}>{b.title}</p><p className="mt-1 font-bold text-gray-900 whitespace-pre-line">{b.text}</p></div>, true)
     }

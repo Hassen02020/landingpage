@@ -4,10 +4,10 @@
 import type { Family } from "./themes"
 import type { SectionKey } from "./style"
 
-export type BlockType = "text" | "benefits" | "steps" | "gallery" | "image_text" | "cta" | "notice"
+export type BlockType = "text" | "benefits" | "steps" | "gallery" | "image_text" | "cta" | "notice" | "video"
 export type DesignSection = SectionKey | "testimonials" | "services" | "conditions" | `block:${string}`
 
-/** BIBLIOTHÈQUE DE BLOCS : 7 types génériques qui couvrent l'usage des 44 blocs du Landing Page Studio (hors vidéo intégrée : aucune ressource tierce). */
+/** BIBLIOTHÈQUE DE BLOCS : 8 types génériques qui couvrent l'usage des 44 blocs du Landing Page Studio. Vidéo : fichier du site lui-même (dossier public), jamais une ressource tierce. */
 export const BLOCK_TYPES: Record<BlockType, { label: string; hint: string }> = {
   text: { label: "Texte", hint: "Un titre et un paragraphe (présentation, hôtel, destination, informations pratiques…)." },
   benefits: { label: "Avantages", hint: "Une grille de points forts avec titre et texte court." },
@@ -16,6 +16,7 @@ export const BLOCK_TYPES: Record<BlockType, { label: string; hint: string }> = {
   image_text: { label: "Image et texte", hint: "Une image à côté d'un titre et d'un texte." },
   cta: { label: "Appel à l'action", hint: "Un message et un bouton vers le formulaire ou WhatsApp." },
   notice: { label: "Encadré", hint: "Un message mis en valeur (conditions, avantage, information importante)." },
+  video: { label: "Vidéo", hint: "Une vidéo hébergée sur le site (fichier .mp4 ou .webm du dossier public), avec une image d'affiche. Aucun service tiers." },
 }
 export const PRESETS: Record<string, { label: string; hex: string | null }> = {
   famille: { label: "Couleur du modèle", hex: null },
@@ -41,6 +42,8 @@ export interface DesignBlock {
   /** bouton d'un bloc « appel à l'action » : défile vers le formulaire ou ouvre WhatsApp */
   cta: "form" | "whatsapp"
   ctaLabel: string
+  /** bloc « vidéo » : chemin d'un fichier du site (/….mp4 ou /….webm), jamais une adresse externe */
+  video: string
 }
 
 export interface PageDesign {
@@ -171,6 +174,7 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
   }
 
   // blocs personnalisés : validés un par un (types connus, textes bornés, URL d'image https ou relatives seulement) ; les blocs incomplets sont signalés ET écartés
+  const VIDEO = /^\/(?!\/)[A-Za-z0-9][A-Za-z0-9._\-\/]{0,190}\.(mp4|webm)$/ // fichier du site seulement : ni « // », ni http(s), ni « .. »
   const IMG = /^(https:\/\/|\/(?!\/))[^\s"'<>]{1,500}$/ // « // » refusé : une adresse relative au protocole chargerait une image d'un AUTRE site
   const seenIds: Record<string, true> = {}
   d.blocks = list(r.blocks, 12, "blocks").map(obj).flatMap((b, i): DesignBlock[] => {
@@ -189,8 +193,11 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
     if (type === "gallery" && images.length === 0) return fail("Ajoutez au moins une image.")
     if (type === "image_text" && (images.length < 1 || !text)) return fail("Une image et un texte sont requis.")
     if ((type === "text" || type === "notice") && !text) return fail("Le texte du bloc est requis.")
+    const video = clean(b.video, 200)
+    if (type === "video" && (!VIDEO.test(video) || video.includes(".."))) return fail("Vidéo : chemin d'un fichier du site attendu (ex. /ma-video.mp4).")
+    if (type === "video" && images.length < 1) return fail("Ajoutez l'image d'affiche de la vidéo.")
     seenIds[id] = true
-    return [{ id, type, title, text, items: type === "benefits" || type === "steps" ? items : [], images: type === "gallery" ? images : type === "image_text" ? images.slice(0, 1) : [], cta: b.cta === "whatsapp" ? "whatsapp" : "form", ctaLabel: type === "cta" ? clean(b.ctaLabel, 40) || "Réserver" : "" }]
+    return [{ id, type, title, text, items: type === "benefits" || type === "steps" ? items : [], images: type === "gallery" ? images : type === "image_text" || type === "video" ? images.slice(0, 1) : [], cta: b.cta === "whatsapp" ? "whatsapp" : "form", ctaLabel: type === "cta" ? clean(b.ctaLabel, 40) || "Réserver" : "" , video: type === "video" ? video : "" }]
   })
 
   // ordre des sections : permutation des sections autorisées pour la famille (+ les blocs) ; « form » toujours présent et visible
