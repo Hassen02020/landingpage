@@ -2,7 +2,8 @@ import Link from "next/link"
 import { builderAccess, listBuilderPages } from "@/lib/server/page-builder"
 import { creatorPath } from "@/lib/page-builder/paths"
 import { filterPages, lifecycleOf, normalizeQuery, summarize } from "@/lib/page-builder/dashboard"
-import { archiveAction, duplicateAction, restoreAction, unpublishFromListAction } from "@/app/admin/createur-actions"
+import { archiveAction, duplicateAction, restoreAction, runSchedulesAction, unpublishFromListAction } from "@/app/admin/createur-actions"
+import { listSchedules, toTunisLocal } from "@/lib/server/page-schedule"
 
 export const dynamic = "force-dynamic"
 
@@ -15,6 +16,8 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
   const access = await builderAccess()
   if (!access.ok) return <p className="bg-white rounded-2xl p-6 text-gray-700">{access.message}</p>
   const all = await listBuilderPages().catch(() => null)
+  const sch = await listSchedules().catch(() => ({ available: false, byId: {} as Record<string, { publishAt: string | null; unpublishAt: string | null }> }))
+  const scheduledCount = Object.keys(sch.byId).length
   const query = normalizeQuery(searchParams)
   const href = (over: Record<string, string>) => {
     const p = new URLSearchParams()
@@ -38,6 +41,13 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
 
       {searchParams.ok && <p role="status" className="bg-green-50 border border-green-200 text-green-900 rounded-xl p-3 text-sm" data-testid="flash-ok">{searchParams.ok}</p>}
       {searchParams.erreur && <p role="alert" className="bg-red-50 border border-red-200 text-red-900 rounded-xl p-3 text-sm" data-testid="flash-error">{searchParams.erreur}</p>}
+
+      {sch.available && scheduledCount > 0 && (
+        <form action={runSchedulesAction} className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex flex-wrap items-center gap-3 text-sm" data-testid="schedules-banner">
+          <span>{scheduledCount} page{scheduledCount > 1 ? "s" : ""} avec une programmation. La publication automatique n&apos;est pas activée : les programmations échues s&apos;appliquent avec ce bouton.</span>
+          <button className="px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white" data-testid="run-schedules">Appliquer les programmations échues</button>
+        </form>
+      )}
 
       {all === null || sum === null ? (
         <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">Lecture du catalogue impossible pour le moment (migration 0004 appliquée ?).</p>
@@ -90,6 +100,8 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
                       <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700">{PRODUCTS[c.product] ?? c.product}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {sch.byId[c.id]?.publishAt && life === "brouillon" && <span className="px-2 py-0.5 rounded-full font-bold bg-violet-100 text-violet-800" data-testid="badge-scheduled">Programmée le {toTunisLocal(sch.byId[c.id].publishAt).replace("T", " à ")}</span>}
+                      {sch.byId[c.id]?.unpublishAt && life === "publiee" && <span className="px-2 py-0.5 rounded-full font-bold bg-violet-100 text-violet-800" data-testid="badge-unpublish">Masquage le {toTunisLocal(sch.byId[c.id].unpublishAt).replace("T", " à ")}</span>}
                       {life === "archivee" ? <span className="px-2 py-0.5 rounded-full font-bold bg-gray-200 text-gray-700">Archivée</span>
                         : life === "brouillon" ? <span className="px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-800">Brouillon</span>
                         : <span title={status.detail} className={`px-2 py-0.5 rounded-full font-bold ${TONE[status.tone]}`}>Publiée · {status.label}</span>}

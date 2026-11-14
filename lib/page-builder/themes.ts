@@ -16,7 +16,7 @@ export interface Theme {
   emoji: string
   product: Product
   family: Family
-  lang: "fr" | "ar"
+  lang: "fr" | "ar" | "en"
   /** champs d'une offre OBLIGATOIRES pour publier (en plus du nom et du prix, toujours obligatoires) */
   offerRequired: OfferField[]
   /** champs d'une offre proposés à l'écran (les autres sont masqués pour ne pas surcharger) */

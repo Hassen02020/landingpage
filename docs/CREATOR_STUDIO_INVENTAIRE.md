@@ -53,3 +53,23 @@ Application **Vite + React, entièrement côté navigateur** (≈ 11 000 lignes)
 ## Avancement de l'intégration (lots, sans migration)
 - **Lot A — Médiathèque : FAIT.** Page `/admin/createur/medias` (images déjà utilisées par les pages et offres de l'entreprise, avec leurs usages) et sélecteur « Choisir une image déjà utilisée » dans l'éditeur (bannières et photos d'offres). Lecture du catalogue cloisonné uniquement : le bucket de stockage est partagé entre entreprises, il n'est jamais listé (sinon une entreprise verrait les images d'une autre). Limite : une image téléversée mais jamais enregistrée sur une page ou une offre n'apparaît pas.
 - Lots B (blocs), C (versions), D (programmation), E (anglais) : voir les décisions de migration à présenter séparément ; rien n'est créé.
+
+## Lots E, C, D — fichiers de migration LOCAUX (non appliqués) et état
+| Lot | Migration (fichier local) | Effet | Sans la migration |
+|---|---|---|---|
+| E — Anglais | `0019_page_lang_en.sql` | `landing_categories.lang` accepte `en` | l'anglais est proposé mais refusé à l'enregistrement par la base |
+| C — Versions | `0020_page_versions.sql` | table `landing_page_versions` (ajout seul, sans coût ni SKU ni places vendues) | onglet « Historique » : message « indisponible », aucune erreur |
+| D — Programmation | `0021_page_schedule.sql` | colonnes `publish_at` / `unpublish_at` (NULL) | panneau « Programmer » : message « indisponible » |
+| B — Blocs | `0022_page_design_size.sql` | limite de taille de `design` relevée de 16 000 à 64 000 octets (le serveur limite à 60 000) | jusqu'à 15 000 octets tout fonctionne ; au-delà, l'enregistrement est refusé avec un message qui nomme 0022 |
+
+**Publication programmée — décision restante pour le propriétaire :** la base ne publie rien seule. L'application des programmations échues se fait (1) par le bouton « Appliquer les programmations échues » du tableau de bord, ou (2) par la route `/api/cron/publish-scheduled`, protégée par `CRON_SECRET` (échec fermé : sans secret de 16 caractères minimum, 503 ; sans l'en-tête exact, 401). **Aucune tâche planifiée n'est déclarée dans le dépôt** : l'activer suppose une variable d'environnement et un cron Vercel, donc votre décision.
+
+## Lot B — blocs personnalisés
+7 types génériques couvrent l'usage des 44 blocs du Studio : **texte, avantages, étapes, galerie d'images, image et texte, appel à l'action, encadré**. Hors périmètre volontaire : vidéo intégrée (ressource tierce), blocs métier spécifiques (Omra, Voyages, Hôtels, Visa) qui s'expriment avec ces 7 types.
+- Stockés dans `design.blocks` (12 blocs maximum), placés parmi les sections avec « Sections de la page » (ordre, masquage), rendus par le moteur serveur `/p`.
+- Sécurité : titres et textes en texte brut (échappés au rendu) ; images en `https://` ou `/…` seulement (les adresses `//…`, `javascript:`, `data:`, `http://` sont refusées, y compris à la relecture).
+- Médiathèque : les images des blocs se choisissent dans la médiathèque (aucun téléversement dans un bloc).
+- Taille : deux paliers prouvés sur PostgreSQL de test — jusqu'à 15 000 octets avec la contrainte actuelle (0018), jusqu'à 60 000 avec 0022.
+
+## Ordre d'application conseillé (par le propriétaire, projet des landing pages uniquement)
+`0019` (anglais) → `0020` (versions) → `0021` (programmation) → `0022` (taille) ; après chacune, exécuter son `postcheck-00NN.sql` (lignes « OK »). Elles sont indépendantes : l'ordre n'est pas imposé, et l'application peut être déployée avant ou après.

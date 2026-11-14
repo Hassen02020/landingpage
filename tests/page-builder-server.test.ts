@@ -15,6 +15,8 @@ import { configureAll } from "./helpers"
 import { resetPublicOrgCache, resetTenantModeCache, runWithOrg } from "@/lib/server/db"
 import { isCheckViolation, isMissingColumn, loadDesign, publicDesign, saveDesign } from "@/lib/server/page-design"
 import { catalogueOffers, listMedia } from "@/lib/server/page-builder"
+import { listVersions, recordVersion, restoreVersion, canon } from "@/lib/server/page-versions"
+import { clearSchedule, listSchedules, loadSchedule, parseTunisLocal, runDueSchedules, setSchedule, toTunisLocal } from "@/lib/server/page-schedule"
 import { archivePage, builderAccess, duplicatePage, loadBuilderPage, publishPage, restorePage, saveDraft, toPublicOffers, unpublishPage } from "@/lib/server/page-builder"
 import { saveCategory } from "@/lib/server/catalog"
 import * as actions from "@/app/admin/createur-actions"
@@ -27,7 +29,12 @@ let T: Record<string, Row[]>
 let calls: { method: string; table: string; url: string; body?: unknown }[]
 let multi = false
 let noDesign = false
+let noVersions = false
+let noSchedule = false
+let check16k = false
+let noEnglish = false
 let seq = 0
+let vseq = 0
 
 function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
   let out = rows
@@ -50,8 +57,8 @@ function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
 
 beforeEach(() => {
   configureAll(); resetTenantModeCache(); resetPublicOrgCache()
-  role = "admin"; orgId = E2B; multi = false; noDesign = false; seq = 0; calls = []
-  T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [] }
+  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; noSchedule = false; check16k = false; noEnglish = false; seq = 0; vseq = 0; calls = []
+  T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [], landing_page_versions: [] }
   vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
     const u = new URL(String(url))
     const method = (init.method ?? "GET").toUpperCase()
@@ -63,12 +70,16 @@ beforeEach(() => {
       return json(multi ? [{ id: E2B }, { id: BOB }] : [{ id: E2B }])
     }
     if (noDesign && ((method === "GET" && /select=design/.test(u.search)) || (method === "PATCH" && String(init.body ?? "").includes('"design"')))) return json({ code: "42703", message: "column landing_categories.design does not exist" }, 400)
+    if (noSchedule && table === "landing_categories" && ((method === "GET" && /publish_at/.test(u.search)) || (method === "PATCH" && /publish_at/.test(String(init.body ?? ""))))) return json({ code: "42703", message: "column landing_categories.publish_at does not exist" }, 400)
+    if (check16k && method === "PATCH" && table === "landing_categories" && String(init.body ?? "").length > 16000) return json({ code: "23514", message: "violates check constraint landing_categories_design_check" }, 400)
+    if (noEnglish && table === "landing_categories" && (method === "POST" || method === "PATCH") && /"lang":"en"/.test(String(init.body ?? ""))) return json({ code: "23514", message: "violates check constraint landing_categories_lang_check" }, 400)
+    if (noVersions && table === "landing_page_versions") return json({ code: "42P01", message: "relation does not exist" }, 404)
     calls.push({ method, table, url: decodeURIComponent(u.search), body: init.body ? JSON.parse(String(init.body)) : undefined })
     const org = u.searchParams.get("organization_id")?.replace("eq.", "")
     const scoped = (T[table] ?? []).filter((r) => !org || r.organization_id === org)
     if (method === "POST") {
       const b = JSON.parse(String(init.body))
-      const row = { id: `00000000-0000-4000-8000-${String(++seq).padStart(12, "0")}`, created_at: "2026-11-13T00:00:00Z", updated_at: "2026-11-13T00:00:00Z", seats_sold: 0, features: [], archived_at: null, ...b }
+      const row = { id: table === "landing_page_versions" ? ++vseq : `00000000-0000-4000-8000-${String(++seq).padStart(12, "0")}`, created_at: "2026-11-13T00:00:00Z", updated_at: "2026-11-13T00:00:00Z", seats_sold: 0, features: [], archived_at: null, ...b }
       if (table === "landing_categories" && T[table].some((r) => r.organization_id === row.organization_id && r.slug === row.slug)) return json({ code: "23505" }, 409)
       T[table].push(row)
       return json([row], 201)
@@ -101,7 +112,7 @@ describe("brouillon : réutilise le catalogue (aucune nouvelle table)", () => {
     expect(T.landing_categories[0]).toMatchObject({ name: "Turquie Été 2027", slug: "turquie-ete-2027", product: "voyage", lang: "fr", visible: false, organization_id: E2B })
     expect(T.landing_offers[0]).toMatchObject({ name: "Départ 1", category_id: T.landing_categories[0].id, price: 2350.5, nights: 7, departure_date: "2027-03-10", seats_total: 20, visible: true, product: "voyage" })
     expect(T.landing_offers[0].features).toEqual(["Vol", "Hôtel"])
-    expect(Object.keys(T).sort()).toEqual(["landing_categories", "landing_events", "landing_leads", "landing_offers"])
+    expect(Object.keys(T).sort().filter((k) => k !== "landing_page_versions")).toEqual(["landing_categories", "landing_events", "landing_leads", "landing_offers"])
   })
   it("Omra Ramadan : produit omra, langue arabe par défaut du modèle", async () => {
     await as(E2B, () => saveDraft({ themeId: "ramadan-omra", category: cat({ name: "Omra Ramadan 2027", lang: "" }), offers: [offerIn({ departure_date: "2027-02-10", nights: "14" })] }, "u1"))
@@ -382,13 +393,24 @@ describe("personnalisation : droits côté serveur (action)", () => {
 })
 
 describe("personnalisation : distinction colonne absente / contrainte violée", () => {
-  it("un design trop volumineux est refusé AVANT toute écriture (aucun PATCH)", async () => {
+  it("un design de plus de 60 000 octets est refusé AVANT toute écriture (aucun PATCH)", async () => {
     const id = await makeComplete(); calls = []
-    const big = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })) }
+    const big = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })), blocks: Array.from({ length: 12 }, (_, i) => ({ id: `blk${String(i).padStart(3, "0")}`, type: "text", title: "B", text: "😀".repeat(600) })) }
     const r = await as(E2B, () => saveDesign(id, "voyage", big, "u1"))
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.errors.size).toMatch(/volumineuse/)
     expect(writes()).toHaveLength(0)
+  })
+  it("un design de 15 000 à 60 000 octets est envoyé à la base ; si la base (sans 0022) le refuse, le message nomme la migration 0022 (jamais une erreur technique)", async () => {
+    const id = await makeComplete()
+    const mid = { faq: Array.from({ length: 8 }, () => ({ q: "é".repeat(140), a: "é".repeat(600) })), program: Array.from({ length: 14 }, () => ({ title: "é".repeat(80), text: "é".repeat(800) })) }
+    expect((await as(E2B, () => saveDesign(id, "voyage", mid, "u1"))).ok).toBe(true) // base de test sans contrainte
+    check16k = true
+    const r = await as(E2B, () => saveDesign(id, "voyage", mid, "u1"))
+    expect(r.ok).toBe(false)
+    if (!r.ok) { expect(r.message).toMatch(/migration 0022/); expect(r.message).not.toMatch(/23514|violates/) }
+    const small = await as(E2B, () => saveDesign(id, "voyage", { faq: [{ q: "q", a: "a" }] }, "u1"))
+    expect(small.ok).toBe(true) // un petit design reste accepté par l'ancienne contrainte
   })
   it("une violation de contrainte (23514) n'est JAMAIS prise pour une migration manquante", async () => {
     const { DbError } = await import("@/lib/server/db")
@@ -459,5 +481,207 @@ describe("médiathèque : images déjà utilisées (aucune lecture du stockage p
     await as(E2B, () => listMedia())
     expect(calls.every((c) => c.method === "GET" && c.table.startsWith("landing_"))).toBe(true)
     expect(writes()).toHaveLength(0)
+  })
+})
+
+describe("historique des versions (migration 0020 locale)", () => {
+  const vers = () => T.landing_page_versions
+  it("une version à chaque enregistrement, publication, désactivation ; AUCUNE version si rien n'a changé ; numéros successifs", async () => {
+    const id = await makeComplete()
+    expect(vers().map((v) => [v.version_number, v.reason])).toEqual([[1, "enregistrement"]])
+    await as(E2B, () => recordVersion(id, "enregistrement", "u1")) // rien n'a changé
+    expect(vers()).toHaveLength(1)
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    await as(E2B, () => unpublishPage(id, "u1"))
+    expect(vers().map((v) => [v.version_number, v.reason])).toEqual([[1, "enregistrement"], [2, "publication"], [3, "desactivation"]])
+    expect(vers().every((v) => v.organization_id === E2B)).toBe(true)
+  })
+  it("l'instantané ne contient NI coût, NI SKU, NI places vendues (données d'exploitation)", async () => {
+    const id = await makeComplete()
+    T.landing_offers[0].cost = 1234.5; T.landing_offers[0].sku = "SKU-SECRET"; T.landing_offers[0].seats_sold = 7
+    T.landing_categories[0].headline = "Autre accroche"
+    await as(E2B, () => recordVersion(id, "enregistrement", "u1"))
+    const text = JSON.stringify(vers().map((v) => v.snapshot))
+    expect(text).not.toContain("1234.5"); expect(text).not.toContain("SKU-SECRET"); expect(text).not.toMatch(/seats_sold|"cost"|"sku"/)
+    expect(vers()).toHaveLength(2)
+  })
+  it("la personnalisation fait partie de l'instantané", async () => {
+    const id = await makeComplete()
+    T.landing_categories[0].design = { v: 1, faq: [{ q: "q", a: "a" }] }
+    await as(E2B, () => recordVersion(id, "personnalisation", "u1"))
+    expect((vers()[1].snapshot as { design: { faq: unknown[] } }).design.faq).toHaveLength(1)
+  })
+  it("restauration : contenu et offres existantes remis à l'état choisi ; adresse et état de publication INCHANGÉS ; une version « restauration » est ajoutée", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    const v1 = Number(vers()[0].id)
+    const oldHeadline = T.landing_categories[0].headline
+    await as(E2B, () => saveDraft({ id, themeId: "turquie", category: { ...cat({ headline: "Nouvelle accroche" }), slug: "turquie-ete-2027" }, offers: [{ ...offerIn({ price: "9999" }), id: String(T.landing_offers[0].id) }] }, "u1"))
+    expect(T.landing_categories[0].headline).toBe("Nouvelle accroche"); expect(Number(T.landing_offers[0].price)).toBe(9999)
+    const r = await as(E2B, () => restoreVersion(id, v1, "u1"))
+    expect(r).toMatchObject({ ok: true, restoredOffers: 1, skippedOffers: 0 })
+    expect(T.landing_categories[0]).toMatchObject({ headline: oldHeadline, slug: "turquie-ete-2027", visible: true })
+    expect(Number(T.landing_offers[0].price)).toBe(2350.5)
+    const last = vers()[vers().length - 1]
+    expect(last.reason).toBe("restauration"); expect(String(last.note)).toMatch(/version 1/)
+  })
+  it("restauration : une offre supprimée depuis est ignorée (comptée), jamais recréée ; version ou page inconnue refusée sans écriture", async () => {
+    const id = await makeComplete()
+    const v1 = Number(vers()[0].id)
+    T.landing_offers[0].archived_at = "2026-11-14"; T.landing_offers[0].visible = false
+    const r = await as(E2B, () => restoreVersion(id, v1, "u1"))
+    expect(r).toMatchObject({ ok: true, restoredOffers: 0, skippedOffers: 1 })
+    calls = []
+    expect((await as(E2B, () => restoreVersion(id, 999, "u1"))).ok).toBe(false)
+    expect((await as(E2B, () => restoreVersion("00000000-0000-4000-8000-0000000000aa", v1, "u1"))).ok).toBe(false)
+    expect(writes()).toHaveLength(0)
+  })
+  it("sans la table (migration 0020 absente) : les actions réussissent, liste « indisponible », restauration refusée avec message clair, aucune exception", async () => {
+    noVersions = true
+    const id = await makeComplete()
+    expect((await as(E2B, () => publishPage(id, "turquie", "u1"))).ok).toBe(true)
+    expect(await as(E2B, () => listVersions(id))).toEqual({ available: false, versions: [] })
+    const r = await as(E2B, () => restoreVersion(id, 1, "u1"))
+    expect(r.ok).toBe(false); if (!r.ok) expect(r.message).toMatch(/migration 0020/)
+  })
+  it("cloisonnement : l'historique d'une page de la plateforme est invisible et non restaurable depuis une AUTRE entreprise", async () => {
+    multi = true
+    const id = await makeComplete()
+    const v1 = Number(vers()[0].id)
+    const list = await as(BOB, () => listVersions(id))
+    expect(list.versions).toEqual([])
+    expect((await as(BOB, () => restoreVersion(id, v1, "u1"))).ok).toBe(false)
+  })
+  it("droits : restauration refusée pour employé, manager, non connecté et autre entreprise ; confirmation obligatoire côté serveur", async () => {
+    const id = await makeComplete(); const v1 = String(vers()[0].id)
+    const fd = (confirm: string) => { const f = new FormData(); f.set("id", id); f.set("version", v1); if (confirm) f.set("confirm", confirm); return f }
+    const redirected = async (p: Promise<unknown>) => p.then(() => "OK", (e) => (e instanceof Error ? e.message : "ERR"))
+    for (const r of ["employee", "manager", null] as Role[]) { role = r; calls = []; expect(await redirected(as(E2B, () => actions.restoreVersionAction(fd("1")))), String(r)).toMatch(/REDIRECT:.*erreur=/); expect(writes()).toHaveLength(0) }
+    role = "admin"; calls = []
+    expect(await redirected(as(E2B, () => actions.restoreVersionAction(fd(""))))).toMatch(/erreur=.*Cochez/)
+    expect(writes()).toHaveLength(0)
+    expect(await redirected(as(E2B, () => actions.restoreVersionAction(fd("1"))))).toMatch(/REDIRECT:.*ok=/)
+  })
+  it("canon : comparaison indépendante de l'ordre des clés", () => { expect(canon({ b: 1, a: { d: 1, c: 2 } })).toBe(canon({ a: { c: 2, d: 1 }, b: 1 })) })
+})
+
+describe("publication programmée (migration 0021 locale)", () => {
+  const NOW = Date.parse("2026-11-14T10:00:00Z")
+  const iso = (minutes: number) => new Date(NOW + minutes * 60_000).toISOString()
+  const tunis = (minutes: number) => toTunisLocal(iso(minutes))
+  it("heure saisie = heure de TUNIS (UTC+1) ; dates impossibles refusées", () => {
+    expect(new Date(parseTunisLocal("2026-12-01T09:00")!).toISOString()).toBe("2026-12-01T08:00:00.000Z")
+    for (const bad of ["", "2026-02-31T10:00", "2026-12-01T25:00", "demain", "2026-12-01", "2026-12-01 09:00", "<script>"]) expect(parseTunisLocal(bad), bad).toBeNull()
+    expect(toTunisLocal("2026-12-01T08:00:00.000Z")).toBe("2026-12-01T09:00")
+  })
+  it("programmation d'une page prête : stockée en UTC ; lecture ; annulation", async () => {
+    const id = await makeComplete()
+    expect(await as(E2B, () => setSchedule(id, { publishAt: tunis(120), unpublishAt: tunis(60 * 48) }, "u1", NOW))).toEqual({ ok: true })
+    expect(await as(E2B, () => loadSchedule(id))).toMatchObject({ available: true, schedule: { publishAt: iso(120), unpublishAt: iso(60 * 48) } })
+    expect(Object.keys((await as(E2B, () => listSchedules())).byId)).toEqual([id])
+    expect((await as(E2B, () => clearSchedule(id, "u1"))).ok).toBe(true)
+    expect((await as(E2B, () => loadSchedule(id))).schedule).toEqual({ publishAt: null, unpublishAt: null })
+  })
+  it("refus : passé, moins d'une minute, au-delà d'un an, masquage avant publication, page incomplète, page déjà publiée (publication), page masquée (masquage seul), archivée", async () => {
+    const id = await makeComplete()
+    const msg = async (i: { publishAt?: string; unpublishAt?: string }) => { const r = await as(E2B, () => setSchedule(id, i, "u1", NOW)); return r.ok ? "OK" : r.message }
+    expect(await msg({ publishAt: tunis(-10) })).toMatch(/futur/)
+    expect(await msg({ publishAt: tunis(0) })).toMatch(/futur/)
+    expect(await msg({ publishAt: tunis(60 * 24 * 400) })).toMatch(/année/)
+    expect(await msg({ publishAt: tunis(120), unpublishAt: tunis(60) })).toMatch(/après la publication/)
+    expect(await msg({})).toMatch(/au moins une date/)
+    expect(await msg({ unpublishAt: tunis(120) })).toMatch(/programmez d'abord sa publication/)
+    T.landing_categories[0].description = "court"
+    expect(await msg({ publishAt: tunis(120) })).toMatch(/incomplète/)
+    T.landing_categories[0].description = "Un voyage organisé complet en Turquie."
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    expect(await msg({ publishAt: tunis(120) })).toMatch(/déjà publiée/)
+    expect(await msg({ unpublishAt: tunis(120) })).toBe("OK")
+    T.landing_categories[0].visible = false; T.landing_categories[0].position = -1000
+    expect(await msg({ publishAt: tunis(120) })).toMatch(/archivée/)
+    expect(T.landing_categories[0].publish_at ?? null).toBeNull()
+  })
+  it("exécution : publication échue appliquée avec les contrôles habituels (version « publication »), programmation effacée ; non échue intacte ; idempotent", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    let r = await as(E2B, () => runDueSchedules(NOW + 60 * 60_000))
+    expect(r).toMatchObject({ published: 0, unpublished: 0, cleared: 0 }); expect(T.landing_categories[0].visible).toBe(false)
+    r = await as(E2B, () => runDueSchedules(NOW + 121 * 60_000))
+    expect(r).toMatchObject({ available: true, published: 1, blocked: [] })
+    expect(T.landing_categories[0]).toMatchObject({ visible: true, publish_at: null })
+    expect(T.landing_page_versions.some((v) => v.reason === "publication")).toBe(true)
+    const again = await as(E2B, () => runDueSchedules(NOW + 200 * 60_000))
+    expect(again).toMatchObject({ published: 0, unpublished: 0 })
+  })
+  it("exécution : une page DEVENUE incomplète (offres expirées) n'est PAS publiée ; la programmation reste et la page est signalée bloquée", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    T.landing_offers[0].departure_date = "2020-01-01"
+    const r = await as(E2B, () => runDueSchedules(NOW + 200 * 60_000))
+    expect(r.published).toBe(0); expect(r.blocked).toHaveLength(1); expect(r.blocked[0].id).toBe(id)
+    expect(T.landing_categories[0]).toMatchObject({ visible: false, publish_at: iso(120) })
+  })
+  it("exécution : masquage échu appliqué ; fenêtre entièrement passée = rien n'est publié ; page déjà publiée = programmation simplement effacée", async () => {
+    const id = await makeComplete()
+    await as(E2B, () => publishPage(id, "turquie", "u1"))
+    await as(E2B, () => setSchedule(id, { unpublishAt: tunis(60) }, "u1", NOW))
+    expect((await as(E2B, () => runDueSchedules(NOW + 90 * 60_000))).unpublished).toBe(1)
+    expect(T.landing_categories[0]).toMatchObject({ visible: false, unpublish_at: null })
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(60 * 5), unpublishAt: tunis(60 * 6) }, "u1", NOW + 120 * 60_000))
+    const r = await as(E2B, () => runDueSchedules(NOW + 60 * 24 * 60_000))
+    expect(r).toMatchObject({ published: 0, cleared: 1 }); expect(T.landing_categories[0]).toMatchObject({ visible: false, publish_at: null, unpublish_at: null })
+    T.landing_categories[0].visible = true; T.landing_categories[0].publish_at = iso(-5)
+    expect((await as(E2B, () => runDueSchedules(NOW))).cleared).toBe(1)
+    expect(T.landing_categories[0].visible).toBe(true)
+  })
+  it("sans les colonnes (migration 0021 absente) : lecture « indisponible », programmation refusée avec message clair, exécution sans effet, aucune exception", async () => {
+    const id = await makeComplete(); noSchedule = true
+    expect(await as(E2B, () => listSchedules())).toEqual({ available: false, byId: {} })
+    expect(await as(E2B, () => loadSchedule(id))).toMatchObject({ available: false })
+    const r = await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    expect(r.ok).toBe(false); if (!r.ok) expect(r.message).toMatch(/migration 0021/)
+    expect(await as(E2B, () => runDueSchedules(NOW))).toMatchObject({ available: false, published: 0 })
+    expect(T.landing_categories[0].visible).toBe(false)
+  })
+  it("cloisonnement : une autre entreprise ne voit ni n'applique les programmations de la plateforme", async () => {
+    multi = true; resetTenantModeCache(); resetPublicOrgCache()
+    const id = await makeComplete()
+    await as(E2B, () => setSchedule(id, { publishAt: tunis(120) }, "u1", NOW))
+    expect(Object.keys((await as(BOB, () => listSchedules())).byId)).toEqual([])
+    const r = await as(BOB, () => runDueSchedules(NOW + 500 * 60_000))
+    expect(r).toMatchObject({ published: 0 }); expect(T.landing_categories[0]).toMatchObject({ visible: false, publish_at: iso(120) })
+  })
+  it("droits : programmer, annuler et appliquer refusés pour employé, manager, non connecté et autre entreprise (aucune écriture)", async () => {
+    const id = await makeComplete()
+    const fd = () => { const f = new FormData(); f.set("id", id); f.set("publish_at", tunis(120)); return f }
+    const outcome = async (p: Promise<unknown>) => p.then(() => "OK", (e) => (e instanceof Error ? e.message : "ERR"))
+    for (const r of ["employee", "manager", null] as Role[]) {
+      role = r; calls = []
+      expect(await outcome(as(E2B, () => actions.scheduleAction(fd()))), String(r)).toMatch(/erreurp=/)
+      expect(await outcome(as(E2B, () => actions.clearScheduleAction(fd())))).toMatch(/erreurp=/)
+      expect(await outcome(as(E2B, () => actions.runSchedulesAction()))).toMatch(/erreur=/)
+      expect(writes()).toHaveLength(0)
+    }
+    multi = true; role = "admin"; orgId = BOB; resetTenantModeCache(); resetPublicOrgCache(); calls = []
+    expect(await outcome(as(BOB, () => actions.scheduleAction(fd())))).toMatch(/erreurp=/)
+    expect(writes()).toHaveLength(0)
+  })
+})
+
+describe("langue anglaise : repli propre tant que la migration 0019 n'est pas appliquée", () => {
+  it("l'anglais est refusé par la base : message clair (0019), AUCUNE page ni offre créée, aucune exception ; français et arabe inchangés", async () => {
+    noEnglish = true
+    const r = await as(E2B, () => saveDraft({ themeId: "turquie", category: cat({ lang: "en" }), offers: [offerIn()] }, "u1"))
+    expect(r.ok).toBe(false)
+    if (!r.ok) { expect(r.message).toMatch(/migration 0019/); expect(r.errors.lang).toMatch(/migration 0019/) }
+    expect(T.landing_categories).toHaveLength(0); expect(T.landing_offers).toHaveLength(0)
+    for (const lang of ["fr", "ar"]) expect((await as(E2B, () => saveDraft({ themeId: "turquie", category: cat({ lang, name: `Page ${lang}` }), offers: [offerIn()] }, "u1"))).ok, lang).toBe(true)
+    expect(T.landing_categories.map((c) => c.lang)).toEqual(["fr", "ar"])
+  })
+  it("passer une page existante en anglais est refusé de la même façon et ne modifie rien", async () => {
+    const id = await makeComplete(); noEnglish = true
+    const r = await as(E2B, () => saveDraft({ id, themeId: "turquie", category: { ...cat({ lang: "en" }), slug: "turquie-ete-2027" }, offers: [] }, "u1"))
+    expect(r.ok).toBe(false); if (!r.ok) expect(r.message).toMatch(/migration 0019/)
+    expect(T.landing_categories[0].lang).toBe("fr")
   })
 })

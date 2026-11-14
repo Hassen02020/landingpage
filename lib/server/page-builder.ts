@@ -11,6 +11,7 @@ import { readiness, type Readiness } from "@/lib/page-builder/readiness"
 import { themeById, type Theme } from "@/lib/page-builder/themes"
 import { rateLimited } from "@/lib/server/guard"
 import { saveDesign } from "@/lib/server/page-design"
+import { recordVersion } from "@/lib/server/page-versions"
 import type { Product } from "@/lib/config"
 import type { SlugLock } from "@/lib/catalog-slug"
 import { ARCHIVED_POSITION, copySlug, isArchived } from "@/lib/page-builder/dashboard"
@@ -78,7 +79,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
   // le produit et la langue viennent du modèle à la création ; ensuite ceux de la page (changer de produit changerait la famille visuelle publique)
   const catFields: Record<string, string> = {
     name: input.category.name ?? "", slug: (input.category.slug || "").trim() || slugify(input.category.name ?? "") || (!existing ? theme.preset?.slug ?? theme.id : ""),
-    product: existing?.product ?? theme.product, lang: input.category.lang === "ar" || input.category.lang === "fr" ? input.category.lang : existing?.lang ?? theme.lang,
+    product: existing?.product ?? theme.product, lang: input.category.lang === "ar" || input.category.lang === "fr" || input.category.lang === "en" ? input.category.lang : existing?.lang ?? theme.lang,
     headline: input.category.headline ?? "", description: input.category.description ?? "",
     banner_desktop: input.category.banner_desktop ?? existing?.banner_desktop ?? "", banner_mobile: input.category.banner_mobile ?? existing?.banner_mobile ?? "",
     seo_title: input.category.seo_title ?? existing?.seo_title ?? "", seo_description: input.category.seo_description ?? existing?.seo_description ?? "",
@@ -97,7 +98,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
   if (Object.keys(errors).length) return { ok: false, errors, message: "Vérifiez les champs signalés." }
 
   const saved = await saveCategory(input.id ?? null, catFields, actorId)
-  if (!saved.ok) return { ok: false, errors: saved.errors, message: saved.errors.slug ?? "Enregistrement impossible." }
+  if (!saved.ok) return { ok: false, errors: saved.errors, message: saved.errors.slug ?? saved.errors.lang ?? "Enregistrement impossible." }
   const categoryId = saved.id
   // préréglage de personnalisation du modèle : appliqué UNIQUEMENT à la création, jamais écrasant ; sans colonne `design` (migration 0018) la page est créée sans lui
   if (!input.id && theme.preset) {
@@ -113,6 +114,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
     const r = await saveOffer(o.id ?? null, f, o.features, actorId)
     if (!r.ok) return { ok: false, errors: Object.fromEntries(Object.entries(r.errors).map(([k, v]) => [`o${i}_${k}`, v])), message: "Vérifiez les champs signalés." }
   }
+  await recordVersion(categoryId, "enregistrement", actorId)
   return { ok: true, id: categoryId }
 }
 
@@ -125,6 +127,7 @@ export async function publishPage(id: string, themeId: string | null, actorId: s
   if (!page) return { ok: false, message: "Page introuvable." }
   if (!page.readiness.ready) return { ok: false, message: "La page est incomplète : corrigez les points signalés avant de publier.", readiness: page.readiness }
   await update("landing_categories", `id=eq.${id}`, { visible: true, updated_at: new Date().toISOString(), updated_by: actorId })
+  await recordVersion(id, "publication", actorId)
   return { ok: true }
 }
 
@@ -132,6 +135,7 @@ export async function unpublishPage(id: string, actorId: string | null): Promise
   const page = await getCategory(id)
   if (!page) return { ok: false, message: "Page introuvable." }
   await update("landing_categories", `id=eq.${id}`, { visible: false, updated_at: new Date().toISOString(), updated_by: actorId })
+  await recordVersion(id, "desactivation", actorId)
   return { ok: true }
 }
 

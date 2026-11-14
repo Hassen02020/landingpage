@@ -1,7 +1,7 @@
 // Catalogue d'offres et catégories (/admin/catalogue) — pages publiques pilotées par l'admin.
 // Lecture publique : uniquement les offres visibles, JAMAIS le coût.
 import { slugLock, slugify, type SlugLock } from "@/lib/catalog-slug"
-import { insertOne, select, update } from "./db"
+import { DbError, insertOne, select, update } from "./db"
 import type { Product } from "@/lib/config"
 
 export interface Category {
@@ -9,7 +9,7 @@ export interface Category {
   slug: string
   name: string
   product: Product
-  lang: "fr" | "ar"
+  lang: "fr" | "ar" | "en"
   headline: string | null
   description: string | null
   banner_desktop: string | null
@@ -188,7 +188,7 @@ export function validateCategory(f: Record<string, string>): { row?: Record<stri
   if (!SLUG.test(slug) || slug.length > 60) e.slug = "Adresse : lettres minuscules, chiffres et tirets (ex. omra-2027)."
   const product = PRODUCTS.includes(f.product) ? f.product : null
   if (!product) e.product = "Produit requis."
-  const lang = f.lang === "ar" ? "ar" : "fr"
+  const lang = f.lang === "ar" ? "ar" : f.lang === "en" ? "en" : "fr"
   for (const k of ["banner_desktop", "banner_mobile"]) {
     const v = (f[k] || "").trim()
     if (v && !safeUrl(v)) e[k] = "Lien https:// ou chemin /… attendu."
@@ -302,6 +302,8 @@ export async function saveCategory(id: string | null, f: Record<string, string>,
     return { ok: true, id: created.id }
   } catch (err) {
     if ((err as { isUniqueViolation?: boolean }).isUniqueViolation) return { ok: false, errors: { slug: "Cette adresse est déjà utilisée." } }
+    // l'anglais n'est accepté par la base qu'après la migration 0019 : message clair au lieu d'une erreur technique, rien n'est enregistré
+    if (err instanceof DbError && err.code === "23514" && row.lang === "en") return { ok: false, errors: { lang: "L'anglais nécessite la migration 0019 (fichier prêt, à appliquer par le propriétaire). Choisissez le français ou l'arabe en attendant : rien n'a été enregistré." } }
     throw err
   }
 }

@@ -4,7 +4,19 @@
 import type { Family } from "./themes"
 import type { SectionKey } from "./style"
 
-export type DesignSection = SectionKey | "testimonials" | "services" | "conditions"
+export type BlockType = "text" | "benefits" | "steps" | "gallery" | "image_text" | "cta" | "notice"
+export type DesignSection = SectionKey | "testimonials" | "services" | "conditions" | `block:${string}`
+
+/** BIBLIOTHÈQUE DE BLOCS : 7 types génériques qui couvrent l'usage des 44 blocs du Landing Page Studio (hors vidéo intégrée : aucune ressource tierce). */
+export const BLOCK_TYPES: Record<BlockType, { label: string; hint: string }> = {
+  text: { label: "Texte", hint: "Un titre et un paragraphe (présentation, hôtel, destination, informations pratiques…)." },
+  benefits: { label: "Avantages", hint: "Une grille de points forts avec titre et texte court." },
+  steps: { label: "Étapes", hint: "Une liste numérotée (programme jour par jour, démarches, étapes d'un visa…)." },
+  gallery: { label: "Galerie d'images", hint: "Jusqu'à 8 images de la médiathèque." },
+  image_text: { label: "Image et texte", hint: "Une image à côté d'un titre et d'un texte." },
+  cta: { label: "Appel à l'action", hint: "Un message et un bouton vers le formulaire ou WhatsApp." },
+  notice: { label: "Encadré", hint: "Un message mis en valeur (conditions, avantage, information importante)." },
+}
 export const PRESETS: Record<string, { label: string; hex: string | null }> = {
   famille: { label: "Couleur du modèle", hex: null },
   emeraude: { label: "Émeraude", hex: "#047857" },
@@ -15,10 +27,22 @@ export const PRESETS: Record<string, { label: string; hex: string | null }> = {
   orange: { label: "Orange", hex: "#c2410c" },
   noir: { label: "Anthracite", hex: "#1f2937" },
 }
-export const SECTION_LABELS: Record<DesignSection, string> = {
+export const SECTION_LABELS: Record<Exclude<DesignSection, `block:${string}`>, string> = {
   intro: "Texte de présentation", highlights: "Points forts", offers: "Départs et prix", inclusions: "Prestations incluses",
   programme: "Programme", gallery: "Galerie d'images", testimonials: "Témoignages", services: "Services inclus (cartes)", conditions: "Conditions et avantages", faq: "Questions fréquentes", form: "Formulaire de réservation",
 }
+export interface DesignBlock {
+  id: string
+  type: BlockType
+  title: string
+  text: string
+  items: { title: string; text: string }[]
+  images: string[]
+  /** bouton d'un bloc « appel à l'action » : défile vers le formulaire ou ouvre WhatsApp */
+  cta: "form" | "whatsapp"
+  ctaLabel: string
+}
+
 export interface PageDesign {
   v: 1
   colors: { preset: string; custom: string }
@@ -36,6 +60,8 @@ export interface PageDesign {
   conditions: { title: string; text: string }[]
   /** date limite de l'offre (AAAA-MM-JJ, jour de Tunis) : affiche un compte à rebours tant qu'elle n'est pas passée ; vide = aucun */
   deadline: string
+  /** blocs personnalisés (placés dans `sections` sous la clé « block:<id> ») */
+  blocks: DesignBlock[]
 }
 
 export const SECTION_DEFAULTS: Record<Family, DesignSection[]> = {
@@ -45,9 +71,13 @@ export const SECTION_DEFAULTS: Record<Family, DesignSection[]> = {
   autre: ["intro", "offers", "inclusions", "testimonials", "faq", "form"],
 }
 
+/** Libellé d'une section dans l'éditeur (les blocs portent le titre choisi par l'équipe). */
+export const sectionLabel = (d: { blocks: { id: string; title: string }[] }, key: DesignSection): string =>
+  key.startsWith("block:") ? `Bloc « ${d.blocks.find((b) => `block:${b.id}` === key)?.title ?? "?"} »` : SECTION_LABELS[key as Exclude<DesignSection, `block:${string}`>]
+
 export const defaultDesign = (family: Family): PageDesign => ({
   v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true }, form: { email: false },
-  sections: SECTION_DEFAULTS[family].map((key) => ({ key, visible: true })), faq: [], testimonials: [], program: [], services: [], conditions: [], deadline: "",
+  sections: SECTION_DEFAULTS[family].map((key) => ({ key, visible: true })), faq: [], testimonials: [], program: [], services: [], conditions: [], deadline: "", blocks: [],
 })
 
 const HEX = /^#[0-9a-fA-F]{6}$/
@@ -102,8 +132,10 @@ export function pgJsonText(v: unknown): string {
   return JSON.stringify(v)
 }
 
-/** Taille maximale du design stocké, en OCTETS de sa forme PostgreSQL (la base refuse au-delà de 16 000 : 1 000 octets de marge). */
-export const MAX_DESIGN_BYTES = 15000
+/** Taille acceptée SANS la migration 0022 : contrainte de 0018 (16 000 octets), 1 000 de marge. Au-delà, l'enregistrement exige 0022. */
+export const LEGACY_DESIGN_BYTES = 15000
+/** Taille maximale du design stocké, en OCTETS de sa forme PostgreSQL : contrainte de 0022 (64 000 octets), 4 000 de marge. */
+export const MAX_DESIGN_BYTES = 60000
 export const designBytes = (d: PageDesign): number => new TextEncoder().encode(pgJsonText(d)).length
 
 /** Nettoie ET valide : renvoie le design sûr et la liste des problèmes (les champs invalides sont écartés, jamais corrigés en silence). */
@@ -132,22 +164,53 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
 
   d.form = { email: obj(r.form).email === true }
 
-  // ordre des sections : permutation des sections autorisées pour la famille ; « form » toujours présent et visible
-  const allowed = SECTION_DEFAULTS[family]
+  const list = (v: unknown, max: number, label: string): unknown[] => {
+    if (!Array.isArray(v)) return []
+    if (v.length > max) errors[label] = `${max} éléments maximum.`
+    return v.slice(0, max)
+  }
+
+  // blocs personnalisés : validés un par un (types connus, textes bornés, URL d'image https ou relatives seulement) ; les blocs incomplets sont signalés ET écartés
+  const IMG = /^(https:\/\/|\/(?!\/))[^\s"'<>]{1,500}$/ // « // » refusé : une adresse relative au protocole chargerait une image d'un AUTRE site
+  const seenIds: Record<string, true> = {}
+  d.blocks = list(r.blocks, 12, "blocks").map(obj).flatMap((b, i): DesignBlock[] => {
+    const type = clean(b.type, 20) as BlockType
+    const id = clean(b.id, 12)
+    const fail = (msg: string): DesignBlock[] => { errors[`block${i}`] = msg; return [] }
+    if (!(type in BLOCK_TYPES)) return fail("Type de bloc inconnu.")
+    if (!/^[a-z0-9]{4,12}$/.test(id)) return fail("Identifiant de bloc invalide.")
+    if (seenIds[id]) return fail("Identifiant de bloc dupliqué.")
+    const title = clean(b.title, 120), text = clean(b.text, 1200)
+    if (!title) return fail("Le titre du bloc est requis.")
+    const items = (Array.isArray(b.items) ? b.items : []).slice(0, 12).map(obj).map((x) => ({ title: clean(x.title, 80), text: clean(x.text, 400) })).filter((x) => x.title)
+    const images = (Array.isArray(b.images) ? b.images : []).slice(0, 8).map((x) => clean(x, 500)).filter(Boolean)
+    if (images.some((u) => !IMG.test(u))) return fail("Image : adresse https:// ou chemin /… attendu.")
+    if ((type === "benefits" || type === "steps") && items.length === 0) return fail("Ajoutez au moins un élément (titre requis).")
+    if (type === "gallery" && images.length === 0) return fail("Ajoutez au moins une image.")
+    if (type === "image_text" && (images.length < 1 || !text)) return fail("Une image et un texte sont requis.")
+    if ((type === "text" || type === "notice") && !text) return fail("Le texte du bloc est requis.")
+    seenIds[id] = true
+    return [{ id, type, title, text, items: type === "benefits" || type === "steps" ? items : [], images: type === "gallery" ? images : type === "image_text" ? images.slice(0, 1) : [], cta: b.cta === "whatsapp" ? "whatsapp" : "form", ctaLabel: type === "cta" ? clean(b.ctaLabel, 40) || "Réserver" : "" }]
+  })
+
+  // ordre des sections : permutation des sections autorisées pour la famille (+ les blocs) ; « form » toujours présent et visible
+  const blockKeys = d.blocks.map((b) => `block:${b.id}` as DesignSection)
+  const allowed: DesignSection[] = [...SECTION_DEFAULTS[family], ...blockKeys]
   const seen: Record<string, true> = {}
   const order: { key: DesignSection; visible: boolean }[] = []
   if (Array.isArray(r.sections)) for (const s of r.sections) {
     const o = obj(s); const key = o.key as DesignSection
     if (allowed.indexOf(key) >= 0 && !seen[key]) { seen[key] = true; order.push({ key, visible: key === "form" ? true : o.visible !== false }) }
   }
-  for (const key of allowed) if (!seen[key]) order.push({ key, visible: true })
+  for (const key of allowed) if (!seen[key]) {
+    // un bloc nouveau se place avant la FAQ (sinon avant le formulaire) ; les autres sections manquantes vont à la fin, comme avant
+    if (key.startsWith("block:")) {
+      const at = order.findIndex((x) => x.key === "faq") >= 0 ? order.findIndex((x) => x.key === "faq") : order.findIndex((x) => x.key === "form")
+      order.splice(at >= 0 ? at : order.length, 0, { key, visible: true })
+    } else order.push({ key, visible: true })
+  }
   d.sections = order
 
-  const list = (v: unknown, max: number, label: string): unknown[] => {
-    if (!Array.isArray(v)) return []
-    if (v.length > max) errors[label] = `${max} éléments maximum.`
-    return v.slice(0, max)
-  }
   d.faq = list(r.faq, 8, "faq").map(obj).map((x) => ({ q: clean(x.q, 140), a: clean(x.a, 600) })).filter((x) => x.q || x.a)
   d.faq.forEach((x, i) => { if (!x.q || !x.a) errors[`faq${i}`] = "Question et réponse sont toutes deux requises." })
   d.testimonials = list(r.testimonials, 6, "testimonials").map(obj).map((x) => ({ name: clean(x.name, 60), text: clean(x.text, 400), place: clean(x.place, 60) })).filter((x) => x.name || x.text)
@@ -171,7 +234,7 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
   d.program = d.program.filter((x) => x.title && x.text)
   d.services = d.services.filter((x) => x.title && x.text)
   d.conditions = d.conditions.filter((x) => x.title && x.text)
-  if (designBytes(d) > MAX_DESIGN_BYTES) errors.size = `Personnalisation trop volumineuse (${designBytes(d)} octets, ${MAX_DESIGN_BYTES} maximum) : raccourcissez le programme, la FAQ ou les témoignages.`
+  if (designBytes(d) > MAX_DESIGN_BYTES) errors.size = `Personnalisation trop volumineuse (${designBytes(d)} octets, ${MAX_DESIGN_BYTES} maximum) : raccourcissez les blocs, le programme, la FAQ ou les témoignages.`
   return { design: d, errors }
 }
 

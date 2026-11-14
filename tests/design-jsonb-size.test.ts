@@ -1,28 +1,32 @@
-// PREUVE : toute personnalisation ACCEPTÉE par le serveur respecte la contrainte PostgreSQL
-//   CHECK (design IS NULL OR (jsonb_typeof(design) = 'object' AND octet_length(design::text) <= 16000))
-// La contrainte est lue DANS le fichier 0018 (aucune copie à la main) et exécutée sur PostgreSQL de test (PGlite).
+// PREUVE : toute personnalisation ACCEPTÉE par le serveur respecte les contraintes PostgreSQL
+//   0018 : CHECK (design IS NULL OR (jsonb_typeof(design) = 'object' AND octet_length(design::text) <= 16000))  → valable jusqu'à LEGACY_DESIGN_BYTES (15 000)
+//   0022 : même règle avec 64 000 octets                                                                       → valable jusqu'à MAX_DESIGN_BYTES (60 000)
+// Les contraintes sont lues DANS les fichiers de migration (aucune copie à la main) et exécutées sur PostgreSQL de test (PGlite).
 // Ces essais ne prouvent rien sur la base de production ; ils démontrent la méthode de mesure.
 import { beforeAll, describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import { PGlite } from "@electric-sql/pglite"
-import { MAX_DESIGN_BYTES, designBytes, pgJsonText, sanitizeDesign, type PageDesign } from "@/lib/page-builder/design"
+import { LEGACY_DESIGN_BYTES, MAX_DESIGN_BYTES, designBytes, pgJsonText, sanitizeDesign, type PageDesign } from "@/lib/page-builder/design"
 import type { Family } from "@/lib/page-builder/themes"
 
 const M18 = readFileSync(new URL("../supabase/migrations/0018_page_design.sql", import.meta.url), "utf8")
-const CHECK = /CHECK \((design IS NULL OR [\s\S]*?<= 16000\))\)/.exec(M18)![1]
-const LIMIT = Number(/<= (\d+)\)/.exec(CHECK)![1])
+const M22 = readFileSync(new URL("../supabase/migrations/0022_page_design_size.sql", import.meta.url), "utf8")
+const checkOf = (m: string) => /CHECK \((design IS NULL OR [\s\S]*?<= \d+\))\)/.exec(m)![1]
+const CHECK = checkOf(M18), CHECK22 = checkOf(M22)
+const LIMIT = Number(/<= (\d+)\)/.exec(CHECK)![1]), LIMIT22 = Number(/<= (\d+)\)/.exec(CHECK22)![1])
 let db: PGlite
 const pgBytes = async (v: unknown) => (await db.query<{ n: number }>(`SELECT octet_length(($1::jsonb)::text) AS n`, [JSON.stringify(v)])).rows[0].n
 const pgText = async (v: unknown) => (await db.query<{ t: string }>(`SELECT ($1::jsonb)::text AS t`, [JSON.stringify(v)])).rows[0].t
 let id = 0
 /** insère la valeur DANS une table portant exactement la contrainte de 0018 : true = acceptée par la base */
-const dbAccepts = async (v: unknown): Promise<boolean> => {
-  try { await db.query(`INSERT INTO d (id, design) VALUES ($1, $2::jsonb)`, [++id, JSON.stringify(v)]); return true } catch { return false }
+const dbAccepts = async (v: unknown, table: "d" | "d22" = "d22"): Promise<boolean> => {
+  try { await db.query(`INSERT INTO ${table} (id, design) VALUES ($1, $2::jsonb)`, [++id, JSON.stringify(v)]); return true } catch { return false }
 }
 
 beforeAll(async () => {
   db = new PGlite()
   await db.exec(`CREATE TABLE d (id int PRIMARY KEY, design jsonb, CONSTRAINT landing_categories_design_check CHECK (${CHECK}))`)
+  await db.exec(`CREATE TABLE d22 (id int PRIMARY KEY, design jsonb, CONSTRAINT landing_categories_design_check CHECK (${CHECK22}))`)
 }, 60000)
 
 // générateur pseudo-aléatoire reproductible
@@ -33,10 +37,10 @@ const ALPHA = ["a", "Z", "é", "à", "ç", "€", "ع", "ر", "😀", "🕋", "�
 const text = (n: number) => { let t = ""; for (let i = 0; i < n; i++) t += pick(ALPHA); return t }
 
 describe("mesure serveur = mesure PostgreSQL", () => {
-  it("la contrainte lue dans 0018 est bien octet_length(design::text) <= 16000", () => {
-    expect(LIMIT).toBe(16000)
-    expect(MAX_DESIGN_BYTES).toBeLessThan(LIMIT)
-    expect(CHECK).toContain("octet_length(design::text)")
+  it("les contraintes lues dans 0018 et 0022 sont bien octet_length(design::text) <= 16000 puis <= 64000 ; les limites du serveur restent en dessous", () => {
+    expect(LIMIT).toBe(16000); expect(LIMIT22).toBe(64000)
+    expect(LEGACY_DESIGN_BYTES).toBeLessThan(LIMIT); expect(MAX_DESIGN_BYTES).toBeLessThan(LIMIT22)
+    expect(CHECK).toContain("octet_length(design::text)"); expect(CHECK22).toContain("octet_length(design::text)")
   })
   it("sérialisation : PostgreSQL met « : » et « , » suivis d'une espace (JSON.stringify non) — pgJsonText reproduit exactement la longueur PostgreSQL", async () => {
     const samples: unknown[] = [
@@ -73,16 +77,22 @@ describe("garantie : accepté par le serveur ⇒ accepté par la base", () => {
       faq: Array.from({ length: n(10) }, () => ({ q: text(n(160)), a: text(n(700)) })),
       testimonials: Array.from({ length: n(8) }, () => ({ name: text(n(70)), text: text(n(450)), place: text(n(70)) })),
       program: Array.from({ length: n(16) }, () => ({ title: text(n(90)), text: text(n(900)) })),
+      services: Array.from({ length: n(8) }, () => ({ title: text(n(90)), text: text(n(450)) })),
+      conditions: Array.from({ length: n(5) }, () => ({ title: text(n(90)), text: text(n(350)) })),
+      deadline: rnd() < 0.5 ? "2027-02-08" : text(8),
+      blocks: Array.from({ length: n(14) }, (_, i) => ({ id: rnd() < 0.8 ? `b${i}x${Math.floor(rnd() * 99999)}` : text(3), type: pick(["text", "benefits", "steps", "gallery", "image_text", "cta", "notice", "pirate"]), title: text(n(130)), text: text(n(1300)), items: Array.from({ length: n(14) }, () => ({ title: text(n(90)), text: text(n(450)) })), images: Array.from({ length: n(10) }, () => (rnd() < 0.8 ? "https://cdn.test/" + text(n(30)).replace(/[^a-z]/gi, "z") : text(6))), cta: pick(["form", "whatsapp", "x"]), ctaLabel: text(n(50)) })),
     }
   }
   const verify = async (raw: unknown, family: Family) => {
     const { design, errors } = sanitizeDesign(raw, family)
     const bytes = designBytes(design)
     if (errors.size) { expect(bytes).toBeGreaterThan(MAX_DESIGN_BYTES); return "refusé" as const }
-    // accepté : taille ≤ limite serveur, égale à celle de PostgreSQL, et la base l'accepte
+    // accepté : taille ≤ limite serveur, égale à celle de PostgreSQL ; acceptée par 0022 ; et par 0018 tant qu'elle reste ≤ 15 000
     expect(bytes).toBeLessThanOrEqual(MAX_DESIGN_BYTES)
     expect(await pgBytes(design)).toBe(bytes)
-    expect(await dbAccepts(design)).toBe(true)
+    expect(await dbAccepts(design, "d22")).toBe(true)
+    if (bytes <= LEGACY_DESIGN_BYTES) expect(await dbAccepts(design, "d")).toBe(true)
+    else expect(await dbAccepts(design, "d")).toBe(bytes <= LIMIT) // au-delà de 15 000 : accepté par 0018 seulement jusqu'à 16 000 ; le serveur le signale (message 0022), il ne plante pas
     return "accepté" as const
   }
   it("400 designs aléatoires (texte multi-octets, emojis coupés, substituts isolés, échappements, listes pleines ou vides) : aucun accepté n'est refusé par la base", async () => {
@@ -91,34 +101,49 @@ describe("garantie : accepté par le serveur ⇒ accepté par la base", () => {
     expect(tally.accepté).toBeGreaterThan(100)
     expect(tally.refusé).toBeGreaterThan(20) // les deux issues sont réellement exercées
   }, 120000)
-  it("cas limite : le plus gros design ACCEPTABLE (réglé à l'octet près sous 15 000) passe la contrainte, avec marge", async () => {
-    let best: PageDesign | null = null
-    for (const filler of ["a", "é", "😀", "\n", "\""]) {
-      // budget de caractères réparti sur le programme, la FAQ et les témoignages, agrandi jusqu'à la dernière taille acceptée par le serveur
-      const fill = (n: number) => (n === 0 ? "" : n === 1 ? "x" : "x" + filler.repeat(Math.ceil(n / filler.length)).slice(0, n - 2) + "x") // « x » aux deux bouts : un texte de retours à la ligne serait vidé par le nettoyage (trim)
-      const build = (k: number) => {
-        let left = k
-        const take = (cap: number) => { const n = Math.min(cap, left); left -= n; return fill(n) }
-        const program = Array.from({ length: 14 }, () => ({ title: "T", text: take(800) || "x" }))
-        const faq = Array.from({ length: 8 }, () => ({ q: "Q", a: take(600) || "x" }))
-        const testimonials = Array.from({ length: 6 }, () => ({ name: "N", text: take(400) || "x", place: "" }))
-        return sanitizeDesign({ program, faq, testimonials }, "voyage")
-      }
-      let lo = 0, hi = 20000
-      while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (!build(mid).errors.size) lo = mid; else hi = mid - 1 }
-      const r = build(lo)
+  // budget de caractères réparti sur le programme, la FAQ, les témoignages et 12 blocs texte ; « x » aux deux bouts : un texte de retours à la ligne serait vidé par le nettoyage (trim)
+  const CAP = 14 * 800 + 8 * 600 + 6 * 400 + 12 * 1200
+  const buildFilled = (filler: string, k: number) => {
+    const fill = (n: number) => (n === 0 ? "" : n === 1 ? "x" : "x" + filler.repeat(Math.ceil(n / filler.length)).slice(0, n - 2) + "x")
+    let left = k
+    const take = (cap: number) => { const n = Math.min(cap, left); left -= n; return fill(n) }
+    const program = Array.from({ length: 14 }, () => ({ title: "T", text: take(800) || "x" }))
+    const faq = Array.from({ length: 8 }, () => ({ q: "Q", a: take(600) || "x" }))
+    const testimonials = Array.from({ length: 6 }, () => ({ name: "N", text: take(400) || "x", place: "" }))
+    const blocks = Array.from({ length: 12 }, (_, i) => ({ id: `blk${String(i).padStart(3, "0")}`, type: "text", title: "B", text: take(1200) || "x" }))
+    return sanitizeDesign({ program, faq, testimonials, blocks }, "voyage")
+  }
+  const FILLERS = ["a", "é", "😀", "\n", "\""]
+  it("palier 0022 : le plus gros design ACCEPTABLE (réglé à l'octet près sous 60 000) passe la contrainte de 64 000, avec marge", async () => {
+    let best: PageDesign | null = null, tight = 0
+    for (const filler of FILLERS) {
+      let lo = 0, hi = CAP
+      while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (!buildFilled(filler, mid).errors.size) lo = mid; else hi = mid - 1 }
+      const r = buildFilled(filler, lo)
       expect(r.errors.size).toBeUndefined()
-      expect(build(lo + 1).errors.size === undefined && lo < 20000).toBe(false) // un caractère de plus et le serveur refuse : on est bien à la limite
       const b = designBytes(r.design)
       expect(b).toBeLessThanOrEqual(MAX_DESIGN_BYTES)
-      expect(b).toBeGreaterThan(MAX_DESIGN_BYTES - 5 * 4) // à quelques octets de la limite (le dernier caractère peut peser jusqu'à 4 octets)
       expect(await pgBytes(r.design)).toBe(b)
-      expect(await dbAccepts(r.design)).toBe(true)
+      expect(await dbAccepts(r.design, "d22")).toBe(true)
+      if (lo < CAP) { expect(b).toBeGreaterThan(MAX_DESIGN_BYTES - 5 * 4); tight++ } // un caractère de plus et le serveur refuse : on est bien à la limite
       if (!best || b > designBytes(best)) best = r.design
     }
-    expect(await pgBytes(best)).toBeLessThanOrEqual(LIMIT)
-    expect(LIMIT - (await pgBytes(best))).toBeGreaterThanOrEqual(1000) // marge de sécurité conservée
-  }, 120000)
+    expect(tight).toBeGreaterThanOrEqual(1) // au moins un type de caractère atteint réellement la limite
+    expect(LIMIT22 - (await pgBytes(best))).toBeGreaterThanOrEqual(4000) // marge de sécurité conservée
+  }, 180000)
+  it("palier 0018 : jusqu'à 15 000 octets la contrainte d'AVANT 0022 est respectée ; au-delà elle refuse (le serveur le dit, il ne plante pas)", async () => {
+    for (const filler of FILLERS) {
+      // plus gros design ≤ 15 000 octets (recherche sur la TAILLE, pas sur la validation)
+      let lo = 0, hi = CAP
+      while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (designBytes(buildFilled(filler, mid).design) <= LEGACY_DESIGN_BYTES) lo = mid; else hi = mid - 1 }
+      const small = buildFilled(filler, lo).design
+      expect(designBytes(small)).toBeLessThanOrEqual(LEGACY_DESIGN_BYTES)
+      expect(await dbAccepts(small, "d")).toBe(true)
+      expect(LIMIT - (await pgBytes(small))).toBeGreaterThanOrEqual(1000)
+      const over = buildFilled(filler, Math.min(CAP, lo + 400))
+      if (!over.errors.size && designBytes(over.design) > LEGACY_DESIGN_BYTES) expect(await dbAccepts(over.design, "d")).toBe(designBytes(over.design) <= LIMIT)
+    }
+  }, 180000)
   it("beaucoup de petites propriétés et de sections : la surcharge « : » / « , » de PostgreSQL est comptée", async () => {
     const many = { sections: Array.from({ length: 30 }, (_, i) => ({ key: i % 2 ? "faq" : "offers", visible: true })), faq: Array.from({ length: 30 }, () => ({ q: "a", a: "b" })), testimonials: Array.from({ length: 30 }, () => ({ name: "a", text: "b", place: "" })), program: Array.from({ length: 30 }, () => ({ title: "a", text: "b" })) }
     const { design, errors } = sanitizeDesign(many, "voyage")

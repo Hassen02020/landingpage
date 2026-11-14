@@ -3,7 +3,7 @@
 // publique garde son rendu actuel), écriture = message clair ; jamais d'erreur 500 ni de perte de données.
 import { DbError, select, update } from "@/lib/server/db"
 import { familyOf } from "@/lib/page-builder/themes"
-import { defaultDesign, sanitizeDesign, type DesignErrors, type PageDesign } from "@/lib/page-builder/design"
+import { LEGACY_DESIGN_BYTES, defaultDesign, designBytes, sanitizeDesign, type DesignErrors, type PageDesign } from "@/lib/page-builder/design"
 import type { Product } from "@/lib/config"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -46,7 +46,11 @@ export async function saveDesign(id: string, product: Product, raw: unknown, act
     await update("landing_categories", `id=eq.${id}`, { design, updated_at: new Date().toISOString(), updated_by: actorId })
     return { ok: true }
   } catch (e) {
-    if (isCheckViolation(e)) return { ok: false, message: "La personnalisation est refusée par la base (forme ou taille) : raccourcissez-la. Rien n'a été enregistré.", errors: {} }
+    if (isCheckViolation(e)) {
+      // au-delà de 15 000 octets, seule la migration 0022 relève la limite de la base : on le dit au lieu d'une erreur technique
+      if (designBytes(design) > LEGACY_DESIGN_BYTES) return { ok: false, message: `Cette personnalisation pèse ${designBytes(design)} octets : au-delà de ${LEGACY_DESIGN_BYTES} octets elle nécessite la migration 0022 (fichier prêt, à appliquer par le propriétaire) ; sinon raccourcissez-la. Rien n'a été enregistré.`, errors: {} }
+      return { ok: false, message: "La personnalisation est refusée par la base (forme ou taille) : raccourcissez-la. Rien n'a été enregistré.", errors: {} }
+    }
     if (isMissingColumn(e)) return { ok: false, message: "La personnalisation avancée nécessite la migration 0018 (fichier prêt, à appliquer par le propriétaire) : rien n'a été enregistré.", errors: {} }
     throw e
   }

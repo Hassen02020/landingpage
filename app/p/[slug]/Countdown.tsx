@@ -4,16 +4,18 @@ import { useEffect, useState } from "react"
 
 const UNITS = {
   fr: { title: "L'offre se termine dans", d: "jours", h: "heures", m: "min", s: "sec", until: "Offre valable jusqu'au" },
+  en: { title: "The offer ends in", d: "days", h: "hours", m: "min", s: "sec", until: "Offer valid until" },
   ar: { title: "ينتهي العرض بعد", d: "يوم", h: "ساعة", m: "دقيقة", s: "ثانية", until: "عرض صالح لـ" },
 }
 const MONTHS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 const MONTHS_AR = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
 
 /** Fin du jour de Tunis (UTC+1) pour une date AAAA-MM-JJ. */
 export const deadlineTime = (day: string): number => Date.parse(`${day}T23:59:59+01:00`)
 
 /** Compte à rebours jusqu'à la date limite choisie par l'équipe. N'affiche RIEN côté serveur (évite tout décalage) et disparaît une fois la date passée : il ne modifie jamais les offres. */
-export function Countdown({ deadline, lang, className = "" }: { deadline: string; lang: "fr" | "ar"; className?: string }) {
+export function Countdown({ deadline, lang, className = "" }: { deadline: string; lang: "fr" | "ar" | "en"; className?: string }) {
   const [now, setNow] = useState<number | null>(null)
   useEffect(() => {
     setNow(Date.now())
@@ -27,7 +29,7 @@ export function Countdown({ deadline, lang, className = "" }: { deadline: string
   const u = UNITS[lang]
   const labels = [u.d, u.h, u.m, u.s]
   const [y, m, d] = deadline.split("-").map(Number)
-  const dateText = lang === "ar" ? `${d} ${MONTHS_AR[m - 1]} ${y}` : `${d} ${MONTHS_FR[m - 1]} ${y}`
+  const dateText = lang === "ar" ? `${d} ${MONTHS_AR[m - 1]} ${y}` : lang === "en" ? `${MONTHS_EN[m - 1]} ${d}, ${y}` : `${d} ${MONTHS_FR[m - 1]} ${y}`
   return (
     <div className={`bg-gray-900 text-white ${className}`} data-testid="countdown" role="timer" aria-live="off">
       <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center">

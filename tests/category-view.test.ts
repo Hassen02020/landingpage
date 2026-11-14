@@ -119,3 +119,55 @@ describe("rendu du clone Ramadan (famille omra avec services, conditions, témoi
     expect(h).not.toContain('name="email"')
   })
 })
+
+describe("langue anglaise (pages /p)", () => {
+  const en = () => renderToStaticMarkup(createElement(CategoryView, { category: category({ lang: "en", name: "Ramadan Umrah", product: "omra" }), offers: [offer({ product: "omra", name: "Double room", departure_date: "2027-02-08", price: 6900 })] }))
+  it("textes, dates et sens de lecture en anglais ; FAQ générique en anglais ; aucun texte français ni arabe de l'interface", () => {
+    const h = en()
+    expect(h).toContain('dir="ltr"'); expect(h).toContain("Book this offer"); expect(h).toContain("February 8, 2027")
+    expect(h).toContain("How do I book?"); expect(h).toContain("Frequently asked questions")
+    expect(h).not.toContain("Réserver cette offre"); expect(h).not.toContain("احجز هذا العرض"); expect(h).not.toContain("Questions fréquentes")
+  })
+  it("le formulaire du CRM est en anglais (champs, consentements)", () => {
+    const h = en()
+    expect(h).toContain("Full name"); expect(h).toContain("I agree that Easy2Book may contact me"); expect(h).not.toContain("Nom complet")
+  })
+})
+
+describe("blocs personnalisés (rendu)", () => {
+  const blocks = [
+    { id: "t0001", type: "text", title: "Notre hôtel", text: "Un hôtel calme." },
+    { id: "t0002", type: "benefits", title: "Pourquoi nous", items: [{ title: "Proche du Haram", text: "200 m" }, { title: "Guides", text: "" }] },
+    { id: "t0003", type: "steps", title: "Programme", items: [{ title: "Jour 1", text: "Arrivée" }, { title: "Jour 2", text: "Visite" }] },
+    { id: "t0004", type: "gallery", title: "En images", images: ["https://cdn.test/a.jpg", "/local/b.jpg"] },
+    { id: "t0005", type: "image_text", title: "L'hôtel", text: "Chambres rénovées.", images: ["https://cdn.test/c.jpg"] },
+    { id: "t0006", type: "cta", title: "Prêt à partir ?", text: "On vous rappelle.", cta: "whatsapp", ctaLabel: "Écrire maintenant" },
+    { id: "t0007", type: "notice", title: "Bon à savoir", text: "Passeport valide 6 mois." },
+  ]
+  const render = (b: unknown[], extra: Record<string, unknown> = {}) => renderToStaticMarkup(createElement(CategoryView, { category: category({ product: "voyage" }), offers: [offer()], design: sanitizeDesign({ blocks: b, ...extra }, "voyage").design }))
+  it("les 7 types s'affichent, placés avant la FAQ, dans l'ordre choisi ; images https et locales ; bouton WhatsApp ou formulaire", () => {
+    const h = render(blocks)
+    for (const t of ["text", "benefits", "steps", "gallery", "image_text", "cta", "notice"]) expect(h, t).toContain(`data-block-type="${t}"`)
+    expect(h).toContain("Notre hôtel"); expect(h).toContain("Proche du Haram"); expect(h).toContain("Jour 2"); expect(h).toContain('src="https://cdn.test/a.jpg"'); expect(h).toContain('src="/local/b.jpg"')
+    expect(h).toContain("Écrire maintenant"); expect(h).toContain("wa.me/")
+    expect(h.indexOf('id="bloc-t0007"')).toBeLessThan(h.indexOf('id="faq"'))
+    expect(h.indexOf('id="faq"')).toBeLessThan(h.indexOf('id="reservation"'))
+    expect(render([{ id: "t0006", type: "cta", title: "Réservez", cta: "form", ctaLabel: "Je réserve" }])).toMatch(/href="#reservation"[^>]*>Je réserve/)
+  })
+  it("ordre personnalisé et masquage appliqués ; sans bloc, rendu inchangé", () => {
+    const first = render(blocks.slice(0, 2), { sections: [{ key: "block:t0002", visible: true }, { key: "block:t0001", visible: false }] })
+    expect(first).toContain("Pourquoi nous"); expect(first).not.toContain("Un hôtel calme.")
+    expect(render([])).toBe(renderToStaticMarkup(createElement(CategoryView, { category: category({ product: "voyage" }), offers: [offer()], design: sanitizeDesign({}, "voyage").design })))
+  })
+  it("INJECTION : titres, textes et éléments sont ÉCHAPPÉS ; une image dangereuse écarte le bloc entier (jamais rendue)", () => {
+    const h = render([
+      { id: "x0001", type: "text", title: "<script>alert(1)</script>", text: "<img src=x onerror=alert(2)>" },
+      { id: "x0002", type: "benefits", title: "<b>gras</b>", items: [{ title: "\"><svg onload=1>", text: "<iframe src=//evil.test></iframe>" }] },
+      { id: "x0003", type: "gallery", title: "Piège", images: ["javascript:alert(3)"] },
+      { id: "x0004", type: "gallery", title: "Piège 2", images: ["//evil.test/a.jpg"] },
+      { id: "x0005", type: "cta", title: "OK", cta: "form", ctaLabel: "<i>go</i>" },
+    ])
+    for (const bad of ["<script>alert(1)", "<img src=x onerror", "<b>gras</b>", "<svg onload", "<iframe", "<i>go</i>", "javascript:alert(3)", "//evil.test/a.jpg", "Piège"]) expect(h, bad).not.toContain(bad)
+    expect(h).toContain("&lt;script&gt;alert(1)&lt;/script&gt;")
+  })
+})

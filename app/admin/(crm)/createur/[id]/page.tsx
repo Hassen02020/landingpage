@@ -11,6 +11,10 @@ import { PreviewPanel } from "./PreviewPanel"
 import { PublishPanel } from "./PublishPanel"
 import { AdLinkBlock } from "./AdLinkBlock"
 import { DesignEditor } from "./DesignEditor"
+import { listVersions, REASON_LABELS } from "@/lib/server/page-versions"
+import { loadSchedule, toTunisLocal } from "@/lib/server/page-schedule"
+import { clearScheduleAction, scheduleAction } from "@/app/admin/createur-actions"
+import { restoreVersionAction } from "@/app/admin/createur-actions"
 import { loadDesign } from "@/lib/server/page-design"
 import { parsePeriod } from "@/lib/server/stats"
 import { formatStat, GROUP_LABELS, type StatGroup } from "@/lib/page-builder/stats"
@@ -20,7 +24,7 @@ export const dynamic = "force-dynamic"
 const defaultTheme = (product: string): Theme => THEMES.find((t) => t.product === product) ?? THEMES[THEMES.length - 1]
 const TONE = { ok: "bg-green-100 text-green-800", warn: "bg-amber-100 text-amber-800", bad: "bg-red-100 text-red-800" } as const
 
-export default async function CreatorEditor({ params, searchParams }: { params: { id: string }; searchParams: { etape?: string; theme?: string; ok?: string; from?: string; to?: string } }) {
+export default async function CreatorEditor({ params, searchParams }: { params: { id: string }; searchParams: { etape?: string; theme?: string; ok?: string; erreur?: string; okp?: string; erreurp?: string; from?: string; to?: string } }) {
   const access = await builderAccess()
   if (!access.ok) return <p className="bg-white rounded-2xl p-6 text-gray-700">{access.message}</p>
   const isNew = params.id === "nouvelle"
@@ -28,7 +32,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   if (!isNew && !page) notFound()
   const theme = themeById(searchParams.theme) ?? (page ? defaultTheme(page.category.product) : null)
   if (!theme) redirect("/admin/createur/modeles")
-  const etape = isNew ? "infos" : ["infos", "design", "formulaire", "apercu", "publication", "stats"].includes(searchParams.etape ?? "") ? (searchParams.etape as string) : "infos"
+  const etape = isNew ? "infos" : ["infos", "design", "formulaire", "apercu", "publication", "stats", "versions"].includes(searchParams.etape ?? "") ? (searchParams.etape as string) : "infos"
   const category = page?.category ?? null
   const path = category ? creatorPath(category.slug) : ""
   const family = familyOf(category?.product ?? theme.product)
@@ -36,6 +40,8 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   const period = parsePeriod(searchParams.from, searchParams.to, 30)
   const catalogue = etape === "infos" ? await catalogueOffers(page?.category.id).catch(() => []) : []
   const media = etape === "infos" ? await listMedia().catch(() => []) : []
+  const sched = etape === "publication" && page ? await loadSchedule(page.category.id).catch(() => null) : null
+  const versions = etape === "versions" && page ? await listVersions(page.category.id).catch(() => null) : null
   const stats = etape === "stats" && page ? await loadPageStats(page.category.slug, period).catch(() => null) : null
 
   return (
@@ -89,8 +95,69 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
       {etape === "publication" && page && (
         <div className="space-y-5">
           <PublishPanel id={params.id} theme={theme.id} visible={page.category.visible} ready={page.readiness.ready} publicUrl={`${SITE_URL}${path}`} />
+          <section className="bg-white rounded-2xl border p-5 space-y-3" aria-label="Programmation" data-testid="schedule-panel">
+            <h2 className="font-black">Programmer la publication</h2>
+            {searchParams.okp && <p role="status" className="rounded-xl p-3 text-sm bg-green-50 text-green-800 border border-green-200" data-testid="schedule-ok">{searchParams.okp}</p>}
+            {searchParams.erreurp && <p role="alert" className="rounded-xl p-3 text-sm bg-red-50 text-red-800 border border-red-200" data-testid="schedule-error">{searchParams.erreurp}</p>}
+            {sched === null ? <p className="text-sm text-amber-800">Programmation indisponible pour le moment.</p> : !sched.available ? (
+              <p className="text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3" data-testid="schedule-unavailable">La publication programmée sera disponible après l&apos;application de la migration 0021 (fichier prêt, à appliquer par le propriétaire).</p>
+            ) : (
+              <>
+                {(sched.schedule.publishAt || sched.schedule.unpublishAt) && (
+                  <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm" data-testid="schedule-current">
+                    {sched.schedule.publishAt && <div>Publication prévue le <strong>{toTunisLocal(sched.schedule.publishAt).replace("T", " à ")}</strong> (heure de Tunis).</div>}
+                    {sched.schedule.unpublishAt && <div>Masquage prévu le <strong>{toTunisLocal(sched.schedule.unpublishAt).replace("T", " à ")}</strong> (heure de Tunis).</div>}
+                    <form action={clearScheduleAction} className="mt-2"><input type="hidden" name="id" value={page.category.id} /><button className="px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white">Annuler la programmation</button></form>
+                  </div>
+                )}
+                <form action={scheduleAction} className="grid gap-3 sm:grid-cols-2">
+                  <input type="hidden" name="id" value={page.category.id} />
+                  {!page.category.visible && <label className="text-sm block"><span className="font-bold">Publier le</span><input type="datetime-local" name="publish_at" defaultValue={toTunisLocal(sched.schedule.publishAt)} className="w-full border rounded-xl px-3 py-2 min-h-[44px] mt-1" aria-label="Publier le" /></label>}
+                  <label className="text-sm block"><span className="font-bold">Masquer le (facultatif)</span><input type="datetime-local" name="unpublish_at" defaultValue={toTunisLocal(sched.schedule.unpublishAt)} className="w-full border rounded-xl px-3 py-2 min-h-[44px] mt-1" aria-label="Masquer le" /></label>
+                  <div className="sm:col-span-2"><button className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="schedule-save">Enregistrer la programmation</button></div>
+                </form>
+                <p className="text-xs text-gray-500">Heure de Tunis. Une page incomplète ne peut pas être programmée, et une programmation échue est appliquée avec les mêmes contrôles que la publication manuelle (le bouton « Appliquer les programmations échues » du tableau de bord ou, si le propriétaire l&apos;active, la tâche planifiée).</p>
+              </>
+            )}
+          </section>
           <AdLinkBlock key={`${path}-${page.category.visible}`} path={path} defaultCampaign={page.category.slug} status={page.status} base={SITE_URL} />
         </div>
+      )}
+
+      {etape === "versions" && page && (
+        <section className="space-y-4" aria-label="Historique des versions" data-testid="versions">
+          <div className="bg-white rounded-2xl border p-5 space-y-2">
+            <h2 className="font-black">8. Historique des versions</h2>
+            <p className="text-sm text-gray-600">Chaque enregistrement, personnalisation, publication, désactivation ou restauration crée une version. Restaurer remet le <strong>contenu</strong> (textes, images, personnalisation, offres existantes) dans l&apos;état choisi ; l&apos;<strong>adresse</strong> et l&apos;<strong>état de publication</strong> ne changent jamais, et l&apos;état actuel reste dans l&apos;historique.</p>
+          </div>
+          {searchParams.ok && <p role="status" className="rounded-xl p-3 text-sm bg-green-50 text-green-800 border border-green-200" data-testid="versions-ok">{searchParams.ok}</p>}
+          {searchParams.erreur && <p role="alert" className="rounded-xl p-3 text-sm bg-red-50 text-red-800 border border-red-200" data-testid="versions-error">{searchParams.erreur}</p>}
+          {versions === null ? (
+            <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">Historique indisponible pour le moment.</p>
+          ) : !versions.available ? (
+            <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm" data-testid="versions-unavailable">L&apos;historique des versions sera disponible après l&apos;application de la migration 0020 (fichier prêt, à appliquer par le propriétaire). Rien n&apos;est perdu en attendant : vos pages fonctionnent normalement.</p>
+          ) : versions.versions.length === 0 ? (
+            <div className="bg-white rounded-2xl border p-8 text-center text-gray-600" data-testid="versions-empty">Aucune version pour l&apos;instant : la première sera créée au prochain enregistrement.</div>
+          ) : (
+            <ul className="space-y-2">
+              {versions.versions.map((v, i) => (
+                <li key={v.id} className="bg-white rounded-2xl border p-4 flex flex-wrap items-center gap-3" data-testid="version-row" data-version={v.version_number}>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold">Version {v.version_number}{i === 0 ? <span className="ml-2 text-xs bg-green-100 text-green-800 rounded-full px-2 py-0.5">actuelle</span> : null}</div>
+                    <div className="text-xs text-gray-500">{REASON_LABELS[v.reason] ?? v.reason} · {v.created_at.slice(0, 16).replace("T", " ")} UTC{v.note ? ` · ${v.note}` : ""}</div>
+                  </div>
+                  {i > 0 && (
+                    <form action={restoreVersionAction} className="flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="id" value={page.category.id} /><input type="hidden" name="version" value={v.id} />
+                      <label className="text-xs flex items-center gap-1"><input type="checkbox" name="confirm" value="1" required aria-label={`Confirmer la restauration de la version ${v.version_number}`} /> Je confirme</label>
+                      <button className="px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white">Restaurer</button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       {etape === "stats" && page && (
@@ -134,10 +201,11 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
 
 async function DesignStep({ id, product, theme }: { id: string; product: Parameters<typeof loadDesign>[1]; theme: string }) {
   const loaded = await loadDesign(id, product)
+  const media = await listMedia().catch(() => [])
   return (
     <div className="space-y-3">
       <h2 className="font-black text-lg">3. Personnaliser la page</h2>
-      <DesignEditor key={id} id={id} initial={loaded.design} available={loaded.available} theme={theme} />
+      <DesignEditor key={id} id={id} initial={loaded.design} available={loaded.available} theme={theme} media={media} />
     </div>
   )
 }
