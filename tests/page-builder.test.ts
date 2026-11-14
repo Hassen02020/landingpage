@@ -12,7 +12,7 @@ const offer = (o: Partial<OfferRow> = {}): OfferRow => ({ id: "o1", name: "Dépa
 describe("thèmes", () => {
   it("quatorze thèmes aux identifiants uniques, chacun avec produit, famille et langue valides", () => {
     expect(THEMES).toHaveLength(14)
-    expect(new Set(THEMES.map((t) => t.id)).size).toBe(11)
+    expect(new Set(THEMES.map((t) => t.id)).size).toBe(14)
     for (const t of THEMES) {
       expect(["omra", "voyage", "hotel", "autre"]).toContain(t.product)
       expect(familyOf(t.product)).toBe(t.family)
