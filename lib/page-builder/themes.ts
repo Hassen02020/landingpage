@@ -88,7 +88,7 @@ function groupPreset(o: { name: string; slug: string; date: string; nights: stri
   return {
     name: o.name,
     slug: o.slug,
-    headline: `عمرة ${o.name} — ${o.nights} ليلة (${o.nightsDetail})`,
+    headline: `${o.name.startsWith("عمرة") ? o.name : `عمرة ${o.name}`} — ${o.nights} ليلة (${o.nightsDetail})`,
     description: `رحلة عمرة مع Easy2Book: ${o.nights} ليلة (${o.nightsDetail})، طيران ذهاباً وإياباً، تأشيرة العمرة والتأمين الصحي، إقامة في فندق أرائك غزة ⭐⭐⭐ قريب من الحرم، تنقلات بحافلات سياحية مريحة، مرافقون ذوو خبرة ومرافقة نسائية، وهدايا للمعتمرين. عدد الأماكن محدود.`,
     offers: [{ name: o.name, destination: "مكة المكرمة والمدينة المنورة", nights_detail: o.nightsDetail, price: o.price, features: GROUP_FEATURES, departure_date: o.date, nights: o.nights, tag: o.tag }],
     design: {
