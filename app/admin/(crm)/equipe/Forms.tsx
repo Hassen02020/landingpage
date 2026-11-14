@@ -31,7 +31,7 @@ export function AddMember() {
         <input name="full_name" placeholder="Nom complet" className="border rounded-xl px-3 py-2" />
         <select name="role" defaultValue="agent" className="border rounded-xl px-3 py-2">
           <option value="agent">Employé (leads)</option>
-          <option value="manager">Manager (affecte les leads, voit l'équipe)</option>
+          <option value="manager">Manager (affecte les leads, voit l&apos;équipe)</option>
           <option value="admin">Administrateur</option>
         </select>
       </div>
