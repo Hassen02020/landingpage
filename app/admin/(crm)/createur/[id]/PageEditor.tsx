@@ -15,10 +15,10 @@ const toRow = (o: Offer, key: number): Row => ({
   key, id: o.id, removed: false, image: v(o.image_url), features: (o.features ?? []).join("\n"),
   v: { name: v(o.name), destination: v(o.destination), departure_date: v(o.departure_date), nights: v(o.nights), nights_detail: v(o.nights_detail), price: v(o.price), price_before: v(o.price_before), seats_total: v(o.seats_total), tag: v(o.tag), description: v(o.description) },
 })
-/** Offres du préréglage confirmé (création d'une page seulement) : prix et textes réels ; date de départ et nuits restent à renseigner par l'équipe. */
+/** Offres du préréglage confirmé (création d'une page seulement) : prix et textes réels ; date et nuits préremplies seulement si le préréglage les connaît (groupes Omra), sinon à renseigner par l'équipe. */
 const presetRow = (key: number, o: NonNullable<Theme["preset"]>["offers"][number]): Row => ({
   key, removed: false, image: "", features: o.features.join("\n"),
-  v: { name: o.name, destination: o.destination, departure_date: "", nights: "", nights_detail: o.nights_detail, price: o.price, price_before: "", seats_total: "", tag: "", description: "" },
+  v: { name: o.name, destination: o.destination, departure_date: o.departure_date ?? "", nights: o.nights ?? "", nights_detail: o.nights_detail, price: o.price, price_before: "", seats_total: "", tag: o.tag ?? "", description: "" },
 })
 const emptyRow = (key: number, theme: Theme): Row => ({ key, removed: false, image: "", features: "", v: { name: "", destination: theme.id === "turquie" ? "Turquie" : "", departure_date: "", nights: "", nights_detail: "", price: "", price_before: "", seats_total: "", tag: "", description: "" } })
 
