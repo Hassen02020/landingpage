@@ -1,7 +1,7 @@
 // Exécuteur de la publication programmée (Créateur). PROTÉGÉ PAR SECRET et ÉCHEC FERMÉ :
 //   • sans variable CRON_SECRET (16 caractères minimum) → 503, rien n'est exécuté ;
 //   • sans l'en-tête « Authorization: Bearer <secret> » exact → 401, rien n'est exécuté.
-// Déclenchée par le cron Vercel déclaré dans vercel.json (toutes les 15 minutes ; Vercel envoie « Authorization: Bearer $CRON_SECRET »). Pour la couper : retirer l’entrée de vercel.json ou la variable CRON_SECRET.
+// Déclenchée par le cron Vercel déclaré dans vercel.json (une fois par jour à 05:00 UTC, soit 06:00 à Tunis, limite de l’offre Vercel Hobby ; Vercel envoie « Authorization: Bearer $CRON_SECRET »). Pour la couper : retirer l’entrée de vercel.json ou la variable CRON_SECRET.
 // Le bouton « Appliquer les programmations échues » du tableau de bord fait la même chose, à la demande, pour un administrateur connecté.
 import { NextResponse } from "next/server"
 import { createHash, timingSafeEqual } from "node:crypto"
