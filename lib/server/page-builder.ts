@@ -98,7 +98,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
   if (Object.keys(errors).length) return { ok: false, errors, message: "Vérifiez les champs signalés." }
 
   const saved = await saveCategory(input.id ?? null, catFields, actorId)
-  if (!saved.ok) return { ok: false, errors: saved.errors, message: saved.errors.slug ?? "Enregistrement impossible." }
+  if (!saved.ok) return { ok: false, errors: saved.errors, message: saved.errors.slug ?? saved.errors.lang ?? "Enregistrement impossible." }
   const categoryId = saved.id
   // préréglage de personnalisation du modèle : appliqué UNIQUEMENT à la création, jamais écrasant ; sans colonne `design` (migration 0018) la page est créée sans lui
   if (!input.id && theme.preset) {

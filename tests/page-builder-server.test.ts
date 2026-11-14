@@ -32,6 +32,7 @@ let noDesign = false
 let noVersions = false
 let noSchedule = false
 let check16k = false
+let noEnglish = false
 let seq = 0
 let vseq = 0
 
@@ -56,7 +57,7 @@ function applyFilters(rows: Row[], query: URLSearchParams): Row[] {
 
 beforeEach(() => {
   configureAll(); resetTenantModeCache(); resetPublicOrgCache()
-  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; noSchedule = false; check16k = false; seq = 0; vseq = 0; calls = []
+  role = "admin"; orgId = E2B; multi = false; noDesign = false; noVersions = false; noSchedule = false; check16k = false; noEnglish = false; seq = 0; vseq = 0; calls = []
   T = { landing_categories: [], landing_offers: [], landing_leads: [], landing_events: [], landing_page_versions: [] }
   vi.stubGlobal("fetch", vi.fn(async (url: unknown, init: RequestInit = {}) => {
     const u = new URL(String(url))
@@ -71,6 +72,7 @@ beforeEach(() => {
     if (noDesign && ((method === "GET" && /select=design/.test(u.search)) || (method === "PATCH" && String(init.body ?? "").includes('"design"')))) return json({ code: "42703", message: "column landing_categories.design does not exist" }, 400)
     if (noSchedule && table === "landing_categories" && ((method === "GET" && /publish_at/.test(u.search)) || (method === "PATCH" && /publish_at/.test(String(init.body ?? ""))))) return json({ code: "42703", message: "column landing_categories.publish_at does not exist" }, 400)
     if (check16k && method === "PATCH" && table === "landing_categories" && String(init.body ?? "").length > 16000) return json({ code: "23514", message: "violates check constraint landing_categories_design_check" }, 400)
+    if (noEnglish && table === "landing_categories" && (method === "POST" || method === "PATCH") && /"lang":"en"/.test(String(init.body ?? ""))) return json({ code: "23514", message: "violates check constraint landing_categories_lang_check" }, 400)
     if (noVersions && table === "landing_page_versions") return json({ code: "42P01", message: "relation does not exist" }, 404)
     calls.push({ method, table, url: decodeURIComponent(u.search), body: init.body ? JSON.parse(String(init.body)) : undefined })
     const org = u.searchParams.get("organization_id")?.replace("eq.", "")
@@ -663,5 +665,23 @@ describe("publication programmée (migration 0021 locale)", () => {
     multi = true; role = "admin"; orgId = BOB; resetTenantModeCache(); resetPublicOrgCache(); calls = []
     expect(await outcome(as(BOB, () => actions.scheduleAction(fd())))).toMatch(/erreurp=/)
     expect(writes()).toHaveLength(0)
+  })
+})
+
+describe("langue anglaise : repli propre tant que la migration 0019 n'est pas appliquée", () => {
+  it("l'anglais est refusé par la base : message clair (0019), AUCUNE page ni offre créée, aucune exception ; français et arabe inchangés", async () => {
+    noEnglish = true
+    const r = await as(E2B, () => saveDraft({ themeId: "turquie", category: cat({ lang: "en" }), offers: [offerIn()] }, "u1"))
+    expect(r.ok).toBe(false)
+    if (!r.ok) { expect(r.message).toMatch(/migration 0019/); expect(r.errors.lang).toMatch(/migration 0019/) }
+    expect(T.landing_categories).toHaveLength(0); expect(T.landing_offers).toHaveLength(0)
+    for (const lang of ["fr", "ar"]) expect((await as(E2B, () => saveDraft({ themeId: "turquie", category: cat({ lang, name: `Page ${lang}` }), offers: [offerIn()] }, "u1"))).ok, lang).toBe(true)
+    expect(T.landing_categories.map((c) => c.lang)).toEqual(["fr", "ar"])
+  })
+  it("passer une page existante en anglais est refusé de la même façon et ne modifie rien", async () => {
+    const id = await makeComplete(); noEnglish = true
+    const r = await as(E2B, () => saveDraft({ id, themeId: "turquie", category: { ...cat({ lang: "en" }), slug: "turquie-ete-2027" }, offers: [] }, "u1"))
+    expect(r.ok).toBe(false); if (!r.ok) expect(r.message).toMatch(/migration 0019/)
+    expect(T.landing_categories[0].lang).toBe("fr")
   })
 })
