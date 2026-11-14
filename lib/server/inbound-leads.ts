@@ -40,6 +40,11 @@ export interface InboundLeadInput {
   contactConsent: boolean
   /** notifier l'équipe d'Easy2Book (réservé à l'organisation de la plateforme) */
   notifyTeam?: boolean
+  /** WhatsApp : référence « E2B-XXXXXX » du message et origine retrouvée par le clic correspondant (aucun identifiant publicitaire personnel) */
+  visitorRef?: string
+  origin?: { channel: string | null; utm_source: string | null; utm_campaign: string | null; utm_content: string | null; ad_id: string | null }
+  /** phrase ajoutée à l'historique de création (ce qui a été retrouvé, ou non) */
+  note?: string
 }
 
 export type InboundResult =
@@ -97,6 +102,15 @@ export async function ingestExternalLead(orgId: string, input: InboundLeadInput)
     adset_id: cut(input.adsetId, 64) || null,
     ad_id: cut(input.adId, 64) || null,
   }
+  if (input.visitorRef && /^E2B-[A-Z0-9]{6}$/.test(input.visitorRef)) base.visitor_ref = input.visitorRef
+  if (input.origin) {
+    // origine retrouvée par le clic du visiteur (campagne : donnée non personnelle)
+    if (input.origin.channel) base.channel = input.origin.channel
+    if (input.origin.utm_source) base.utm_source = input.origin.utm_source
+    if (input.origin.utm_campaign) base.utm_campaign = input.origin.utm_campaign
+    if (input.origin.utm_content) base.utm_content = input.origin.utm_content
+    if (input.origin.ad_id) base.ad_id = input.origin.ad_id
+  }
 
   return await runWithOrg(orgId, async (): Promise<InboundResult> => {
     let ref = randomRef()
@@ -106,11 +120,11 @@ export async function ingestExternalLead(orgId: string, input: InboundLeadInput)
         const leadId = saved?.id ?? null
         if (leadId) {
           await logActivity(leadId, { id: null, label: "système" }, "created", {
-            body: `Lead ${label} (${input.platform === "whatsapp" ? "message entrant" : "formulaire instantané"}) — identifiant externe ${String(input.externalId).slice(0, 40)}${input.formId ? `, formulaire ${String(input.formId).slice(0, 40)}` : ""}`,
+            body: `Lead ${label} (${input.platform === "whatsapp" ? "message entrant" : "formulaire instantané"}) — identifiant externe ${String(input.externalId).slice(0, 40)}${input.formId ? `, formulaire ${String(input.formId).slice(0, 40)}` : ""}${input.note ? ` — ${input.note.slice(0, 300)}` : ""}`,
           }).catch(() => console.error("[inbound] historique non écrit"))
         }
         if (input.notifyTeam && orgId === DEFAULT_ORG_ID) {
-          await notifyNewLead({ id: leadId, ref, product: "autre", offer: input.offer, firstName, phone: phone!, source: `${label} (formulaire instantané)`, channel: CHANNEL[input.platform] }).catch(() => undefined)
+          await notifyNewLead({ id: leadId, ref, product: "autre", offer: input.offer, firstName, phone: phone!, source: input.platform === "whatsapp" ? "WhatsApp (message entrant)" : `${label} (formulaire instantané)`, channel: CHANNEL[input.platform] }).catch(() => undefined)
         }
         return { ok: true, ref, leadId, duplicate: false }
       } catch (e) {
@@ -120,11 +134,20 @@ export async function ingestExternalLead(orgId: string, input: InboundLeadInput)
         }
         // doublon : même événement externe, ou même téléphone + produit le même jour → référence existante
         try {
-          const existing = await select<{ ref: string; id?: string }>(
+          const existing = await select<{ ref: string; id?: string; idempotency_key?: string }>(
             "landing_leads",
-            `select=ref,id&or=(idempotency_key.eq.${encodeURIComponent(key!)},and(phone.eq.${phone},product.eq.autre,lead_day.eq.${tunisDay()}))&limit=1`
+            `select=ref,id,idempotency_key&or=(idempotency_key.eq.${encodeURIComponent(key!)},and(phone.eq.${phone},product.eq.autre,lead_day.eq.${tunisDay()}))&limit=1`
           )
-          if (existing[0]) return { ok: true, ref: existing[0].ref, leadId: existing[0].id ?? null, duplicate: true }
+          if (existing[0]) {
+            // même téléphone le même jour mais AUTRE événement (autre formulaire, autre campagne) : le lead existant est conservé
+            // et la nouvelle source est tracée dans son historique (rien n'est perdu de l'attribution)
+            if (existing[0].id && existing[0].idempotency_key !== key) {
+              await logActivity(existing[0].id, { id: null, label: "système" }, "note", {
+                body: `Nouvelle demande reçue via ${label}${input.campaignId ? ` (campagne ${String(input.campaignId).slice(0, 40)})` : ""}${input.offer ? ` — ${String(input.offer).slice(0, 80)}` : ""} : rattachée à ce lead (même téléphone, même jour) — identifiant externe ${String(input.externalId).slice(0, 40)}.`,
+              }).catch(() => console.error("[inbound] historique non écrit"))
+            }
+            return { ok: true, ref: existing[0].ref, leadId: existing[0].id ?? null, duplicate: true }
+          }
         } catch {
           return { ok: false, reason: "storage_error" }
         }

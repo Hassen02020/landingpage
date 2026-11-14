@@ -52,6 +52,19 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 | 9 | Analytics | **VALIDÉ PAR TESTS** (entonnoir, délais, série par jour) — *PR PRÉPARÉE* (aucune migration) | `analytics.test` 6, `admin-flow` (onglet Entonnoir) ; stats marketing / équipe / offres / WhatsApp existantes |
 | 10 | Certification | **AUDIT FAIT** (06/11/2026) — voir la matrice ci-dessous ; *PRODUCTION CERTIFIÉE* seulement après vérification en ligne | tsc, Vitest 260/260, build, e2e : whatsapp, collect, omra-journey, consent, social (0 échec), admin 121 contrôles (0 échec), CI GitHub verte (run 9) |
 
+## Chantier 3 — Acquisition automatique des leads (14/11/2026)
+Ordre d'exécution du propriétaire du 14/11/2026. Détail, preuves et blocages : `docs/AUDIT_CHANTIER3_ACQUISITION_LEADS.md` (§ 7).
+
+| Élément | État |
+|---|---|
+| Migrations **0013** (rôle Manager), **0015** (pages Facebook), **0023** (journal des événements entrants), **0024** (numéros WhatsApp) | **APPLIQUÉES en production le 14/11/2026** (postchecks OK) ; 0009 à 0012, 0014, 0016, 0017 constatées appliquées par audit de schéma |
+| Journal des événements entrants + écran de suivi (`/admin/integrations`) | **DÉPLOYÉ** (voir journal) ; sans donnée personnelle |
+| Facebook / Instagram (Meta Lead Ads) | Code **TESTÉ (charges simulées)**, base prête, webhook **INERTE** : en attente de l'application Meta et des variables `META_APP_SECRET`, `META_LEADS_VERIFY_TOKEN` |
+| WhatsApp entrant (API Cloud) | Code **TESTÉ (charges simulées)**, base prête, webhook **INERTE** : en attente du compte WhatsApp Business et des variables `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` ; texte des messages non conservé |
+| TikTok (réception de leads) | **BLOQUÉ** : compte annonceur non actif, schéma de signature non confirmé ; aucun code inventé |
+| Dette technique | ESLint + Playwright (PR #44 fusionnée) ; limites de débit partagées : **non faites** (migration de stockage commun à décider) |
+| Lead réel reçu d'un canal externe | **AUCUN** : aucun canal n'est certifié |
+
 ## Journal
 
 - 02/11/2026 — Bloc 0 : état réel vérifié (main `04de912`, 3 branches, PR #1 ouverte hors sujet, 0 workflow CI).
