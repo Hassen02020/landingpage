@@ -87,6 +87,9 @@ Application Meta **MarketingEasy** (ID `1103466232321935`, portefeuille « Easy2
 
 **Écarts connus :** expéditeurs WhatsApp à nom d'utilisateur sans numéro visible (pas de lead possible) ; programmation automatique des pages limitée à un passage par jour (offre Vercel Hobby).
 
+## Pages Omra par départ (14/11/2026)
+Trois modèles du Créateur — « Omra — Groupe 1 », « Omra — Groupe 2 », « Omra — Chawwal » — reprennent le principe de la page « Omra Ramadan complet » (services, offre, conditions, FAQ, formulaire, WhatsApp) avec **uniquement les données de /omra** (date, durée, prix, hôtel, prestations) : adresses `/p/omra-foj-1`, `/p/omra-foj-2`, `/p/omra-chawwal`. Pas de vidéo, pas de témoignage, pas d'échéance inventés. Ils s'utilisent depuis **Admin → Créateur → Nouvelle page** (brouillon, publication par l'équipe). Test : `tests/omra-group-presets.test.ts`.
+
 ## Avis en étoiles des visiteurs — page /omra (14/11/2026)
 Décision du propriétaire : les anciens témoignages sont **masqués** (non confirmés) ; à leur place, des avis **déposés par les vrais visiteurs** (tous les visiteurs), affichés sur `/omra`.
 

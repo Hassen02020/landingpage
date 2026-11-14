@@ -30,7 +30,7 @@ export interface Theme {
   preset?: ThemePreset
 }
 
-export interface PresetOffer { name: string; destination: string; nights_detail: string; price: string; features: string[] }
+export interface PresetOffer { name: string; destination: string; nights_detail: string; price: string; features: string[]; /** facultatifs : renseignés seulement quand le départ est connu (groupes Omra) */ departure_date?: string; nights?: string; tag?: string }
 export interface ThemePreset {
   name: string
   /** adresse par défaut (un nom arabe ne permet pas d'en déduire une) ; modifiable tant que la page n'est pas publiée */
@@ -82,6 +82,41 @@ const RAMADAN_PRESET: ThemePreset = {
   },
 }
 
+// --- Un modèle par départ Omra (mêmes principes que « Omra Ramadan complet ») : données UNIQUEMENT celles de /omra (dates, durée, prix, hôtel, prestations) ---
+const GROUP_FEATURES = ["تذكرة الطائرة ذهاباً وإياباً", "تأشيرة العمرة + التأمين الصحي", "فندق أرائك غزة ⭐⭐⭐ قريب من الحرم", "التنقلات بحافلات سياحية مريحة", "مرافقون ذوو خبرة + مرافقة نسائية", "هدايا للمعتمرين"]
+function groupPreset(o: { name: string; slug: string; date: string; nights: string; nightsDetail: string; price: string; tag: string }): ThemePreset {
+  return {
+    name: o.name,
+    slug: o.slug,
+    headline: `${o.name} — ${o.nightsDetail} مع Easy2Book`,
+    description: `رحلة عمرة مع Easy2Book: ${o.nights} ليلة (${o.nightsDetail})، طيران ذهاباً وإياباً، تأشيرة العمرة والتأمين الصحي، إقامة في فندق أرائك غزة ⭐⭐⭐ قريب من الحرم، تنقلات بحافلات سياحية مريحة، مرافقون ذوو خبرة ومرافقة نسائية، وهدايا للمعتمرين. عدد الأماكن محدود.`,
+    offers: [{ name: o.name, destination: "مكة المكرمة والمدينة المنورة", nights_detail: o.nightsDetail, price: o.price, features: GROUP_FEATURES, departure_date: o.date, nights: o.nights, tag: o.tag }],
+    design: {
+      colors: { preset: "famille", custom: "#0b162c" },
+      cta: { label: "احجز مكانك الآن", whatsapp: true },
+      sections: [{ key: "intro", visible: true }, { key: "services", visible: true }, { key: "offers", visible: true }, { key: "conditions", visible: true }, { key: "inclusions", visible: false }, { key: "programme", visible: true }, { key: "testimonials", visible: false }, { key: "faq", visible: true }, { key: "form", visible: true }],
+      services: [
+        { title: "طيران وتأشيرة العمرة والتأمين", text: "نتكفّل بتذكرة الطائرة ذهاباً وإياباً وبتأشيرة العمرة والتأمين الصحي، لتنطلق رحلتك دون عناء إداري." },
+        { title: "فندق أرائك غزة ⭐⭐⭐ قريب من الحرم", text: "إقامة مريحة قريبة من الحرم مع دخول مباشر لمكة لأداء العمرة." },
+        { title: "مرافقون ذوو خبرة + مرافقة نسائية", text: "مرافقة ميدانية طيلة الرحلة، وزيارة المزارات في مكة والمدينة، مع تنقلات بحافلات سياحية مريحة." },
+        { title: "هدايا للمعتمرين", text: "هدايا من Easy2Book لكل معتمر." },
+      ],
+      conditions: [
+        { title: "عرض المجموعات", text: "لكل 10 أشخاص عمرة مجانية، وأسعار خاصة للعائلات والمجموعات. الاتصال على 98 140 514." },
+        { title: "تنبيه التوفر", text: "عدد الأماكن محدود." },
+      ],
+      faq: [
+        { q: "شنوة يشمل السعر؟", a: "الطيران ذهاباً وإياباً، تأشيرة العمرة والتأمين الصحي، الإقامة في فندق أرائك غزة ⭐⭐⭐ قريب من الحرم، التنقلات بالحافلات، زيارة المزارات، المرافقة (منها مرافقة نسائية) وهدايا للمعتمرين." },
+        { q: "كيفاش نستفيد من عرض المجموعات؟", a: "لكل 10 أشخاص عمرة مجانية، وأسعار خاصة للعائلات والمجموعات. اختر عدد الأشخاص في الاستمارة أو احكي معانا على واتساب." },
+        { q: "فما مرافقة للنساء؟", a: "نعم، المجموعة ترافقها مرافقة نسائية ذات خبرة إلى جانب المرافقين والمرشدين." },
+      ],
+    },
+  }
+}
+const GROUP1_PRESET = groupPreset({ name: "الفوج الأول", slug: "omra-foj-1", date: "2027-01-27", nights: "14", nightsDetail: "10 بمكة + 4 بالمدينة", price: "5500", tag: "✈️ أول فوج" })
+const GROUP2_PRESET = groupPreset({ name: "الفوج الثاني", slug: "omra-foj-2", date: "2027-02-18", nights: "25", nightsDetail: "20 بمكة + 5 بالمدينة", price: "7800", tag: "⭐ الإقامة الأطول" })
+const CHAWWAL_PRESET = groupPreset({ name: "عمرة شوال", slug: "omra-chawwal", date: "2027-03-15", nights: "14", nightsDetail: "10 بمكة + 4 بالمدينة", price: "4800", tag: "🕌 السعر الأقل" })
+
 const ALL_DATED: OfferField[] = ["name", "destination", "departure_date", "nights", "nights_detail", "price", "price_before", "seats_total", "tag", "features", "description", "image_url"]
 
 export const THEMES: Theme[] = [
@@ -91,6 +126,12 @@ export const THEMES: Theme[] = [
     hints: { name: "ex. Omra Ramadan 2027 — départ 1", headline: "ex. Vivez Ramadan à La Mecque et Médine", features: "ex. Vol aller-retour\nHôtel près du Haram\nGuide religieux", description: "Décrivez le programme réel de ce départ." } },
   { id: "ramadan-complet", label: "Omra Ramadan complet", tagline: "Un mois complet à La Mecque : chambres à 2, 3 ou 4-5, services, conditions et témoignages", emoji: "🌙", product: "omra", family: "omra", lang: "ar", offerRequired: ["departure_date", "nights"], offerFields: ALL_DATED,
     hints: { name: "ex. غرفة ثنائية", headline: "ex. عمرة شهر رمضان كامل", features: "ex. طيران\nفندق ميسان الملتزم", description: "Programme réel de ce départ." }, preset: RAMADAN_PRESET },
+  { id: "omra-groupe-1", label: "Omra — Groupe 1", tagline: "Départ du 27 janvier 2027 · 14 nuits · 5 500 TND", emoji: "✈️", product: "omra", family: "omra", lang: "ar", offerRequired: ["departure_date", "nights"], offerFields: ALL_DATED,
+    hints: { name: "ex. الفوج الأول", headline: "ex. عمرة مع مرافقة كاملة", features: "ex. طيران\nفندق أرائك غزة", description: "Programme réel de ce départ." }, preset: GROUP1_PRESET },
+  { id: "omra-groupe-2", label: "Omra — Groupe 2", tagline: "Départ du 18 février 2027 · 25 nuits · 7 800 TND", emoji: "⭐", product: "omra", family: "omra", lang: "ar", offerRequired: ["departure_date", "nights"], offerFields: ALL_DATED,
+    hints: { name: "ex. الفوج الأول", headline: "ex. عمرة مع مرافقة كاملة", features: "ex. طيران\nفندق أرائك غزة", description: "Programme réel de ce départ." }, preset: GROUP2_PRESET },
+  { id: "omra-chawwal", label: "Omra — Chawwal", tagline: "Départ du 15 mars 2027 · 14 nuits · 4 800 TND", emoji: "🕌", product: "omra", family: "omra", lang: "ar", offerRequired: ["departure_date", "nights"], offerFields: ALL_DATED,
+    hints: { name: "ex. الفوج الأول", headline: "ex. عمرة مع مرافقة كاملة", features: "ex. طيران\nفندق أرائك غزة", description: "Programme réel de ce départ." }, preset: CHAWWAL_PRESET },
   { id: "voyage-organise", label: "Voyage organisé", tagline: "Voyage de groupe avec programme et dates de départ", emoji: "🧳", product: "voyage", family: "voyage", lang: "fr", offerRequired: ["destination", "departure_date"], offerFields: ALL_DATED,
     hints: { name: "ex. Voyage organisé — nom du circuit", headline: "ex. Un voyage organisé, sans souci", destination: "ex. destination", features: "ex. Vol\nHôtel\nTransferts", description: "Programme jour par jour (réel)." } },
   { id: "turquie", label: "Turquie", tagline: "Voyage organisé vers la Turquie", emoji: "🇹🇷", product: "voyage", family: "voyage", lang: "fr", offerRequired: ["departure_date"], offerFields: ALL_DATED,
