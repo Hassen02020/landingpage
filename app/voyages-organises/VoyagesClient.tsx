@@ -156,8 +156,8 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1000&q=72"
-            srcSet="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=640&q=72 640w, https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1000&q=72 1000w, https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1400&q=70 1400w"
+            src="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1000&q=72&auto=format"
+            srcSet="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=640&q=72&auto=format 640w, https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1000&q=72&auto=format 1000w, https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1400&q=70&auto=format 1400w"
             sizes="100vw"
             alt="Voyages organisés"
             fetchPriority="high"
