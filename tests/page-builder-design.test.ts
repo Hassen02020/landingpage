@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { THEMES } from "@/lib/page-builder/themes"
 import { MAX_DESIGN_BYTES, designBytes, contrastWithWhite, defaultDesign, resolvePrimary, sanitizeDesign, tint, visibleSections } from "@/lib/page-builder/design"
 
 describe("personnalisation : validation stricte", () => {
@@ -69,5 +70,42 @@ describe("taille : jamais plus que ce que la base accepte (CHECK 16 000 octets)"
     const r = sanitizeDesign({ faq: [{ q: "Question ?", a: "Réponse." }], program: Array.from({ length: 7 }, (_, i) => ({ title: `Jour ${i + 1}`, text: "Visite et temps libre. ".repeat(10) })) }, "voyage")
     expect(r.errors).toEqual({})
     expect(designBytes(r.design)).toBeLessThan(MAX_DESIGN_BYTES)
+  })
+})
+
+describe("clone du modèle Ramadan : services, conditions, date limite, préréglage", () => {
+  it("omra : sections « services » et « conditions » autorisées ; autres familles : refusées", () => {
+    const omra = sanitizeDesign({}, "omra").design.sections.map((s) => s.key)
+    expect(omra).toEqual(["intro", "services", "offers", "conditions", "inclusions", "programme", "testimonials", "faq", "form"])
+    expect(sanitizeDesign({ sections: [{ key: "services", visible: true }] }, "voyage").design.sections.some((s) => s.key === "services")).toBe(false)
+  })
+  it("services et conditions : bornés, incomplets signalés et écartés ; sections vides jamais affichées", () => {
+    const r = sanitizeDesign({ services: [{ title: "Vol", text: "Tunis – Jeddah" }, { title: "Sans texte", text: "" }], conditions: [{ title: "Famille", text: "-200 DT" }] }, "omra")
+    expect(r.design.services).toEqual([{ title: "Vol", text: "Tunis – Jeddah" }])
+    expect(r.errors.services1).toBeTruthy()
+    expect(visibleSections(r.design)).toEqual(expect.arrayContaining(["services", "conditions"]))
+    expect(visibleSections(sanitizeDesign({}, "omra").design)).not.toContain("services")
+    expect(sanitizeDesign({ services: Array.from({ length: 9 }, () => ({ title: "a", text: "b" })) }, "omra").errors.services).toMatch(/maximum/)
+  })
+  it("date limite : jour valide AAAA-MM-JJ seulement (31 février, texte, injection refusés)", () => {
+    expect(sanitizeDesign({ deadline: "2026-12-15" }, "omra").design.deadline).toBe("2026-12-15")
+    for (const bad of ["2026-02-31", "15/12/2026", "demain", "2026-13-01", "<script>"]) {
+      const r = sanitizeDesign({ deadline: bad }, "omra")
+      expect(r.errors.deadline, bad).toBeTruthy(); expect(r.design.deadline).toBe("")
+    }
+  })
+  it("le préréglage confirmé « Omra Ramadan complet » passe la validation SANS erreur, tient dans la limite de taille et contient les données du modèle", () => {
+    const theme = THEMES.find((t) => t.id === "ramadan-complet")!
+    expect(theme).toMatchObject({ product: "omra", family: "omra", lang: "ar" })
+    const { design, errors } = sanitizeDesign(theme.preset!.design, "omra")
+    expect(errors).toEqual({})
+    expect(designBytes(design)).toBeLessThan(MAX_DESIGN_BYTES)
+    expect({ services: design.services.length, conditions: design.conditions.length, testimonials: design.testimonials.length, deadline: design.deadline, wa: design.cta.whatsapp }).toEqual({ services: 4, conditions: 3, testimonials: 4, deadline: "2026-12-15", wa: true })
+    expect(resolvePrimary(design)).toBe("#0b162c")
+    expect(design.sections.find((x) => x.key === "inclusions")!.visible).toBe(false)
+    expect(visibleSections(design)).toEqual(["intro", "services", "offers", "conditions", "programme", "testimonials", "faq", "form"])
+    expect(theme.preset!.offers.map((o) => [o.name, o.price])).toEqual([["غرفة رباعية أو خماسية", "5900"], ["غرفة ثلاثية", "6400"], ["غرفة ثنائية", "6900"]])
+    // aucune date de départ ni nombre de nuits inventés
+    expect(JSON.stringify(theme.preset!.offers)).not.toMatch(/departure_date|"nights"/)
   })
 })

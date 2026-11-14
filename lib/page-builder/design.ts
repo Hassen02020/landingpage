@@ -4,7 +4,7 @@
 import type { Family } from "./themes"
 import type { SectionKey } from "./style"
 
-export type DesignSection = SectionKey | "testimonials"
+export type DesignSection = SectionKey | "testimonials" | "services" | "conditions"
 export const PRESETS: Record<string, { label: string; hex: string | null }> = {
   famille: { label: "Couleur du modèle", hex: null },
   emeraude: { label: "Émeraude", hex: "#047857" },
@@ -17,7 +17,7 @@ export const PRESETS: Record<string, { label: string; hex: string | null }> = {
 }
 export const SECTION_LABELS: Record<DesignSection, string> = {
   intro: "Texte de présentation", highlights: "Points forts", offers: "Départs et prix", inclusions: "Prestations incluses",
-  programme: "Programme", gallery: "Galerie d'images", testimonials: "Témoignages", faq: "Questions fréquentes", form: "Formulaire de réservation",
+  programme: "Programme", gallery: "Galerie d'images", testimonials: "Témoignages", services: "Services inclus (cartes)", conditions: "Conditions et avantages", faq: "Questions fréquentes", form: "Formulaire de réservation",
 }
 export interface PageDesign {
   v: 1
@@ -30,10 +30,16 @@ export interface PageDesign {
   faq: { q: string; a: string }[]
   testimonials: { name: string; text: string; place: string }[]
   program: { title: string; text: string }[]
+  /** cartes « ce qui est inclus » (ex. vol, visa, encadrement, hôtel) : texte fourni par l'équipe */
+  services: { title: string; text: string }[]
+  /** avantages et conditions (ex. réduction famille, groupes) : texte d'information, jamais un calcul */
+  conditions: { title: string; text: string }[]
+  /** date limite de l'offre (AAAA-MM-JJ, jour de Tunis) : affiche un compte à rebours tant qu'elle n'est pas passée ; vide = aucun */
+  deadline: string
 }
 
 export const SECTION_DEFAULTS: Record<Family, DesignSection[]> = {
-  omra: ["intro", "offers", "inclusions", "programme", "testimonials", "faq", "form"],
+  omra: ["intro", "services", "offers", "conditions", "inclusions", "programme", "testimonials", "faq", "form"],
   voyage: ["intro", "highlights", "offers", "programme", "gallery", "inclusions", "testimonials", "faq", "form"],
   hotel: ["intro", "offers", "inclusions", "gallery", "testimonials", "faq", "form"],
   autre: ["intro", "offers", "inclusions", "testimonials", "faq", "form"],
@@ -41,7 +47,7 @@ export const SECTION_DEFAULTS: Record<Family, DesignSection[]> = {
 
 export const defaultDesign = (family: Family): PageDesign => ({
   v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true }, form: { email: false },
-  sections: SECTION_DEFAULTS[family].map((key) => ({ key, visible: true })), faq: [], testimonials: [], program: [],
+  sections: SECTION_DEFAULTS[family].map((key) => ({ key, visible: true })), faq: [], testimonials: [], program: [], services: [], conditions: [], deadline: "",
 })
 
 const HEX = /^#[0-9a-fA-F]{6}$/
@@ -149,15 +155,29 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
   d.program = list(r.program, 14, "program").map(obj).map((x) => ({ title: clean(x.title, 80), text: clean(x.text, 800) })).filter((x) => x.title || x.text)
   d.program.forEach((x, i) => { if (!x.title || !x.text) errors[`program${i}`] = "Titre et texte de l'étape sont requis." })
 
+  d.services = list(r.services, 6, "services").map(obj).map((x) => ({ title: clean(x.title, 80), text: clean(x.text, 400) })).filter((x) => x.title || x.text)
+  d.services.forEach((x, i) => { if (!x.title || !x.text) errors[`services${i}`] = "Titre et texte de la carte sont requis." })
+  d.conditions = list(r.conditions, 4, "conditions").map(obj).map((x) => ({ title: clean(x.title, 80), text: clean(x.text, 300) })).filter((x) => x.title || x.text)
+  d.conditions.forEach((x, i) => { if (!x.title || !x.text) errors[`conditions${i}`] = "Titre et texte de la condition sont requis." })
+  const deadline = clean(r.deadline, 10)
+  if (deadline) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline) || Number.isNaN(Date.parse(`${deadline}T12:00:00Z`)) || new Date(`${deadline}T12:00:00Z`).toISOString().slice(0, 10) !== deadline) errors.deadline = "Date limite : jour valide attendu (AAAA-MM-JJ)."
+    else d.deadline = deadline
+  }
+
   // éléments incomplets écartés du design retourné : jamais publiés à moitié
   d.faq = d.faq.filter((x) => x.q && x.a)
   d.testimonials = d.testimonials.filter((x) => x.name && x.text)
   d.program = d.program.filter((x) => x.title && x.text)
+  d.services = d.services.filter((x) => x.title && x.text)
+  d.conditions = d.conditions.filter((x) => x.title && x.text)
   if (designBytes(d) > MAX_DESIGN_BYTES) errors.size = `Personnalisation trop volumineuse (${designBytes(d)} octets, ${MAX_DESIGN_BYTES} maximum) : raccourcissez le programme, la FAQ ou les témoignages.`
   return { design: d, errors }
 }
 
 /** Sections à afficher, dans l'ordre choisi ; « témoignages » n'apparaît que s'il y en a. */
 export function visibleSections(d: PageDesign): DesignSection[] {
-  return d.sections.filter((s) => s.visible && (s.key !== "testimonials" || d.testimonials.length > 0)).map((s) => s.key)
+  return d.sections
+    .filter((s) => s.visible && (s.key !== "testimonials" || d.testimonials.length > 0) && (s.key !== "services" || d.services.length > 0) && (s.key !== "conditions" || d.conditions.length > 0))
+    .map((s) => s.key)
 }

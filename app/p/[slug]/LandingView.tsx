@@ -13,6 +13,7 @@ import { familyOf } from "@/lib/page-builder/themes"
 import { faqFor } from "@/lib/page-builder/faq"
 import { SECTIONS, STYLE, derive, type FamilyStyle } from "@/lib/page-builder/style"
 import { resolvePrimary, tint, visibleSections, type DesignSection, type PageDesign } from "@/lib/page-builder/design"
+import { Countdown } from "./Countdown"
 
 const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
 const frDate = (iso: string) => {
@@ -22,8 +23,8 @@ const frDate = (iso: string) => {
 }
 
 const T = {
-  fr: { from: "À partir de", perPerson: "/ pers.", nights: "nuits", reserve: "Réserver cette offre", ask: "Question sur WhatsApp", full: "Complet", left: (n: number) => `Plus que ${n} place${n > 1 ? "s" : ""}`, formTitle: "Réservez votre place", formSub: "Moins d'une minute — un conseiller vous rappelle", included: "Inclus", call: "Appeler", highlights: "Les points forts", includedTitle: "Prestations incluses", programme: "Programme", gallery: "En images", faq: "Questions fréquentes", dates: "Départs et prix", promo: "Promotion", testimonials: "Ils nous ont fait confiance", whatsappCta: "Écrire sur WhatsApp", preview: "Aperçu : les boutons et le formulaire sont désactivés." },
-  ar: { from: "ابتداءً من", perPerson: "/ للشخص", nights: "ليلة", reserve: "احجز هذا العرض", ask: "اسأل على واتساب", full: "مكتمل", left: (n: number) => `بقي ${n} أماكن فقط`, formTitle: "احجز مكانك الآن", formSub: "أقل من دقيقة — مستشارنا يتصل بيك", included: "يشمل", call: "اتصل", highlights: "أبرز المميزات", includedTitle: "الخدمات المشمولة", programme: "البرنامج", gallery: "صور", faq: "أسئلة شائعة", dates: "الرحلات والأسعار", promo: "عرض خاص", testimonials: "آراء عملائنا", whatsappCta: "راسلنا على واتساب", preview: "معاينة: الأزرار والنموذج معطّلة." },
+  fr: { from: "À partir de", perPerson: "/ pers.", nights: "nuits", reserve: "Réserver cette offre", ask: "Question sur WhatsApp", full: "Complet", left: (n: number) => `Plus que ${n} place${n > 1 ? "s" : ""}`, formTitle: "Réservez votre place", formSub: "Moins d'une minute — un conseiller vous rappelle", included: "Inclus", call: "Appeler", highlights: "Les points forts", includedTitle: "Prestations incluses", programme: "Programme", gallery: "En images", faq: "Questions fréquentes", dates: "Départs et prix", promo: "Promotion", testimonials: "Ils nous ont fait confiance", servicesTitle: "Ce qui est inclus", conditionsTitle: "Avantages et conditions", whatsappCta: "Écrire sur WhatsApp", preview: "Aperçu : les boutons et le formulaire sont désactivés." },
+  ar: { from: "ابتداءً من", perPerson: "/ للشخص", nights: "ليلة", reserve: "احجز هذا العرض", ask: "اسأل على واتساب", full: "مكتمل", left: (n: number) => `بقي ${n} أماكن فقط`, formTitle: "احجز مكانك الآن", formSub: "أقل من دقيقة — مستشارنا يتصل بيك", included: "يشمل", call: "اتصل", highlights: "أبرز المميزات", includedTitle: "الخدمات المشمولة", programme: "البرنامج", gallery: "صور", faq: "أسئلة شائعة", dates: "الرحلات والأسعار", promo: "عرض خاص", testimonials: "آراء عملائنا", servicesTitle: "ما يشمله البرنامج", conditionsTitle: "المزايا والشروط", whatsappCta: "راسلنا على واتساب", preview: "معاينة: الأزرار والنموذج معطّلة." },
 }
 
 // Style personnalisé : une SEULE couleur choisie (contraste du texte blanc vérifié à l'enregistrement) pilote boutons, titres, pastilles et bandeaux.
@@ -149,6 +150,34 @@ export function LandingView({ category, offers, preview = false, design = null }
             </div>
           </section>
         ) : null
+      case "services":
+        return design && design.services.length > 0 ? (
+          <section key={key} id="services" className="max-w-5xl mx-auto px-4 py-6" aria-label={t.servicesTitle} data-testid="services">
+            {title(t.servicesTitle)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {design.services.map((x, i) => (
+                <div key={x.title + i} className="bg-white rounded-2xl border border-gray-100 p-6">
+                  <p className={`text-xs font-black ${st.priceText}`} dir="ltr">{String(i + 1).padStart(2, "0")}</p>
+                  <h3 className="mt-1 text-lg font-black">{x.title}</h3>
+                  <p className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-line">{x.text}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null
+      case "conditions":
+        return design && design.conditions.length > 0 ? (
+          <section key={key} id="conditions" className="max-w-5xl mx-auto px-4 py-6" aria-label={t.conditionsTitle} data-testid="conditions">
+            <div className={`rounded-2xl p-6 grid gap-5 ${design.conditions.length === 1 ? "md:grid-cols-1" : design.conditions.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"} ${st.formBand}`}>
+              {design.conditions.map((x, i) => (
+                <div key={x.title + i}>
+                  <p className={`text-xs font-black ${st.priceText}`}>{x.title}</p>
+                  <p className="mt-1 text-sm font-bold text-gray-900 whitespace-pre-line">{x.text}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null
       case "testimonials":
         return design && design.testimonials.length > 0 ? (
           <section key={key} className="max-w-5xl mx-auto px-4 py-6" aria-label={t.testimonials} data-testid="testimonials">
@@ -210,6 +239,7 @@ export function LandingView({ category, offers, preview = false, design = null }
   return (
     <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
       {preview && <div className="bg-amber-100 text-amber-900 text-sm font-bold text-center py-2 px-3" role="status">{t.preview}</div>}
+      {design?.deadline ? <Countdown deadline={design.deadline} lang={lang} /> : null}
       <header className="relative">
         {category.banner_desktop || category.banner_mobile ? (
           <picture>

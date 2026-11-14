@@ -32,7 +32,8 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
           <h1 className="text-2xl font-black">Créateur de Landing Pages</h1>
           <p className="text-gray-600 text-sm max-w-2xl">Créez, personnalisez, publiez et promouvez vos pages. Aucun code à écrire.</p>
         </div>
-        <Link href="/admin/createur/modeles" className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="new-page">+ Nouvelle page</Link>
+        <div className="flex flex-wrap gap-2"><Link href="/admin/createur/medias" className="border px-4 py-3 rounded-xl font-bold min-h-[44px] bg-white" data-testid="media-link">Médiathèque</Link>
+        <Link href="/admin/createur/modeles" className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="new-page">+ Nouvelle page</Link></div>
       </div>
 
       {searchParams.ok && <p role="status" className="bg-green-50 border border-green-200 text-green-900 rounded-xl p-3 text-sm" data-testid="flash-ok">{searchParams.ok}</p>}

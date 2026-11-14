@@ -73,6 +73,22 @@ export function DesignEditor({ id, initial, available, theme }: { id: string; in
         <p className="text-xs text-gray-500">Une section sans contenu ne s&apos;affiche pas. Le formulaire de réservation reste toujours visible.</p>
       </section>
 
+      {d.sections.some((x) => x.key === "services") && (
+        <>
+          <ListEditor title="Services inclus (cartes)" hint="Ce que le programme comprend (vol, visa, encadrement, hôtel…). Texte réel uniquement." testid="services" errs={errs} errKey="services"
+            items={d.services} blank={{ title: "", text: "" }} max={6} onChange={(v) => upd("services", v)}
+            fields={[["title", "Titre", "input"], ["text", "Description", "textarea"]]} />
+          <ListEditor title="Avantages et conditions" hint="Par exemple une réduction famille ou la marche à suivre pour les groupes : affichés tels quels, sans calcul." testid="conditions" errs={errs} errKey="conditions"
+            items={d.conditions} blank={{ title: "", text: "" }} max={4} onChange={(v) => upd("conditions", v)}
+            fields={[["title", "Titre", "input"], ["text", "Texte", "textarea"]]} />
+        </>
+      )}
+      <section className="bg-white rounded-2xl border p-5 space-y-2" aria-label="Date limite de l'offre" data-testid="deadline-block">
+        <h2 className="font-black">Date limite de l&apos;offre (compte à rebours)</h2>
+        <input type="date" value={d.deadline} onChange={(e) => upd("deadline", e.target.value)} className={`${inp} max-w-xs`} aria-label="Date limite de l'offre" />
+        {errs.deadline && <span role="alert" className="text-red-700 text-xs block">{errs.deadline}</span>}
+        <p className="text-xs text-gray-500">Un compte à rebours s&apos;affiche en haut de la page jusqu&apos;à cette date, puis disparaît. Il ne modifie pas vos offres. Laissez vide pour ne rien afficher.</p>
+      </section>
       <ListEditor title="Questions fréquentes" hint="Remplace les questions génériques. Ne promettez rien que vous ne pouvez pas tenir (prix, disponibilité)." testid="faq" errs={errs} errKey="faq"
         items={d.faq} blank={{ q: "", a: "" }} max={8} onChange={(v) => upd("faq", v)}
         fields={[["q", "Question", "input"], ["a", "Réponse", "textarea"]]} />

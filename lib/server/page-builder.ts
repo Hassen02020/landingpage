@@ -10,6 +10,8 @@ import { isOfferExpired, pageStatus, type PageStatus } from "@/lib/page-status"
 import { readiness, type Readiness } from "@/lib/page-builder/readiness"
 import { themeById, type Theme } from "@/lib/page-builder/themes"
 import { rateLimited } from "@/lib/server/guard"
+import { saveDesign } from "@/lib/server/page-design"
+import type { Product } from "@/lib/config"
 import type { SlugLock } from "@/lib/catalog-slug"
 import { ARCHIVED_POSITION, copySlug, isArchived } from "@/lib/page-builder/dashboard"
 
@@ -75,7 +77,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
 
   // le produit et la langue viennent du modèle à la création ; ensuite ceux de la page (changer de produit changerait la famille visuelle publique)
   const catFields: Record<string, string> = {
-    name: input.category.name ?? "", slug: (input.category.slug || "").trim() || slugify(input.category.name ?? ""),
+    name: input.category.name ?? "", slug: (input.category.slug || "").trim() || slugify(input.category.name ?? "") || (!existing ? theme.preset?.slug ?? theme.id : ""),
     product: existing?.product ?? theme.product, lang: input.category.lang === "ar" || input.category.lang === "fr" ? input.category.lang : existing?.lang ?? theme.lang,
     headline: input.category.headline ?? "", description: input.category.description ?? "",
     banner_desktop: input.category.banner_desktop ?? existing?.banner_desktop ?? "", banner_mobile: input.category.banner_mobile ?? existing?.banner_mobile ?? "",
@@ -97,6 +99,10 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
   const saved = await saveCategory(input.id ?? null, catFields, actorId)
   if (!saved.ok) return { ok: false, errors: saved.errors, message: saved.errors.slug ?? "Enregistrement impossible." }
   const categoryId = saved.id
+  // préréglage de personnalisation du modèle : appliqué UNIQUEMENT à la création, jamais écrasant ; sans colonne `design` (migration 0018) la page est créée sans lui
+  if (!input.id && theme.preset) {
+    try { await saveDesign(categoryId, catFields.product as Product, theme.preset.design, actorId) } catch (e) { console.error("[createur] préréglage de personnalisation non appliqué", e instanceof Error ? e.message : "erreur") }
+  }
   for (let i = 0; i < input.offers.length; i++) {
     const o = input.offers[i]
     if (o.remove) {
@@ -210,4 +216,28 @@ export async function catalogueOffers(excludeCategoryId?: string): Promise<Catal
       price: o.price, price_before: o.price_before, seats_total: o.seats_total, tag: o.tag, description: o.description, features: o.features ?? [],
       image_url: o.image_url, page: o.category_id ? name.get(o.category_id) ?? "Sans page" : "Sans page", expired: isOfferExpired(o.departure_date, today),
     }))
+}
+
+// ------------------------------------------------------------------------------------------------ médiathèque (lecture seule, sans migration)
+export interface MediaEntry { url: string; uses: string[] }
+
+/**
+ * Images DÉJÀ UTILISÉES par les pages et offres de l'entreprise (bannières et photos d'offres, offres archivées comprises).
+ * Le bucket de stockage est partagé entre les entreprises et ses chemins ne portent pas l'entreprise : on ne LISTE donc jamais le stockage
+ * (une entreprise verrait les images d'une autre) ; seules les références lues dans la base cloisonnée sont proposées.
+ */
+export async function listMedia(): Promise<MediaEntry[]> {
+  const [cats, live, archived] = await Promise.all([listCategories(), listOffers(), listOffers({ archived: true })])
+  const byUrl: Record<string, string[]> = {}
+  const order: string[] = []
+  const add = (url: string | null | undefined, use: string) => {
+    const u = (url ?? "").trim()
+    if (!u || !(u.startsWith("https://") || u.startsWith("http://") || u.startsWith("/"))) return
+    if (!byUrl[u]) { byUrl[u] = []; order.push(u) }
+    if (byUrl[u].indexOf(use) < 0) byUrl[u].push(use)
+  }
+  for (const c of cats) { add(c.banner_desktop, `Bannière ordinateur — ${c.name}`); add(c.banner_mobile, `Bannière mobile — ${c.name}`) }
+  for (const o of live) add(o.image_url, `Offre — ${o.name}`)
+  for (const o of archived) add(o.image_url, `Offre archivée — ${o.name}`)
+  return order.map((url) => ({ url, uses: byUrl[url] }))
 }
