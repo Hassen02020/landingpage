@@ -54,16 +54,18 @@ Seuils VIP · période de calcul · formule dépenses + fréquence · avantages 
 
 ## Chantier 3 — Acquisition automatique des leads (14/11/2026)
 Ordre d'exécution du propriétaire du 14/11/2026. Détail, preuves et blocages : `docs/AUDIT_CHANTIER3_ACQUISITION_LEADS.md` (§ 7).
+PR fusionnées : #43 (Créateur lots B–E, `22a7078`), #44 (dette technique, `34d8cd1`), #45 (chantier 3, `df51867`). Production : déploiement `dpl_FNVWT3ACJk9HqJWRkR5wK4NHrE7q` (READY, commit `df51867`, alias `landingpage-easy2book.vercel.app`).
 
 | Élément | État |
 |---|---|
-| Migrations **0013** (rôle Manager), **0015** (pages Facebook), **0023** (journal des événements entrants), **0024** (numéros WhatsApp) | **APPLIQUÉES en production le 14/11/2026** (postchecks OK) ; 0009 à 0012, 0014, 0016, 0017 constatées appliquées par audit de schéma |
-| Journal des événements entrants + écran de suivi (`/admin/integrations`) | **DÉPLOYÉ** (voir journal) ; sans donnée personnelle |
-| Facebook / Instagram (Meta Lead Ads) | Code **TESTÉ (charges simulées)**, base prête, webhook **INERTE** : en attente de l'application Meta et des variables `META_APP_SECRET`, `META_LEADS_VERIFY_TOKEN` |
-| WhatsApp entrant (API Cloud) | Code **TESTÉ (charges simulées)**, base prête, webhook **INERTE** : en attente du compte WhatsApp Business et des variables `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` ; texte des messages non conservé |
+| Migrations **0013** (rôle Manager), **0015** (pages Facebook), **0019–0022** (Créateur), **0023** (journal des événements entrants), **0024** (numéros WhatsApp) | **APPLIQUÉES en production le 14/11/2026** (postchecks OK) ; 0009 à 0012, 0014, 0016, 0017 constatées appliquées par audit de schéma |
+| Journal des événements entrants + écran de suivi (`/admin/integrations`) | **DÉPLOYÉ** ; sans donnée personnelle ; isolation, immuabilité de l'entreprise, droits (anon et comptes connectés exclus) **prouvés en production** par une transaction annulée (0 ligne conservée) |
+| Facebook / Instagram (Meta Lead Ads) | Code **TESTÉ (charges simulées)** et déployé, base prête, webhook **INERTE** (404, vérifié en ligne) : en attente de l'application Meta et des variables `META_APP_SECRET`, `META_LEADS_VERIFY_TOKEN` |
+| WhatsApp entrant (API Cloud) | Code **TESTÉ (charges simulées)** et déployé, base prête, webhook **INERTE** (404, vérifié en ligne) : en attente du compte WhatsApp Business et des variables `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` ; texte des messages non conservé |
 | TikTok (réception de leads) | **BLOQUÉ** : compte annonceur non actif, schéma de signature non confirmé ; aucun code inventé |
-| Dette technique | ESLint + Playwright (PR #44 fusionnée) ; limites de débit partagées : **non faites** (migration de stockage commun à décider) |
-| Lead réel reçu d'un canal externe | **AUCUN** : aucun canal n'est certifié |
+| Dette technique | ESLint + Playwright (PR #44) ; limites de débit partagées : **non faites** (stockage commun à décider) |
+| Programmation automatique des pages | **NON ACTIVÉE** (aucun `CRON_SECRET`, aucun cron) ; bouton manuel opérationnel |
+| Lead réel reçu d'un canal externe | **AUCUN** : aucun canal n'est certifié ; aucun faux prospect créé en production |
 
 ## Journal
 
