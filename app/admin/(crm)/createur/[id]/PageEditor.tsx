@@ -15,6 +15,11 @@ const toRow = (o: Offer, key: number): Row => ({
   key, id: o.id, removed: false, image: v(o.image_url), features: (o.features ?? []).join("\n"),
   v: { name: v(o.name), destination: v(o.destination), departure_date: v(o.departure_date), nights: v(o.nights), nights_detail: v(o.nights_detail), price: v(o.price), price_before: v(o.price_before), seats_total: v(o.seats_total), tag: v(o.tag), description: v(o.description) },
 })
+/** Offres du préréglage confirmé (création d'une page seulement) : prix et textes réels ; date de départ et nuits restent à renseigner par l'équipe. */
+const presetRow = (key: number, o: NonNullable<Theme["preset"]>["offers"][number]): Row => ({
+  key, removed: false, image: "", features: o.features.join("\n"),
+  v: { name: o.name, destination: o.destination, departure_date: "", nights: "", nights_detail: o.nights_detail, price: o.price, price_before: "", seats_total: "", tag: "", description: "" },
+})
 const emptyRow = (key: number, theme: Theme): Row => ({ key, removed: false, image: "", features: "", v: { name: "", destination: theme.id === "turquie" ? "Turquie" : "", departure_date: "", nights: "", nights_detail: "", price: "", price_before: "", seats_total: "", tag: "", description: "" } })
 
 function SaveButtons({ canContinue }: { canContinue: boolean }) {
@@ -30,9 +35,9 @@ function SaveButtons({ canContinue }: { canContinue: boolean }) {
 export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }: { theme: Theme; category: Category | null; offers: Offer[]; slugLock: { locked: boolean; message?: string }; catalogue?: CatalogueOffer[] }) {
   const [state, action] = useFormState(saveDraftAction, undefined)
   const [tab, setTab] = useState<"infos" | "perso">("infos")
-  const [name, setName] = useState(category?.name ?? "")
-  const [slug, setSlug] = useState(category?.slug ?? "")
-  const [rows, setRows] = useState<Row[]>(() => (offers.length ? offers.map(toRow) : [emptyRow(0, theme)]))
+  const [name, setName] = useState(category?.name ?? theme.preset?.name ?? "")
+  const [slug, setSlug] = useState(category?.slug ?? theme.preset?.slug ?? "")
+  const [rows, setRows] = useState<Row[]>(() => (offers.length ? offers.map(toRow) : theme.preset && !category ? theme.preset.offers.map((o, i) => presetRow(i, o)) : [emptyRow(0, theme)]))
   const e = (k: string) => state?.errors?.[k]
   const has = (f: OfferField) => theme.offerFields.includes(f)
   const req = (f: OfferField) => f === "name" || f === "price" || theme.offerRequired.includes(f)
@@ -61,8 +66,8 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [] }
         <section className="bg-white rounded-2xl border p-5 grid grid-cols-1 gap-4">
           <h2 className="font-black">Le produit</h2>
           <Field label="Nom de la page *" error={e("name")} help="Titre principal de la page publique."><input name="name" value={name} onChange={(ev) => setName(ev.target.value)} required maxLength={120} className={inputCls} placeholder={theme.hints.name} /></Field>
-          <Field label="Argument commercial (accroche) *" error={e("headline")} help="Une phrase (160 caractères max) qui donne envie de réserver."><input name="headline" defaultValue={v(category?.headline)} maxLength={160} className={inputCls} placeholder={theme.hints.headline} /></Field>
-          <Field label="Présentation du produit *" error={e("description")} help="Décrivez le produit tel qu'il est : aucune promesse inventée."><textarea name="description" rows={4} maxLength={2000} defaultValue={v(category?.description)} className={inputCls} placeholder="Présentez le produit en quelques lignes." /></Field>
+          <Field label="Argument commercial (accroche) *" error={e("headline")} help="Une phrase (160 caractères max) qui donne envie de réserver."><input name="headline" defaultValue={category ? v(category.headline) : theme.preset?.headline ?? ""} maxLength={160} className={inputCls} placeholder={theme.hints.headline} /></Field>
+          <Field label="Présentation du produit *" error={e("description")} help="Décrivez le produit tel qu'il est : aucune promesse inventée."><textarea name="description" rows={4} maxLength={2000} defaultValue={category ? v(category.description) : theme.preset?.description ?? ""} className={inputCls} placeholder="Présentez le produit en quelques lignes." /></Field>
         </section>
 
         <section className="space-y-4">

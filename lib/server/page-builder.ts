@@ -10,6 +10,8 @@ import { isOfferExpired, pageStatus, type PageStatus } from "@/lib/page-status"
 import { readiness, type Readiness } from "@/lib/page-builder/readiness"
 import { themeById, type Theme } from "@/lib/page-builder/themes"
 import { rateLimited } from "@/lib/server/guard"
+import { saveDesign } from "@/lib/server/page-design"
+import type { Product } from "@/lib/config"
 import type { SlugLock } from "@/lib/catalog-slug"
 import { ARCHIVED_POSITION, copySlug, isArchived } from "@/lib/page-builder/dashboard"
 
@@ -75,7 +77,7 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
 
   // le produit et la langue viennent du modèle à la création ; ensuite ceux de la page (changer de produit changerait la famille visuelle publique)
   const catFields: Record<string, string> = {
-    name: input.category.name ?? "", slug: (input.category.slug || "").trim() || slugify(input.category.name ?? ""),
+    name: input.category.name ?? "", slug: (input.category.slug || "").trim() || slugify(input.category.name ?? "") || (!existing ? theme.preset?.slug ?? theme.id : ""),
     product: existing?.product ?? theme.product, lang: input.category.lang === "ar" || input.category.lang === "fr" ? input.category.lang : existing?.lang ?? theme.lang,
     headline: input.category.headline ?? "", description: input.category.description ?? "",
     banner_desktop: input.category.banner_desktop ?? existing?.banner_desktop ?? "", banner_mobile: input.category.banner_mobile ?? existing?.banner_mobile ?? "",
@@ -97,6 +99,10 @@ export async function saveDraft(input: DraftInput, actorId: string | null): Prom
   const saved = await saveCategory(input.id ?? null, catFields, actorId)
   if (!saved.ok) return { ok: false, errors: saved.errors, message: saved.errors.slug ?? "Enregistrement impossible." }
   const categoryId = saved.id
+  // préréglage de personnalisation du modèle : appliqué UNIQUEMENT à la création, jamais écrasant ; sans colonne `design` (migration 0018) la page est créée sans lui
+  if (!input.id && theme.preset) {
+    try { await saveDesign(categoryId, catFields.product as Product, theme.preset.design, actorId) } catch (e) { console.error("[createur] préréglage de personnalisation non appliqué", e instanceof Error ? e.message : "erreur") }
+  }
   for (let i = 0; i < input.offers.length; i++) {
     const o = input.offers[i]
     if (o.remove) {

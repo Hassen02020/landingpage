@@ -400,3 +400,33 @@ describe("personnalisation : distinction colonne absente / contrainte violée", 
     expect(isMissingColumn(new DbError(500, undefined, "boom"))).toBe(false)
   })
 })
+
+describe("modèle « Omra Ramadan complet » : préréglage appliqué à la création", () => {
+  const offers = [{ ...offerIn({ name: "غرفة رباعية أو خماسية", price: "5900", departure_date: "2027-02-08", nights: "30" }) }]
+  it("création : la personnalisation de départ (services, conditions, témoignages confirmés, date limite) est enregistrée avec la page", async () => {
+    const r = await as(E2B, () => saveDraft({ themeId: "ramadan-complet", category: cat({ name: "عمرة رمضان كامل", lang: "ar" }), offers }, "u1"))
+    expect(r.ok, JSON.stringify(r)).toBe(true)
+    const d = T.landing_categories[0].design as { services: unknown[]; conditions: unknown[]; testimonials: unknown[]; deadline: string }
+    expect(d.services).toHaveLength(4); expect(d.conditions).toHaveLength(3); expect(d.testimonials).toHaveLength(4); expect(d.deadline).toBe("2026-12-15")
+    expect(T.landing_categories[0]).toMatchObject({ product: "omra", lang: "ar", visible: false, slug: "omra-ramadan-complet" })
+  })
+  it("modification d'une page existante : le préréglage n'est JAMAIS réappliqué (la personnalisation de l'équipe n'est pas écrasée)", async () => {
+    const r = await as(E2B, () => saveDraft({ themeId: "ramadan-complet", category: cat({ name: "عمرة رمضان كامل", lang: "ar" }), offers }, "u1"))
+    if (!r.ok) throw new Error("setup")
+    T.landing_categories[0].design = { v: 1, faq: [{ q: "q", a: "a" }] }
+    await as(E2B, () => saveDraft({ id: r.id, themeId: "ramadan-complet", category: { ...cat({ name: "عمرة رمضان كامل", lang: "ar" }), slug: "omra-ramadan-kamil" }, offers }, "u1"))
+    expect((T.landing_categories[0].design as { faq: unknown[] }).faq).toHaveLength(1)
+    expect((T.landing_categories[0].design as { services?: unknown[] }).services).toBeUndefined()
+  })
+  it("sans la colonne design (migration 0018 absente) : la page est quand même créée, sans erreur", async () => {
+    noDesign = true
+    const r = await as(E2B, () => saveDraft({ themeId: "ramadan-complet", category: cat({ name: "عمرة رمضان كامل", lang: "ar" }), offers }, "u1"))
+    expect(r.ok).toBe(true)
+    expect(T.landing_categories).toHaveLength(1)
+    expect(T.landing_categories[0].design).toBeUndefined()
+  })
+  it("un modèle sans préréglage (ex. Omra) n'enregistre aucune personnalisation à la création", async () => {
+    await as(E2B, () => saveDraft({ themeId: "omra", category: cat({ name: "Omra simple", lang: "ar" }), offers }, "u1"))
+    expect(T.landing_categories[0].design).toBeUndefined()
+  })
+})
