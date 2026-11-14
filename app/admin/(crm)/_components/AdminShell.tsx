@@ -76,6 +76,7 @@ const GROUPS: Group[] = [
       { href: "/admin/createur", label: "Créateur de Landing Pages", icon: "plus", permission: "catalog.manage" },
       { href: "/admin/catalogue", label: "Offres et catégories", icon: "box", permission: "catalog.manage" },
       { href: "/admin/promos", label: "Codes promo", icon: "ticket", permission: "promos.manage" },
+      { href: "/admin/avis", label: "Avis des visiteurs", icon: "chat", permission: "catalog.manage" },
     ],
   },
   {

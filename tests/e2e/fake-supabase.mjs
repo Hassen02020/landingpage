@@ -15,7 +15,7 @@ const jwt = () => {
 }
 
 const E2B_ORG = "00000000-0000-4000-8000-0000000e2b01"
-const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs", "landing_page_versions"]
+const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs", "landing_page_versions", "landing_reviews"]
 
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
@@ -75,6 +75,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
   }
   const db = {
     landing_page_versions: [],
+    landing_reviews: [],
     landing_staff: [
       { user_id: ADMIN_ID, email: ADMIN.email, full_name: "Direction", role: "admin", active: true, created_at: day(40) },
       { user_id: AGENT_ID, email: AGENT.email, full_name: "Agent Sami", role: "agent", active: true, created_at: day(20) },
@@ -164,8 +165,9 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     landing_message_templates: { active: true, position: 0 },
     landing_offers: { visible: false, position: 0, seats_sold: 0, features: [], archived_at: null },
     landing_categories: { visible: false, position: 0, lang: "fr" },
+    landing_reviews: { status: "pending", moderated_at: null },
   }
-  const UNIQUE = { landing_leads: ["ref", "idempotency_key"], landing_promo_codes: ["code"], landing_staff: ["email"], landing_offers: ["sku"], landing_categories: ["slug"] }
+  const UNIQUE = { landing_leads: ["ref", "idempotency_key"], landing_promo_codes: ["code"], landing_staff: ["email"], landing_offers: ["sku"], landing_categories: ["slug"], landing_reviews: ["content_hash"] }
 
   const match = (row, params) => {
     for (const [k, raw] of params) {
@@ -336,7 +338,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
         const sameScope = (r) => GLOBAL_COLS.has(col) || !tenant || r.organization_id === row.organization_id
         if (row[col] != null && rows.some((r) => r[col] === row[col] && sameScope(r))) return send(res, 409, { code: "23505" })
       }
-      const base = name === "landing_leads" || name === "landing_offers" || name === "landing_categories" || name === "landing_message_templates" ? { id: randomUUID() } : { id: (seq[name] = (seq[name] ?? 0) + 1) }
+      const base = name === "landing_leads" || name === "landing_offers" || name === "landing_categories" || name === "landing_message_templates" || name === "landing_reviews" ? { id: randomUUID() } : { id: (seq[name] = (seq[name] ?? 0) + 1) }
       if (tenant && TENANT_TABLES.includes(name) && row.organization_id === undefined) postsWithoutOrg.push(name)
       const created = { ...base, created_at: day(0), updated_at: day(0), ...(tenant && TENANT_TABLES.includes(name) ? { organization_id: E2B_ORG } : {}), ...(name === "landing_leads" ? { lead_day: day(0).slice(0, 10), status: "nouveau" } : {}), ...(DEFAULTS[name] ?? {}), ...row }
       rows.push(created)

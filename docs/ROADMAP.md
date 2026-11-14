@@ -87,6 +87,20 @@ Application Meta **MarketingEasy** (ID `1103466232321935`, portefeuille « Easy2
 
 **Écarts connus :** expéditeurs WhatsApp à nom d'utilisateur sans numéro visible (pas de lead possible) ; programmation automatique des pages limitée à un passage par jour (offre Vercel Hobby).
 
+## Avis en étoiles des visiteurs — page /omra (14/11/2026)
+Décision du propriétaire : les anciens témoignages sont **masqués** (non confirmés) ; à leur place, des avis **déposés par les vrais visiteurs** (tous les visiteurs), affichés sur `/omra`.
+
+| Règle | Mise en œuvre |
+|---|---|
+| Aucun avis visible sans validation | statut `pending` par défaut (contrainte en base) ; l'administrateur clique « Publier » dans `/admin/avis` ; seul le statut peut changer (droit de modification limité à 3 colonnes) |
+| Moyenne et nombre honnêtes | calculés sur les avis **publiés** uniquement ; aucune moyenne tant qu'il n'y en a pas ; aucun balisage Google `aggregateRating` |
+| Accord du visiteur | case obligatoire (contrainte en base) : prénom et commentaire publiés après relecture |
+| Données minimales | note, prénom, commentaire facultatif, langue, empreinte du contenu (anti-doublon) ; ni e-mail, ni téléphone, ni IP |
+| Anti-abus | champ piège invisible, refus des adresses web / e-mails / téléphones dans le texte, 3 avis valides par heure et par adresse, 20 par heure pour le site, 30 envois (valides ou non) par heure et par adresse, origine contrôlée |
+| Migration | **0025** `landing_reviews` (cloisonnée par entreprise, serveur seulement, retour arrière refusé s'il existe des avis) |
+
+Preuves : `tests/migration-0025.test.ts` (7, PostgreSQL), `reviews.test.ts` (14, dont 4 sabotages vérifiés), `reviews-api.test.ts` (9), `reviews-view.test.ts` (3), parcours navigateur `tests/e2e/reviews.e2e.mjs` (20 contrôles : dépôt → invisible → validation → visible → retrait). Voir l'état de déploiement dans le journal.
+
 ## Journal
 
 - 02/11/2026 — Bloc 0 : état réel vérifié (main `04de912`, 3 branches, PR #1 ouverte hors sujet, 0 workflow CI).

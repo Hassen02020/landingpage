@@ -5,6 +5,7 @@ import { SkipLink } from "@/app/components/SkipLink"
 import { SiteHeader } from "@/app/components/SiteHeader"
 import Image from "next/image"
 import { LeadCaptureForm } from "../components/LeadCaptureForm"
+import { ReviewsSection } from "./ReviewsSection"
 import { PHONE_NUMBER, SOCIAL_LINKS, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent as sendEvent } from "@/lib/tracking"
 
@@ -380,6 +381,9 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
           </ol>
         </div>
       </section>
+
+      {/* AVIS DES VISITEURS — seuls les avis validés par l'équipe sont affichés */}
+      <ReviewsSection page="omra" />
 
       {/* FORMULAIRE — le lead est enregistré dans le CRM puis le visiteur continue sur WhatsApp */}
       <section id="reservation" className="scroll-mt-16 py-12 sm:py-16 bg-emerald-50">
