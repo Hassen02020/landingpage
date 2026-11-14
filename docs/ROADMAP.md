@@ -64,7 +64,8 @@ PR fusionnées : #43 (Créateur lots B–E, `22a7078`), #44 (dette technique, `3
 | WhatsApp entrant (API Cloud) | Code **TESTÉ (charges simulées)** et déployé, base prête, webhook **INERTE** (404, vérifié en ligne) : en attente du compte WhatsApp Business et des variables `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` ; texte des messages non conservé |
 | TikTok (réception de leads) | **BLOQUÉ** : compte annonceur non actif, schéma de signature non confirmé ; aucun code inventé |
 | Dette technique | ESLint + Playwright (PR #44) ; limites de débit partagées : **non faites** (stockage commun à décider) |
-| Programmation automatique des pages | **NON ACTIVÉE** (aucun `CRON_SECRET`, aucun cron) ; bouton manuel opérationnel |
+| Programmation automatique des pages | **ACTIVÉE le 14/11/2026** : `CRON_SECRET` défini dans Vercel (production, sensible), cron quotidien `0 5 * * *` (05:00 UTC = 06:00 à Tunis) déclaré dans `vercel.json` (PR #47 puis correctif #48 : l'offre **Hobby** n'accepte qu'un passage par jour). Déploiement `dpl_GCZdQ6Kanpc5WXSkex5U82qeQ1eD` (commit `f8fa1c5`). Vérifié en ligne : sans secret 401, mauvais secret 401, bon secret 200 (`available: true`, 0 page touchée). **Limite** : une page programmée est appliquée au prochain passage quotidien (jusqu'à 24 h de retard) ; bouton manuel pour l'immédiat ; 15 minutes = offre Pro. Pour couper : retirer l'entrée de `vercel.json` ou `CRON_SECRET`. |
+| Lots B–E du Créateur (production, base) | Vérifiés sur la vraie base dans une transaction annulée (13 contrôles : anglais, design > 16 000 octets, plafond 64 000, programmation, versions en ajout seul, isolation par entreprise). **Parcours dans l'interface (connexion à `/admin/createur`) : NON VÉRIFIÉS**, à faire par le propriétaire |
 | Lead réel reçu d'un canal externe | **AUCUN** : aucun canal n'est certifié ; aucun faux prospect créé en production |
 
 ## Journal
