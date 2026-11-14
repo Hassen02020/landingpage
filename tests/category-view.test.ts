@@ -100,16 +100,15 @@ describe("rendu avec personnalisation (design)", () => {
 describe("rendu du clone Ramadan (famille omra avec services, conditions, témoignages, compte à rebours)", () => {
   const theme = THEMES.find((t) => t.id === "ramadan-complet")!
   const render = () => renderToStaticMarkup(createElement(CategoryView, { category: category({ product: "omra", lang: "ar", name: "عمرة رمضان كامل" }), offers: [offer({ product: "omra", name: "غرفة ثنائية", price: 6900 })], design: sanitizeDesign(theme.preset!.design, "omra").design }))
-  it("services, conditions et témoignages réels affichés dans l'ordre du modèle ; couleur marine ; bouton WhatsApp ; texte du bouton", () => {
+  it("services et conditions affichés dans l'ordre du modèle ; témoignages MASQUÉS par défaut (non confirmés) ; couleur marine ; bouton WhatsApp ; texte du bouton", () => {
     const h = render()
     expect(h).toContain('data-testid="services"'); expect(h).toContain("فندق ميسان الملتزم"); expect(h).toContain("طيران تونس – جدة – تونس وتأشيرة العمرة الكاملة")
     expect(h).toContain('data-testid="conditions"'); expect(h).toContain("تخفيض 200 د.ت للعائلات انطلاقاً من شخصين"); expect(h).toContain("98 140 514")
-    expect(h).toContain('data-testid="testimonials"'); expect(h).toContain("سميرة العيادي")
+    expect(h).not.toContain('data-testid="testimonials"'); expect(h).not.toContain("سميرة العيادي")
     expect(h).toContain("--p:#0b162c"); expect(h).toContain("احجز مكانك الآن"); expect(h).toContain("راسلنا على واتساب")
     expect(h.indexOf('id="services"')).toBeLessThan(h.indexOf('id="offres"'))
     expect(h.indexOf('id="offres"')).toBeLessThan(h.indexOf('id="conditions"'))
-    expect(h.indexOf('id="conditions"')).toBeLessThan(h.indexOf('data-testid="testimonials"'))
-    expect(h.indexOf('data-testid="testimonials"')).toBeLessThan(h.indexOf('id="reservation"'))
+    expect(h.indexOf('id="conditions"')).toBeLessThan(h.indexOf('id="reservation"'))
     expect(h).toContain('dir="rtl"')
   })
   it("le compte à rebours n'est PAS rendu côté serveur (aucun décalage d'hydratation) ; formulaire CRM présent avec e-mail absent par défaut", () => {
