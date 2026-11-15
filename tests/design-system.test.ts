@@ -85,7 +85,7 @@ describe("E8 : ambiances par produit", () => {
 describe("E8 : arabe", () => {
   it("pied de page du site en arabe : textes arabes, sens droite-gauche, numéro de téléphone lisible, ni majuscules ni espacement des lettres", () => {
     const h = r(createElement(SiteFooter, { whatsappHref: "#", lang: "ar" }))
-    for (const x of ["عروضنا", "اتصل بنا", "راسلنا على واتساب", "جميع الحقوق محفوظة", "الإشعارات القانونية", "الخصوصية", "رحلات منظمة", "مركز الحجز"]) expect(h).toContain(x)
+    for (const x of ["عروضنا", "اتصل بنا", "راسلنا على واتساب", "جميع الحقوق محفوظة", "الإشعارات القانونية", "الخصوصية", "رحلات منظمة"]) expect(h).toContain(x)
     expect(h).toContain('dir="rtl"'); expect(h).toContain('lang="ar"'); expect(h).toContain('<span dir="ltr">+216')
     expect(h).not.toMatch(/Nos offres|Écrire sur WhatsApp|Tous droits|Devis gratuit/); expect(h).not.toMatch(/uppercase|tracking-widest/)
   })
@@ -93,10 +93,17 @@ describe("E8 : arabe", () => {
     const h = r(createElement(SiteFooter, { whatsappHref: "#" }))
     expect(h).toContain("Nos offres"); expect(h).toContain("Écrire sur WhatsApp"); expect(h).toContain("uppercase")
   })
-  it("pied de page compact en arabe", () => {
+  it("pied de page compact en arabe : sans « مركز الحجز », logo sans plaque, réseaux sociaux officiels", () => {
     const h = r(createElement(DS.Easy2BookFooter, { name: "عمرة", phone: "+21698140514", phoneLabel: "98 140 514", whatsappHref: "#", lang: "ar" }))
-    for (const x of ["Easy2Book · مركز الحجز", "واتساب", "الإشعارات القانونية"]) expect(h).toContain(x)
-    expect(h).not.toContain("Mentions légales"); expect(h).not.toContain("Centrale de Réservation")
+    for (const x of ["واتساب", "الإشعارات القانونية", "Easy2Book"]) expect(h).toContain(x)
+    expect(h).not.toContain("مركز الحجز"); expect(h).not.toContain("Centrale de Réservation"); expect(h).not.toContain("Mentions légales")
+    expect(h).not.toMatch(/rounded-xl bg-white p-1/) // plus de plaque blanche autour du logo
+    for (const u of ["https://www.facebook.com/Easy2Bookplateforme", "https://www.instagram.com/easy2book.2025/", "https://www.tiktok.com/@easy2book"]) expect(h).toContain(u)
+    expect(h).toContain('aria-label="مواقع التواصل الاجتماعي"')
+  })
+  it("pied de page du site en arabe : plus de ligne « مركز الحجز » ; mêmes réseaux sociaux (source unique)", () => {
+    const h = r(createElement(SiteFooter, { whatsappHref: "#", lang: "ar" }))
+    expect(h).not.toContain("مركز الحجز"); expect(h).toContain("https://www.tiktok.com/@easy2book")
   })
   it("page arabe sans en-tête « split » (pages de départ) : pied de page arabe de bout en bout", () => {
     const theme = THEMES.find((t) => t.id === "omra-groupe-1")!
