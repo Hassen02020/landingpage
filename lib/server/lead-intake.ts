@@ -10,6 +10,7 @@ import { logActivity, tunisDay } from "@/lib/server/crm"
 import { notifyNewLead } from "@/lib/server/notify"
 import { verifyCaptcha } from "@/lib/server/captcha"
 import { cleanEmail } from "@/lib/validation"
+import { isRegion } from "@/lib/regions"
 import { checkLead } from "@/lib/server/protection"
 import { waText } from "@/lib/wa-text"
 import { discountLabel, findUsablePromo, normalizeCode, redeemPromo, type PromoRow } from "@/lib/server/promo"
@@ -42,7 +43,7 @@ function formPage(pageUrl: string | undefined): string | null {
 function degradeRow(row: Record<string, unknown>, code: string | undefined): boolean {
   let changed = false
   if (code === "23503" || code === "PGRST204" || code === "42703") {
-    for (const col of ["offer_id", "email", "contact_channel", "form_page", "custom_fields"]) {
+    for (const col of ["offer_id", "email", "region", "contact_channel", "form_page", "custom_fields"]) {
       if (col in row) {
         delete row[col]
         changed = true
@@ -190,6 +191,8 @@ export async function handleLeadPost(request: NextRequest, ctx: IntakeContext = 
     adults, // null = non précisé (la fiche CRM le complète pendant la qualification)
     children,
     email,
+    // région facultative (menu de la page) : acceptée seulement si elle figure dans la liste officielle des gouvernorats ; jamais pour une entreprise cliente ; toute autre valeur est ignorée
+    ...(ctx.platform && isRegion(body.region) ? { region: body.region } : {}),
     contact_channel: "whatsapp",
     budget: (intake ? intake.accepted.budget : str(body.budget, 64)) || null,
     trip_type: str(body.trip_type, 64) || null,

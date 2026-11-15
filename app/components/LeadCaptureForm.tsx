@@ -1,5 +1,6 @@
 "use client"
 
+import { REGIONS } from "@/lib/regions"
 import { useState } from "react"
 import Script from "next/script"
 import { getAttribution } from "@/lib/attribution"
@@ -8,6 +9,9 @@ import { PRODUCTS, TURNSTILE_SITE_KEY, type Product } from "@/lib/config"
 import { buildWhatsAppUrl, generateEventId, trackEvent } from "@/lib/tracking"
 
 type Lang = "fr" | "ar" | "en"
+
+// Menu « région » : le libellé suit la langue de la page ; les valeurs sont les gouvernorats de la liste officielle (identiques à la contrainte SQL de la migration 0006)
+const REGION_TXT = { fr: { label: "Région (facultatif)" }, en: { label: "Region (optional)" }, ar: { label: "الولاية (اختياري)" } } as const
 
 const T = {
   fr: {
@@ -120,6 +124,8 @@ export interface LeadCaptureFormProps {
   askTravelers?: boolean
   /** Champ e-mail facultatif (non par défaut : l'e-mail est complété pendant le suivi). */
   askEmail?: boolean
+  /** Menu facultatif « région » (gouvernorats de la liste officielle) : non par défaut ; activé par le réglage de la page. */
+  askRegion?: boolean
   /** Libellé d'offre → identifiant catalogue (lien lead → offre pour la marge et les places). */
   offerIds?: Record<string, string>
   /** Libellé d'offre → prix par personne : affiche une estimation INDICATIVE (adultes × prix), sans engagement. */
@@ -148,6 +154,7 @@ export function LeadCaptureForm({
   showPromo = false,
   askTravelers = false,
   askEmail = false,
+  askRegion = false,
   offerIds,
   priceByOffer,
 }: LeadCaptureFormProps) {
@@ -198,6 +205,7 @@ export function LeadCaptureForm({
       adults: askTravelers ? get("adults") || undefined : undefined,
       children: askTravelers ? get("children") || undefined : undefined,
       email: askEmail ? get("email") || undefined : undefined,
+      region: askRegion ? get("region") || undefined : undefined,
       message: get("message"),
       promo_code: get("promo_code") || undefined,
       contactConsent: true,
@@ -396,6 +404,13 @@ export function LeadCaptureForm({
             {lang === "ar" ? `${adultsCount} × ${priceByOffer[offerValue]} د.ت للبالغين — تقدير غير ملزم، قبل تخفيض العائلات، يؤكده مستشارنا.` : lang === "en" ? `${adultsCount} adult(s) × ${priceByOffer[offerValue]} TND — indicative, before any family discount, confirmed by an advisor.` : `${adultsCount} adulte(s) × ${priceByOffer[offerValue]} TND — indicatif, avant réduction famille, confirmé par un conseiller.`}
           </span>
         </p>
+      )}
+
+      {askRegion && (
+        <select name="region" defaultValue="" disabled={submitting} className={inputCls} aria-label={REGION_TXT[lang].label} data-testid="region-select">
+          <option value="">{REGION_TXT[lang].label}</option>
+          {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
       )}
 
       {askEmail && (

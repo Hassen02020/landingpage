@@ -56,6 +56,7 @@ const RAMADAN_PRESET: ThemePreset = {
   design: {
     colors: { preset: "famille", custom: "#003878" },
     hero: "split",
+    form: { email: false, region: true }, // E6 : région facultative (décision du propriétaire, page Omra Ramadan seulement)
     cta: { label: "احجز مكانك الآن", whatsapp: true },
     deadline: "2026-12-15",
     // vidéo publicitaire : fichier du site (public/), chargé seulement au clic ; sa carte finale annonce la même échéance que la page

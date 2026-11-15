@@ -52,7 +52,7 @@ export interface PageDesign {
   background: "famille" | "blanc" | "teinte"
   cta: { label: string; whatsapp: boolean }
   price: { prefix: boolean; showBefore: boolean }
-  form: { email: boolean }
+  form: { email: boolean; region: boolean }
   /** mise en page de l'en-tête : « standard » (bandeau) ou « split » (texte + carte vidéo verticale, fond clair) */
   hero: "standard" | "split"
   sections: { key: DesignSection; visible: boolean }[]
@@ -81,7 +81,7 @@ export const sectionLabel = (d: { blocks: { id: string; title: string }[] }, key
   key.startsWith("block:") ? `Bloc « ${d.blocks.find((b) => `block:${b.id}` === key)?.title ?? "?"} »` : SECTION_LABELS[key as Exclude<DesignSection, `block:${string}`>]
 
 export const defaultDesign = (family: Family): PageDesign => ({
-  v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true }, form: { email: false }, hero: "standard",
+  v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true }, form: { email: false, region: false }, hero: "standard",
   sections: SECTION_DEFAULTS[family].map((key) => ({ key, visible: true })), faq: [], testimonials: [], program: [], services: [], conditions: [], deadline: "", blocks: [],
 })
 
@@ -167,7 +167,7 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
   const price = obj(r.price)
   d.price = { prefix: price.prefix !== false, showBefore: price.showBefore !== false }
 
-  d.form = { email: obj(r.form).email === true }
+  d.form = { email: obj(r.form).email === true, region: obj(r.form).region === true }
   d.hero = r.hero === "split" ? "split" : "standard"
 
   const list = (v: unknown, max: number, label: string): unknown[] => {

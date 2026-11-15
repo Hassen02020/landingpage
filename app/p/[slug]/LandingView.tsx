@@ -260,6 +260,7 @@ export function LandingView({ category, offers, preview = false, design = null }
             onOfferChange={setOffer}
             showPromo
             askEmail={design?.form.email === true}
+            askRegion={design?.form.region === true}
             askTravelers={family === "voyage" || family === "hotel" || family === "omra"}
             priceByOffer={split ? priceByOffer : undefined}
           />
