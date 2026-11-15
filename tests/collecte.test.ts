@@ -63,13 +63,6 @@ describe("collecte : premier contact court (décisions du propriétaire)", () =>
     expect(decodeURIComponent((await res.json()).whatsappUrl)).toContain("Voyageurs : 3 adulte(s) + 1 enfant(s)")
   })
 
-  it("budget et région envoyés par un client malveillant ne sont pas enregistrés au premier contact", async () => {
-    configureAll()
-    const f = installFetchMock()
-    await leadsPOST(post("/api/leads", mk({ region: "Sousse", budget: "9999 TND" })))
-    expect(f.db.landing_leads[0].region).toBeUndefined()
-  })
-
   it("base pas encore migrée (0006) : le lead n'est JAMAIS perdu (repli sans e-mail / canal, voyageurs historiques)", async () => {
     configureAll()
     const f = installFetchMock()
@@ -174,8 +167,10 @@ describe("qualification CRM (pendant le suivi)", () => {
 
 describe("garde-fou : le formulaire public du premier contact reste court", () => {
   const src = readFileSync(new URL("../app/components/LeadCaptureForm.tsx", import.meta.url), "utf8")
-  it("n'expose ni budget, ni région, ni type de séjour, ni âge", () => {
-    for (const forbidden of ['name="budget"', 'name="region"', 'name="trip_type"', 'name="age"', "budgets"]) expect(src).not.toContain(forbidden)
+  it("n'expose ni budget, ni type de séjour, ni âge ; la région n'existe que derrière l'option de page askRegion (E6, décision du propriétaire)", () => {
+    for (const forbidden of ['name="budget"', 'name="trip_type"', 'name="age"', "budgets"]) expect(src).not.toContain(forbidden)
+    expect(src).toMatch(/askRegion = false/)
+    expect(src).toMatch(/\{askRegion && \(\s*<select name="region"/)
   })
   it("voyageurs et e-mail seulement sur demande explicite de la page (props, faux par défaut)", () => {
     expect(src).toMatch(/askTravelers = false/)
