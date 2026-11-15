@@ -230,7 +230,7 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
 
   d.services = list(r.services, 6, "services").map(obj).map((x) => ({ title: clean(x.title, 80), text: clean(x.text, 400) })).filter((x) => x.title || x.text)
   d.services.forEach((x, i) => { if (!x.title || !x.text) errors[`services${i}`] = "Titre et texte de la carte sont requis." })
-  d.conditions = list(r.conditions, 4, "conditions").map(obj).map((x) => ({ title: clean(x.title, 80), text: clean(x.text, 300) })).filter((x) => x.title || x.text)
+  d.conditions = list(r.conditions, 8, "conditions").map(obj).map((x) => ({ title: clean(x.title, 80), text: clean(x.text, 300) })).filter((x) => x.title || x.text)
   d.conditions.forEach((x, i) => { if (!x.title || !x.text) errors[`conditions${i}`] = "Titre et texte de la condition sont requis." })
   const deadline = clean(r.deadline, 10)
   if (deadline) {

@@ -67,10 +67,15 @@ describe("E5 : prix par personne, réduction et date de début de Ramadan (conte
     expect(split.match(/\/ للشخص/g)!.length).toBeGreaterThanOrEqual(2) // hero + carte
     expect(std).not.toMatch(/<\/span><span class="text-sm font-bold text-gray-600"> \/ للشخص/)
   })
-  it("conditions : réduction de 200 d.t. PAR PERSONNE, début de Ramadan 1448 = 8 février 2027, quatre blocs", () => {
+  it("fiche commerciale : départ 8 février 2027, 30 jours, acompte 50 % avant le 15/12/2026, réduction 200 par personne, enfants 15 %, bébé 450", () => {
     const h = view("omra-ramadan-complet")
-    expect(h).toContain("تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين"); expect(h).toContain("1448 هـ · 8 فيفري 2027"); expect(h).toContain("md:grid-cols-2")
-    expect(h).toContain("عرض صالح لـ 15 ديسمبر 2026")
+    for (const x of ["الانطلاق يوم 8 فيفري 2027 (بداية شهر رمضان 1448 هـ) · المدة 30 يوماً", "عربون 50% قبل 15 ديسمبر 2026", "تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين", "تخفيض 15% للأطفال من 2 إلى 11 سنة", "سعر الرضيع 450 د.ت", "عرض صالح لـ 15 ديسمبر 2026"]) expect(h).toContain(x)
+    expect(h).toContain("lg:grid-cols-3") // 7 blocs : trois colonnes
+  })
+  it("la limite des blocs de conditions est de 8 (au-delà : erreur claire, jamais de perte silencieuse)", () => {
+    const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `T${i}`, text: `x${i}` }))
+    expect(sanitizeDesign({ conditions: mk(8) }, "omra").design.conditions).toHaveLength(8)
+    expect(sanitizeDesign({ conditions: mk(9) }, "omra").errors.conditions).toMatch(/maximum/)
   })
   it("vol direct, hôtel de La Mecque et séjour à Médine : textes du brochure du propriétaire", () => {
     const h = view("omra-ramadan-complet")
