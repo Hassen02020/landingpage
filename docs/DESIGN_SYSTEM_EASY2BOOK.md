@@ -31,7 +31,7 @@ Briques d'affichage prop-driven, sans suivi ni logique CRM (textes, liens et ges
 |---|---|---|
 | `Easy2BookButton` | bouton / lien (`brand`, `whatsapp`, `page`) | couleurs = variables `--e2b-*` |
 | `Easy2BookWhatsAppCTA` | appel WhatsApp | vert accessible, `noopener`, suivi fourni par la page |
-| `Easy2BookHeader` / `Easy2BookFooter` | en-tête et pied de page compacts | pied de page en `fr` / `en` / `ar` |
+| `Easy2BookHeader` / `Easy2BookFooter` | en-tête et pied de page compacts | pied de page en `fr` / `en` / `ar` ; **logo transparent sur fond clair (aucune plaque)**, réseaux sociaux officiels (`lib/social-links.ts`), aucun texte ne répète « Centrale de réservation » (déjà dans le logo) |
 | `Easy2BookHero` | hero « split » (texte + média vertical) | titre en deux temps (accent jaune), ambiance par famille |
 | `Easy2BookOfferCard` / `Easy2BookPriceCard` | carte d'offre complète / carte de prix compacte | aucun calcul : le prix vient de la page |
 | `Easy2BookTrustSection` | cartes de réassurance (icônes ou numéros) | texte brut échappé |

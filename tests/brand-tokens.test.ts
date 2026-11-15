@@ -37,7 +37,7 @@ describe("E3 : application aux composants de marque", () => {
   it("en-tête et pied de page de marque : bleu, jaune et vert WhatsApp viennent des variables, jamais d'une valeur en dur", () => {
     for (const part of [hdr, ftr]) expect(part).not.toMatch(/#[0-9a-fA-F]{6}\b/)
     expect(hdr).toMatch(/border-e2b-yellow/); expect(hdr).toMatch(/text-e2b-wa/); expect(hdr).toMatch(/text-e2b-blue/)
-    expect(ftr).toMatch(/bg-e2b-blue/); expect(ftr).toMatch(/border-e2b-yellow/)
+    expect(ftr).toMatch(/border-e2b-yellow/); expect(ftr).toMatch(/text-e2b-blue/); expect(ftr).toMatch(/bg-e2b-blue/) // icônes sociales
   })
   it("les modèles Omra du Créateur partent du bleu Easy2Book et la personnalisation reste valide", () => {
     for (const id of ["ramadan-complet", "omra-groupe-1", "omra-groupe-2", "omra-chawwal"]) {
