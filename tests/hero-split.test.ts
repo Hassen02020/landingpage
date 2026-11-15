@@ -67,19 +67,23 @@ describe("E5 : prix par personne, réduction et date de début de Ramadan (conte
     expect(split.match(/\/ للشخص/g)!.length).toBeGreaterThanOrEqual(2) // hero + carte
     expect(std).not.toMatch(/<\/span><span class="text-sm font-bold text-gray-600"> \/ للشخص/)
   })
-  it("fiche commerciale : départ 8 février 2027, 30 jours, acompte 50 % avant le 15/12/2026, réduction 200 par personne, enfants 15 %, bébé 450", () => {
+  it("fiche commerciale : départ 8 février 2027, acompte 50 % avant le 15/12/2026, solde avant début février 2027, annulation gratuite avant billets et visas, famille 200 par personne, bébé 450", () => {
     const h = view("omra-ramadan-complet")
-    for (const x of ["الانطلاق يوم 8 فيفري 2027 (بداية شهر رمضان 1448 هـ) · المدة 30 يوماً", "عربون 50% قبل 15 ديسمبر 2026", "تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين", "تخفيض 15% للأطفال من 2 إلى 11 سنة", "سعر الرضيع 450 د.ت", "عرض صالح لـ 15 ديسمبر 2026"]) expect(h).toContain(x)
-    expect(h).toContain("lg:grid-cols-3") // 7 blocs : trois colonnes
+    for (const x of ["الانطلاق يوم 8 فيفري 2027 (بداية شهر رمضان 1448 هـ)", "عربون 50% قبل 15 ديسمبر 2026 · الباقي 50% قبل بداية شهر فيفري 2027", "تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين", "سعر الرضيع 450 د.ت", "إلغاء مجاني قبل إصدار تذاكر الطيران والتأشيرات", "عرض صالح لـ 15 ديسمبر 2026"]) expect(h).toContain(x)
+  })
+  it("PROMESSES NON CONFIRMÉES INTERDITES : pas de vol « direct », pas de navette, pas de situation de l'hôtel de Médine, pas de durée « 30 jours », pas de réduction enfants tant qu'elle n'est pas tranchée ; Rawda sous réserve", () => {
+    const h = view("omra-ramadan-complet")
+    for (const x of ["مباشر", "التوصيل", "المنطقة المركزية", "الساحات النبوية", "30 يوماً", "15%", "25%", "للأطفال"]) expect(h).not.toContain(x)
+    expect(h).toContain("زيارة الروضة الشريفة ضمن تنظيم البرنامج وبحسب التصاريح والمواعيد التي تمنحها السلطات المختصة")
   })
   it("la limite des blocs de conditions est de 8 (au-delà : erreur claire, jamais de perte silencieuse)", () => {
     const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `T${i}`, text: `x${i}` }))
     expect(sanitizeDesign({ conditions: mk(8) }, "omra").design.conditions).toHaveLength(8)
     expect(sanitizeDesign({ conditions: mk(9) }, "omra").errors.conditions).toMatch(/maximum/)
   })
-  it("vol direct, hôtel de La Mecque et séjour à Médine : textes du brochure du propriétaire", () => {
+  it("vol, hôtel de La Mecque et séjour à Médine : textes du brochure, sans les éléments non confirmés", () => {
     const h = view("omra-ramadan-complet")
-    for (const x of ["طيران مباشر تونس – جدة – تونس", "مطار تونس قرطاج", "خدمة التوصيل والنظافة اليومية", "المنطقة المركزية ومجاورة للساحات النبوية"]) expect(h).toContain(x)
+    for (const x of ["طيران تونس – جدة – تونس", "مطار تونس قرطاج", "فندق ميسان الملتزم بمكة", "المسجد النبوي الشريف والروضة والمزارات"]) expect(h).toContain(x)
   })
   it("les prix des chambres ne sont pas touchés (5 900 / 6 400 / 6 900) et aucun badge « le plus demandé » n'est ajouté", () => {
     expect(THEMES.find((t) => t.id === "ramadan-complet")!.preset!.offers.map((o) => o.price)).toEqual(["5900", "6400", "6900"])
