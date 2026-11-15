@@ -183,7 +183,7 @@ export function LandingView({ category, offers, preview = false, design = null }
                       )}
                       <div className="mt-auto">
                         {showBefore && o.price_before !== null && Number(o.price_before) > Number(o.price) && <div className="text-sm text-gray-400 line-through" dir="ltr">{fmt(Number(o.price_before))} TND</div>}
-                        <div className={`text-3xl font-black ${st.priceText}`}><span dir="ltr">{fmt(Number(o.price))}</span> <span className="text-base">TND</span></div>
+                        <div className={`text-3xl font-black ${st.priceText}`}><span dir="ltr">{fmt(Number(o.price))}</span> <span className="text-base">TND</span>{split && <span className="text-sm font-bold text-gray-600"> {t.perPerson}</span>}</div>
                         {n !== null && n > 0 && n <= 10 && <p className="text-sm font-bold text-red-600 mt-1">🔥 {t.left(n)}</p>}
                         {n === 0 ? (
                           <div className="mt-3 text-center bg-gray-200 text-gray-600 font-black py-3 rounded-2xl">{t.full}</div>
@@ -250,7 +250,7 @@ export function LandingView({ category, offers, preview = false, design = null }
       case "conditions":
         return design && design.conditions.length > 0 ? (
           <section key={key} id="conditions" className="max-w-5xl mx-auto px-4 py-6" aria-label={t.conditionsTitle} data-testid="conditions">
-            <div className={`rounded-2xl p-6 grid gap-5 ${design.conditions.length === 1 ? "md:grid-cols-1" : design.conditions.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"} ${st.formBand}`}>
+            <div className={`rounded-2xl p-6 grid gap-5 ${design.conditions.length === 1 ? "md:grid-cols-1" : design.conditions.length === 2 || design.conditions.length === 4 ? "md:grid-cols-2" : design.conditions.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-3"} ${st.formBand}`}>
               {design.conditions.map((x, i) => (
                 <div key={x.title + i}>
                   <p className={`text-xs font-black ${st.priceText}`}>{x.title}</p>

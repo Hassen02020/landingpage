@@ -61,6 +61,32 @@ describe("en-tête et pied de page du site sur les pages du Créateur", () => {
   })
 })
 
+describe("E5 : prix par personne, réduction et date de début de Ramadan (contenu validé par le propriétaire)", () => {
+  it("la mise en page split affiche « par personne » sur chaque carte ; la mise en page standard ne l'ajoute pas", () => {
+    const split = view("omra-ramadan-complet"), std = view("autre-page", { ...design(), hero: "standard" })
+    expect(split.match(/\/ للشخص/g)!.length).toBeGreaterThanOrEqual(2) // hero + carte
+    expect(std).not.toMatch(/<\/span><span class="text-sm font-bold text-gray-600"> \/ للشخص/)
+  })
+  it("fiche commerciale : départ 8 février 2027, 30 jours, acompte 50 % avant le 15/12/2026, réduction 200 par personne, enfants 15 %, bébé 450", () => {
+    const h = view("omra-ramadan-complet")
+    for (const x of ["الانطلاق يوم 8 فيفري 2027 (بداية شهر رمضان 1448 هـ) · المدة 30 يوماً", "عربون 50% قبل 15 ديسمبر 2026", "تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين", "تخفيض 15% للأطفال من 2 إلى 11 سنة", "سعر الرضيع 450 د.ت", "عرض صالح لـ 15 ديسمبر 2026"]) expect(h).toContain(x)
+    expect(h).toContain("lg:grid-cols-3") // 7 blocs : trois colonnes
+  })
+  it("la limite des blocs de conditions est de 8 (au-delà : erreur claire, jamais de perte silencieuse)", () => {
+    const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `T${i}`, text: `x${i}` }))
+    expect(sanitizeDesign({ conditions: mk(8) }, "omra").design.conditions).toHaveLength(8)
+    expect(sanitizeDesign({ conditions: mk(9) }, "omra").errors.conditions).toMatch(/maximum/)
+  })
+  it("vol direct, hôtel de La Mecque et séjour à Médine : textes du brochure du propriétaire", () => {
+    const h = view("omra-ramadan-complet")
+    for (const x of ["طيران مباشر تونس – جدة – تونس", "مطار تونس قرطاج", "خدمة التوصيل والنظافة اليومية", "المنطقة المركزية ومجاورة للساحات النبوية"]) expect(h).toContain(x)
+  })
+  it("les prix des chambres ne sont pas touchés (5 900 / 6 400 / 6 900) et aucun badge « le plus demandé » n'est ajouté", () => {
+    expect(THEMES.find((t) => t.id === "ramadan-complet")!.preset!.offers.map((o) => o.price)).toEqual(["5900", "6400", "6900"])
+    expect(view("omra-ramadan-complet")).not.toContain("الأكثر طلباً")
+  })
+})
+
 describe("avis étoilés sur la page Ramadan", () => {
   it("la liste des pages d'avis est partagée entre le serveur et le navigateur", () => {
     expect(Array.from(REVIEW_PAGES).sort()).toEqual(Array.from(REVIEW_PAGE_KEYS).sort())
