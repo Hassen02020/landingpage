@@ -24,8 +24,29 @@ Règles : blanc pour la lisibilité ; jaune pour l'énergie ; une page de produi
 ## Mascotte EAZY
 **Ressource absente** du dépôt, du prototype `Easy2Book-omraramdhan2027` et des fichiers reçus. Elle n'est ni générée ni redessinée : le composant `Easy2BookMascot` attend les fichiers officiels (PNG ou SVG transparents).
 
-## Composants
-E3 pose l'en-tête compact et le pied de page de marque sur les pages du Créateur (`LandingView.tsx`, mise en page « split »), avec les variables ci-dessus. L'extraction en composants réutilisables (Header, Footer, Button, Hero, OfferCard, PriceCard, TrustSection, FAQ, LeadForm, WhatsAppCTA, Mascot) est le chantier E8, non commencé.
+## Composants (chantier E8) — `app/components/easy2book/`
+Briques d'affichage prop-driven, sans suivi ni logique CRM (textes, liens et gestionnaires de clic viennent de la page).
+
+| Composant | Rôle | Remarques |
+|---|---|---|
+| `Easy2BookButton` | bouton / lien (`brand`, `whatsapp`, `page`) | couleurs = variables `--e2b-*` |
+| `Easy2BookWhatsAppCTA` | appel WhatsApp | vert accessible, `noopener`, suivi fourni par la page |
+| `Easy2BookHeader` / `Easy2BookFooter` | en-tête et pied de page compacts | pied de page en `fr` / `en` / `ar` |
+| `Easy2BookHero` | hero « split » (texte + média vertical) | titre en deux temps (accent jaune), ambiance par famille |
+| `Easy2BookOfferCard` / `Easy2BookPriceCard` | carte d'offre complète / carte de prix compacte | aucun calcul : le prix vient de la page |
+| `Easy2BookTrustSection` | cartes de réassurance (icônes ou numéros) | texte brut échappé |
+| `Easy2BookConditionsBand` | avantages et conditions | 1 à 8 blocs |
+| `Easy2BookFAQ` | questions fréquentes | `<details>` natif |
+| `Easy2BookLeadForm` | enveloppe d'affichage de `LeadCaptureForm` | **la chaîne CRM n'est pas dans le composant** |
+| `Easy2BookMascot` | mascotte EAZY | **n'affiche rien sans fichier officiel** (aucun remplaçant) |
+
+Le pied de page du site (`SiteFooter`) accepte `lang` (`fr` par défaut) : en arabe, textes arabes, sens droite-gauche, téléphone en `dir="ltr"`, ni majuscules ni espacement des lettres.
+
+### Ambiances par produit (`lib/design-system/ambiance.ts`)
+Omra, hôtels, vols, bateaux, transferts, attractions, packages, voyages organisés. **Seule la surface varie.** Omra = crème chaud déjà validé (`--e2b-surface-omra`). Les sept autres reprennent le bleu clair de marque et sont marquées « à valider » tant que le propriétaire n'a pas approuvé leur ambiance avec ses photographies.
+
+## Page de référence
+La page Omra Ramadan complet (`/p/omra-ramadan-complet`) utilise ces composants ; les pages de départ (`/p/omra-foj-*`) utilisent le même formulaire, la même FAQ, les mêmes cartes et le pied de page du site en arabe.
 
 ## Ce qui n'a pas changé
 CRM, formulaire, consentements, attribution, `noindex`, pages `/c` et `/omra`, `SiteHeader` / `SiteFooter` partagés avec le reste du site.

@@ -12,6 +12,10 @@
   --e2b-yellow: #f0c848;      /* jaune Easy2Book (logo) : accents, jamais en texte sur fond clair */
   --e2b-ink: #0b1b3a;         /* texte principal */
   --e2b-wa: #0e7a3c;          /* vert WhatsApp accessible (texte blanc 5,43:1) */
+  --e2b-wa-dark: #0b6a33;     /* survol du bouton WhatsApp */
+  /* ambiances par produit (système de composants) : seules les SURFACES varient, jamais le bleu, le jaune, le logo ni la police */
+  --e2b-surface-omra: #fbf8f2;   /* crème chaud, déjà validé sur la page Omra Ramadan */
+  --e2b-line-omra: #efe7d6;
 }
 
 /* ---- Site public : confort tactile et lisibilité (n'affecte pas l'espace équipe, repéré par .admin-root) ---- */

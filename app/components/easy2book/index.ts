@@ -1,0 +1,13 @@
+// Système de composants Easy2Book : briques communes aux landing pages (Omra, hôtels, vols, bateaux, transferts, attractions, packages, voyages organisés).
+export { Easy2BookButton } from "./Easy2BookButton"
+export { Easy2BookWhatsAppCTA } from "./Easy2BookWhatsAppCTA"
+export { Easy2BookHeader } from "./Easy2BookHeader"
+export { Easy2BookFooter } from "./Easy2BookFooter"
+export { Easy2BookHero, splitHeadline } from "./Easy2BookHero"
+export { Easy2BookOfferCard } from "./Easy2BookOfferCard"
+export { Easy2BookPriceCard } from "./Easy2BookPriceCard"
+export { Easy2BookTrustSection } from "./Easy2BookTrustSection"
+export { Easy2BookConditionsBand } from "./Easy2BookConditionsBand"
+export { Easy2BookFAQ } from "./Easy2BookFAQ"
+export { Easy2BookLeadForm } from "./Easy2BookLeadForm"
+export { Easy2BookMascot } from "./Easy2BookMascot"
