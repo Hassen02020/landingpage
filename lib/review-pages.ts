@@ -1,2 +1,2 @@
 // Pages qui acceptent des avis de visiteurs (clé = adresse de la page). Fichier sans dépendance serveur : utilisable côté navigateur.
-export const REVIEW_PAGE_KEYS: readonly string[] = ["omra", "omra-ramadan-complet"]
+export const REVIEW_PAGE_KEYS: readonly string[] = ["omra", "omra-ramadan-complet", "omra-foj-1", "omra-foj-2", "omra-chawwal"]

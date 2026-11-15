@@ -52,8 +52,11 @@ describe("avis étoilés sur la page Ramadan", () => {
     expect(REVIEW_PAGE_KEYS).toContain("omra-ramadan-complet")
   })
   it("section d'avis affichée avant le formulaire uniquement pour une page autorisée", () => {
-    const yes = view("omra-ramadan-complet"), no = view("omra-foj-1")
+    const yes = view("omra-ramadan-complet"), no = view("autre-page")
     expect(yes).toContain('id="avis"'); expect(yes.indexOf('id="avis"')).toBeLessThan(yes.indexOf('id="reservation"'))
     expect(no).not.toContain('id="avis"')
+  })
+  it("les pages des trois départs (Groupe 1, Groupe 2, Chawwal) acceptent aussi les avis, avec leur propre note", () => {
+    for (const slug of ["omra-foj-1", "omra-foj-2", "omra-chawwal"]) { expect(REVIEW_PAGES.has(slug)).toBe(true); expect(view(slug)).toContain('id="avis"') }
   })
 })
