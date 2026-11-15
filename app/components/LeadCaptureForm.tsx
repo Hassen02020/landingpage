@@ -393,7 +393,7 @@ export function LeadCaptureForm({
           {lang === "ar" ? "الكلفة التقديرية" : lang === "en" ? "Estimated cost" : "Coût estimé"}{" : "}
           <strong dir="ltr">{String(priceByOffer[offerValue] * adultsCount).replace(/\B(?=(\d{3})+(?!\d))/g, " ")}</strong> {lang === "ar" ? "د.ت" : "TND"}
           <span className="block text-xs text-gray-500 mt-0.5">
-            {lang === "ar" ? `${adultsCount} × ${priceByOffer[offerValue]} د.ت للبالغين — تقدير غير ملزم، يؤكده مستشارنا.` : lang === "en" ? `${adultsCount} adult(s) × ${priceByOffer[offerValue]} TND — indicative, confirmed by an advisor.` : `${adultsCount} adulte(s) × ${priceByOffer[offerValue]} TND — indicatif, confirmé par un conseiller.`}
+            {lang === "ar" ? `${adultsCount} × ${priceByOffer[offerValue]} د.ت للبالغين — تقدير غير ملزم، قبل تخفيض العائلات، يؤكده مستشارنا.` : lang === "en" ? `${adultsCount} adult(s) × ${priceByOffer[offerValue]} TND — indicative, before any family discount, confirmed by an advisor.` : `${adultsCount} adulte(s) × ${priceByOffer[offerValue]} TND — indicatif, avant réduction famille, confirmé par un conseiller.`}
           </span>
         </p>
       )}

@@ -61,6 +61,27 @@ describe("en-tête et pied de page du site sur les pages du Créateur", () => {
   })
 })
 
+describe("E5 : prix par personne, réduction et date de début de Ramadan (contenu validé par le propriétaire)", () => {
+  it("la mise en page split affiche « par personne » sur chaque carte ; la mise en page standard ne l'ajoute pas", () => {
+    const split = view("omra-ramadan-complet"), std = view("autre-page", { ...design(), hero: "standard" })
+    expect(split.match(/\/ للشخص/g)!.length).toBeGreaterThanOrEqual(2) // hero + carte
+    expect(std).not.toMatch(/<\/span><span class="text-sm font-bold text-gray-600"> \/ للشخص/)
+  })
+  it("conditions : réduction de 200 d.t. PAR PERSONNE, début de Ramadan 1448 = 8 février 2027, quatre blocs", () => {
+    const h = view("omra-ramadan-complet")
+    expect(h).toContain("تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين"); expect(h).toContain("1448 هـ · 8 فيفري 2027"); expect(h).toContain("md:grid-cols-2")
+    expect(h).toContain("عرض صالح لـ 15 ديسمبر 2026")
+  })
+  it("vol direct, hôtel de La Mecque et séjour à Médine : textes du brochure du propriétaire", () => {
+    const h = view("omra-ramadan-complet")
+    for (const x of ["طيران مباشر تونس – جدة – تونس", "مطار تونس قرطاج", "خدمة التوصيل والنظافة اليومية", "المنطقة المركزية ومجاورة للساحات النبوية"]) expect(h).toContain(x)
+  })
+  it("les prix des chambres ne sont pas touchés (5 900 / 6 400 / 6 900) et aucun badge « le plus demandé » n'est ajouté", () => {
+    expect(THEMES.find((t) => t.id === "ramadan-complet")!.preset!.offers.map((o) => o.price)).toEqual(["5900", "6400", "6900"])
+    expect(view("omra-ramadan-complet")).not.toContain("الأكثر طلباً")
+  })
+})
+
 describe("avis étoilés sur la page Ramadan", () => {
   it("la liste des pages d'avis est partagée entre le serveur et le navigateur", () => {
     expect(Array.from(REVIEW_PAGES).sort()).toEqual(Array.from(REVIEW_PAGE_KEYS).sort())

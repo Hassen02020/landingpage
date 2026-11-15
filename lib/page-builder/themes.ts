@@ -62,16 +62,18 @@ const RAMADAN_PRESET: ThemePreset = {
     blocks: [{ id: "vid0001", type: "video", title: "الفيديو الإعلاني", text: "", items: [], images: ["/omra-ramadan-complet-poster.jpg"], cta: "form", ctaLabel: "", video: "/omra-ramadan-complet.mp4" }],
     // les cartes « services » remplacent la liste des prestations (même contenu) : masquée par défaut, réaffichable dans « Personnaliser »
     sections: [{ key: "intro", visible: true }, { key: "block:vid0001", visible: true }, { key: "services", visible: true }, { key: "offers", visible: true }, { key: "conditions", visible: true }, { key: "inclusions", visible: false }, { key: "programme", visible: true }, { key: "testimonials", visible: false }, { key: "faq", visible: true }, { key: "form", visible: true }],
+    // textes du brochure du propriétaire (prototype Easy2Book-omraramdhan2027), repris tels quels ; « مباشر » et les détails d'hôtel viennent du même prototype
     services: [
-      { title: "طيران تونس – جدة – تونس وتأشيرة العمرة الكاملة", text: "نتكفّل بجميع إجراءات حجز التذاكر الدولية واستخراج تأشيرة العمرة والتنقلات المريحة من المطار إلى الفندق، لتنطلق رحلتك من تونس دون عناء إداري." },
-      { title: "تأطير كامل مع مرشدين مرافقين", text: "مرافقة ميدانية ودينية خطوة بخطوة طيلة شهر رمضان، من مناسك العمرة الأولى حتى صلاة التراويح والقيام." },
-      { title: "الإقامة في فندق ميسان الملتزم", text: "غرف مجهزة وعناية فندقية متواصلة في مكة المكرمة تمنحك الهدوء والراحة بعد أداء الصلوات." },
-      { title: "رحلة إلى المدينة المنورة مشمولة في البرنامج", text: "زيارة المسجد النبوي الشريف والروضة المباركة في أجواء رمضانية هادئة ومنظمة." },
+      { title: "طيران مباشر تونس – جدة – تونس", text: "رحلات منتظمة ومريحة مع استقبال ومرافقة من مطار تونس قرطاج حتى الوصول إلى مكة المكرمة." },
+      { title: "تأشيرة وتأطير ديني وإداري", text: "إنجاز كامل إجراءات التأشيرة مع مرشدين مرافقين خطوة بخطوة في المناسك والزيارات." },
+      { title: "فندق ميسان الملتزم بمكة", text: "إقامة مريحة ومنظمة للعائلات والأفراد مع خدمات متواصلة طوال شهر رمضان المبارك، مع خدمة التوصيل والنظافة اليومية." },
+      { title: "رحلة روحانية للمدينة المنورة", text: "زيارة المسجد النبوي الشريف والروضة والمزارات التاريخية في أجواء هادئة ومؤطرة. إقامة هادئة في المنطقة المركزية ومجاورة للساحات النبوية." },
     ],
     conditions: [
-      { title: "تخفيض العائلات", text: "تخفيض 200 د.ت للعائلات انطلاقاً من شخصين." },
+      { title: "تخفيض العائلات", text: "تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين." },
       { title: "المجموعات الكبيرة", text: "مجموعات تفوق 10 أشخاص: الاتصال على 98 140 514 للحصول على الإمكانية." },
       { title: "تنبيه التوفر", text: "عدد غرف محدود جداً · عرض صالح لـ 15 ديسمبر 2026." },
+      { title: "بداية شهر رمضان", text: "1448 هـ · 8 فيفري 2027." },
     ],
     // MASQUÉS par défaut : à réafficher (« Personnaliser » > Témoignages) seulement si ces avis sont réels et que les clients ont donné leur accord
     testimonials: [
