@@ -46,8 +46,8 @@ const RAMADAN_FEATURES = ["طيران تونس – جدة – تونس", "تأش
 const RAMADAN_PRESET: ThemePreset = {
   name: "عمرة رمضان كامل",
   slug: "omra-ramadan-complet",
-  headline: "عمرة شهر رمضان كامل في مكة المكرمة مع رحلة إلى المدينة المنورة",
-  description: "برنامج عمرة شهر رمضان كامل في مكة المكرمة والمدينة المنورة مع Easy2Book: طيران تونس – جدة – تونس، تأشيرة، وتأطير كامل مع مرشدين مرافقين خطوة بخطوة، وإقامة مريحة في فندق ميسان الملتزم، مع رحلة إلى المدينة المنورة. عدد الغرف محدود جداً.",
+  headline: "عمرة رمضان الكل في مكة المكرمة… بسفر أسهل وقلب مطمئن",
+  description: "برنامج متكامل من Easy2Book يشمل طيران تونس – جدة – تونس، التأشيرة، التأطير الديني والإداري خطوة بخطوة، إقامة مريحة في فندق ميسان الملتزم، ورحلة روحانية للمدينة المنورة. عدد الغرف محدود جداً.",
   offers: [
     { name: "غرفة رباعية أو خماسية", destination: "مكة المكرمة والمدينة المنورة", nights_detail: "شهر رمضان كامل — 4 أو 5 أشخاص في الغرفة", price: "5900", features: RAMADAN_FEATURES },
     { name: "غرفة ثلاثية", destination: "مكة المكرمة والمدينة المنورة", nights_detail: "شهر رمضان كامل — 3 أشخاص في الغرفة", price: "6400", features: RAMADAN_FEATURES },
@@ -55,6 +55,7 @@ const RAMADAN_PRESET: ThemePreset = {
   ],
   design: {
     colors: { preset: "famille", custom: "#0b162c" },
+    hero: "split",
     cta: { label: "احجز مكانك الآن", whatsapp: true },
     deadline: "2026-12-15",
     // vidéo publicitaire : fichier du site (public/), chargé seulement au clic ; sa carte finale annonce la même échéance que la page
@@ -88,7 +89,7 @@ function groupPreset(o: { name: string; slug: string; date: string; nights: stri
   return {
     name: o.name,
     slug: o.slug,
-    headline: `عمرة ${o.name} — ${o.nights} ليلة (${o.nightsDetail})`,
+    headline: `${o.name.startsWith("عمرة") ? o.name : `عمرة ${o.name}`} — ${o.nights} ليلة (${o.nightsDetail})`,
     description: `رحلة عمرة مع Easy2Book: ${o.nights} ليلة (${o.nightsDetail})، طيران ذهاباً وإياباً، تأشيرة العمرة والتأمين الصحي، إقامة في فندق أرائك غزة ⭐⭐⭐ قريب من الحرم، تنقلات بحافلات سياحية مريحة، مرافقون ذوو خبرة ومرافقة نسائية، وهدايا للمعتمرين. عدد الأماكن محدود.`,
     offers: [{ name: o.name, destination: "مكة المكرمة والمدينة المنورة", nights_detail: o.nightsDetail, price: o.price, features: GROUP_FEATURES, departure_date: o.date, nights: o.nights, tag: o.tag }],
     design: {

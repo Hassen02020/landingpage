@@ -66,6 +66,12 @@ export function DesignEditor({ id, initial, available, theme, media = [] }: { id
           <label className="flex items-center gap-2"><input type="checkbox" checked={d.price.prefix} onChange={(e) => upd("price", { ...d.price, prefix: e.target.checked })} aria-label="Afficher À partir de" /> Afficher « À partir de … » (prix le plus bas) en tête de page</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={d.price.showBefore} onChange={(e) => upd("price", { ...d.price, showBefore: e.target.checked })} aria-label="Afficher le prix barré" /> Afficher l&apos;ancien prix barré lorsqu&apos;il existe</label>
         </div>
+        <label className="flex items-center gap-2 text-sm">En-tête de la page
+          <select value={d.hero} onChange={(e) => upd("hero", e.target.value === "split" ? "split" : "standard")} className={`${inp} max-w-xs`} aria-label="Mise en page de l'en-tête">
+            <option value="standard">Standard (bandeau)</option>
+            <option value="split">Texte + vidéo verticale (fond clair)</option>
+          </select>
+        </label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.form.email} onChange={(e) => upd("form", { email: e.target.checked })} aria-label="Demander l'e-mail dans le formulaire" /> Demander l&apos;e-mail dans le formulaire (facultatif pour le visiteur)</label>
         <p className="text-xs text-gray-500">Les prix et les dates viennent toujours de vos offres : ce réglage ne change que leur présentation.</p>
       </section>

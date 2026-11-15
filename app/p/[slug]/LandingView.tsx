@@ -2,7 +2,7 @@
 // gardent EXACTEMENT leur rendu historique (app/c/[slug]/CategoryView.tsx, inchangé) tant que l'inventaire de production n'est pas validé.
 "use client"
 
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import { LeadCaptureForm } from "@/app/components/LeadCaptureForm"
 import { PHONE_NUMBER, WHATSAPP_NUMBER } from "@/lib/config"
 import { handleWhatsAppClick, trackEvent } from "@/lib/tracking"
@@ -14,6 +14,8 @@ import { faqFor } from "@/lib/page-builder/faq"
 import { SECTIONS, STYLE, derive, type FamilyStyle } from "@/lib/page-builder/style"
 import { resolvePrimary, tint, visibleSections, type DesignSection, type PageDesign } from "@/lib/page-builder/design"
 import { Countdown } from "./Countdown"
+import { ReviewsSection } from "@/app/omra/ReviewsSection"
+import { REVIEW_PAGE_KEYS } from "@/lib/review-pages"
 
 const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
 const enDate = (iso: string) => {
@@ -36,6 +38,17 @@ const T = {
 // Style personnalisé : une SEULE couleur choisie (contraste du texte blanc vérifié à l'enregistrement) pilote boutons, titres, pastilles et bandeaux.
 const CUSTOM: FamilyStyle = { page: "bg-gray-50", heroNoImage: "bg-[var(--p)]", accentText: "text-white", priceText: "text-[var(--p)]", button: "bg-[var(--p)] hover:brightness-90", buttonSoft: "text-[var(--p)]", chip: "bg-[var(--pl)] text-[var(--p)]", formBand: "bg-[var(--pl)]", sectionTitle: "text-[var(--p)]", ring: "ring-[var(--pl)]", accentColor: "#000000" }
 
+// Icônes simples (trait) des cartes « services » de la mise en page « split » : avion, bouclier, hôtel, boussole
+const ICONS = [
+  "M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4s-1 0-3.5 3.5L7 6 5 8l6 3-3 3-3-.5L4 15l4 1 1 4 1.5-1-.5-3 3-3 3 6z",
+  "M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4",
+  "M4 21V5l8-2v18M12 7h8v14M7 8h2M7 12h2M7 16h2M15 11h2M15 15h2M3 21h18",
+  "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5 14 14l-5.5 1.5L10 10z",
+]
+const Icon = ({ i }: { i: number }) => (
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[i % ICONS.length]} /></svg>
+)
+
 export function LandingView({ category, offers, preview = false, design = null }: { category: Category; offers: PublicOffer[]; preview?: boolean; design?: PageDesign | null }) {
   const lang = category.lang
   const t = T[lang]
@@ -55,6 +68,10 @@ export function LandingView({ category, offers, preview = false, design = null }
   const info = derive(offers)
   if (design && design.program.length) info.programmes = design.program.map((x) => ({ name: x.title, text: x.text }))
   const hasPromo = offers.some((o) => o.price_before !== null && Number(o.price_before) > Number(o.price))
+  const split = design?.hero === "split"
+  const heroVideo = split ? design?.blocks.find((b) => b.type === "video") ?? null : null
+  const reviewed = REVIEW_PAGE_KEYS.includes(category.slug) && lang === "ar"
+  const priceByOffer = Object.fromEntries(offers.map((o) => [label(o), Number(o.price)]))
   const faq = design && design.faq.length ? design.faq : faqFor(family, lang)
 
   const choose = (o: PublicOffer) => {
@@ -74,6 +91,7 @@ export function LandingView({ category, offers, preview = false, design = null }
   const block = (key: string) => {
     const b = design?.blocks.find((x) => `block:${x.id}` === key)
     if (!b) return null
+    if (heroVideo && b.id === heroVideo.id) return null // déjà affichée dans l'en-tête
     const wrap = (children: React.ReactNode, narrow = false) => (
       <section key={key} id={`bloc-${b.id}`} className={`${narrow ? "max-w-3xl" : "max-w-5xl"} mx-auto px-4 py-6 scroll-mt-4`} aria-label={b.title} data-testid="block" data-block-type={b.type}>{children}</section>
     )
@@ -120,7 +138,7 @@ export function LandingView({ category, offers, preview = false, design = null }
     if (key.startsWith("block:")) return block(key)
     switch (key) {
       case "intro":
-        return category.description ? <p key={key} className="max-w-3xl mx-auto px-4 py-6 text-gray-700 whitespace-pre-line leading-relaxed">{category.description}</p> : null
+        return category.description && !split ? <p key={key} className="max-w-3xl mx-auto px-4 py-6 text-gray-700 whitespace-pre-line leading-relaxed">{category.description}</p> : null
       case "highlights":
         return info.highlights.length >= 2 ? (
           <section key={key} className="max-w-5xl mx-auto px-4 pt-2 pb-4" aria-label={t.highlights}>
@@ -207,10 +225,10 @@ export function LandingView({ category, offers, preview = false, design = null }
         return design && design.services.length > 0 ? (
           <section key={key} id="services" className="max-w-5xl mx-auto px-4 py-6" aria-label={t.servicesTitle} data-testid="services">
             {title(t.servicesTitle)}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`grid grid-cols-1 gap-4 ${split ? "sm:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2"}`}>
               {design.services.map((x, i) => (
-                <div key={x.title + i} className="bg-white rounded-2xl border border-gray-100 p-6">
-                  <p className={`text-xs font-black ${st.priceText}`} dir="ltr">{String(i + 1).padStart(2, "0")}</p>
+                <div key={x.title + i} className={`rounded-2xl border p-6 ${split ? "bg-[#fbf8f2] border-[#efe7d6]" : "bg-white border-gray-100"}`}>
+                  {split ? <span className={`block ${st.priceText}`}><Icon i={i} /></span> : <p className={`text-xs font-black ${st.priceText}`} dir="ltr">{String(i + 1).padStart(2, "0")}</p>}
                   <h3 className="mt-1 text-lg font-black">{x.title}</h3>
                   <p className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-line">{x.text}</p>
                 </div>
@@ -261,7 +279,9 @@ export function LandingView({ category, offers, preview = false, design = null }
         )
       case "form":
         return (
-          <section key={key} id="reservation" className={`scroll-mt-4 py-10 ${st.formBand}`}>
+          <Fragment key={key}>
+          {reviewed && <ReviewsSection page={category.slug} />}
+          <section id="reservation" className={`scroll-mt-4 py-10 ${st.formBand}`}>
             <div className="max-w-xl mx-auto px-4">
               <h2 className="text-2xl font-black text-center mb-1">{t.formTitle}</h2>
               <p className="text-center text-gray-600 mb-5">{t.formSub}</p>
@@ -280,11 +300,13 @@ export function LandingView({ category, offers, preview = false, design = null }
                     showPromo
                     askEmail={design?.form.email === true}
                     askTravelers={family === "voyage" || family === "hotel" || family === "omra"}
+                    priceByOffer={split ? priceByOffer : undefined}
                   />
                 </fieldset>
               </div>
             </div>
           </section>
+          </Fragment>
         )
     }
   }
@@ -293,6 +315,39 @@ export function LandingView({ category, offers, preview = false, design = null }
     <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
       {preview && <div className="bg-amber-100 text-amber-900 text-sm font-bold text-center py-2 px-3" role="status">{t.preview}</div>}
       {design?.deadline ? <Countdown deadline={design.deadline} lang={lang} /> : null}
+      {split ? (
+        <header className="bg-[#fbf8f2] border-b border-[#efe7d6]" data-testid="hero-split">
+          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12 grid gap-8 lg:grid-cols-2 items-center">
+            <div>
+              <span className="inline-block text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200">{category.name}</span>
+              {(() => {
+                const h = category.headline || category.name
+                const cut = h.search(/…|\.\.\./)
+                return (
+                  <h1 className="mt-4 text-3xl sm:text-5xl font-black leading-tight text-gray-900">
+                    {cut > 0 ? <>{h.slice(0, cut).trim()}… <span className="text-amber-600">{h.slice(cut).replace(/^(…|\.\.\.)\s*/, "")}</span></> : h}
+                  </h1>
+                )
+              })()}
+              {category.description && <p className="mt-4 text-gray-600 leading-relaxed whitespace-pre-line">{category.description}</p>}
+              {showFrom && from !== null && (
+                <p className="mt-3 font-black text-lg text-gray-900">{t.from} <span dir="ltr">{fmt(from)}</span> TND {t.perPerson}</p>
+              )}
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a href="#reservation" className={`inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{ctaLabel}</a>
+                {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#25D366] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
+              </div>
+            </div>
+            {heroVideo && (
+              <figure className="mx-auto w-full max-w-[300px]">
+                <video controls playsInline preload="none" poster={heroVideo.images[0]} className="w-full aspect-[9/16] rounded-3xl bg-black object-cover shadow-2xl" aria-label={heroVideo.title} data-testid="block-video">
+                  <source src={heroVideo.video} type={heroVideo.video.endsWith(".webm") ? "video/webm" : "video/mp4"} />
+                </video>
+              </figure>
+            )}
+          </div>
+        </header>
+      ) : (
       <header className="relative">
         {category.banner_desktop || category.banner_mobile ? (
           <picture>
@@ -320,6 +375,7 @@ export function LandingView({ category, offers, preview = false, design = null }
           </div>
         </div>
       </header>
+      )}
 
       {(design ? visibleSections(design) : (SECTIONS[family] as DesignSection[])).map((k) => section(k))}
 
