@@ -84,7 +84,8 @@ describe("modèle « Omra Ramadan complet » : preuves sociales", () => {
     const preset = THEMES.find((t) => t.id === "ramadan-complet")!.preset!
     const r = sanitizeDesign(preset.design, "omra")
     expect(r.design.sections.find((x) => x.key === "testimonials")!.visible).toBe(false)
-    const h = renderToStaticMarkup(createElement(View, { category: category({ product: "omra", lang: "ar" }), offers: [offer({ product: "omra" })], design: r.design }))
+    // les tracés SVG (icônes de l'en-tête et du pied de page) contiennent des suites de chiffres : on ne contrôle que le texte de la page
+    const h = renderToStaticMarkup(createElement(View, { category: category({ product: "omra", lang: "ar" }), offers: [offer({ product: "omra" })], design: r.design })).replace(/<svg[\s\S]*?<\/svg>/g, "")
     for (const nom of ["عبد الرزاق", "سميرة العيادي", "نزار", "لطفي"]) expect(h).not.toContain(nom)
     for (const chiffre of ["4.9", "4,9", "98%", "98 %"]) expect(h).not.toContain(chiffre)
   })
