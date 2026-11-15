@@ -3,9 +3,10 @@
 // ne portent que sur les avis PUBLIÉS ; aucun e-mail, téléphone ni IP n'est conservé ; le texte est brut (React l'échappe).
 import { DbError, insertOne, select, update } from "@/lib/server/db"
 import { sha256 } from "@/lib/server/hash"
+import { REVIEW_PAGE_KEYS } from "@/lib/review-pages"
 
 /** Pages qui acceptent des avis. */
-export const REVIEW_PAGES: ReadonlySet<string> = new Set(["omra"])
+export const REVIEW_PAGES: ReadonlySet<string> = new Set(REVIEW_PAGE_KEYS)
 export type ReviewStatus = "pending" | "published" | "rejected"
 export type ReviewLang = "fr" | "ar" | "en"
 

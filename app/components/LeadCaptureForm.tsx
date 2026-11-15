@@ -122,6 +122,8 @@ export interface LeadCaptureFormProps {
   askEmail?: boolean
   /** Libellé d'offre → identifiant catalogue (lien lead → offre pour la marge et les places). */
   offerIds?: Record<string, string>
+  /** Libellé d'offre → prix par personne : affiche une estimation INDICATIVE (adultes × prix), sans engagement. */
+  priceByOffer?: Record<string, number>
 }
 
 const PHONE_RE = /^(?:(?:\+|00)216)?[234579]\d{7}$|^(?:\+|00)\d{9,15}$/
@@ -147,6 +149,7 @@ export function LeadCaptureForm({
   askTravelers = false,
   askEmail = false,
   offerIds,
+  priceByOffer,
 }: LeadCaptureFormProps) {
   const t = T[lang]
   const [selectedProduct, setSelectedProduct] = useState<Product>(product || "voyage")
@@ -154,6 +157,7 @@ export function LeadCaptureForm({
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ ref: string; url: string } | null>(null)
   const [started, setStarted] = useState(false)
+  const [adultsCount, setAdultsCount] = useState(2)
 
   const currentProduct = product || selectedProduct
 
@@ -367,7 +371,7 @@ export function LeadCaptureForm({
 
       {askTravelers && (
       <div className="grid grid-cols-2 gap-3">
-          <select name="adults" defaultValue="2" disabled={submitting} className={inputCls} aria-label={t.adults}>
+          <select name="adults" defaultValue="2" onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} disabled={submitting} className={inputCls} aria-label={t.adults}>
             {adultOptions.map((n) => (
               <option key={n} value={n}>
                 {n} {t.adults}
@@ -382,6 +386,16 @@ export function LeadCaptureForm({
             ))}
           </select>
         </div>
+      )}
+
+      {askTravelers && priceByOffer && offerValue && priceByOffer[offerValue] !== undefined && (
+        <p className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-700" data-testid="estimate" role="status">
+          {lang === "ar" ? "الكلفة التقديرية" : lang === "en" ? "Estimated cost" : "Coût estimé"}{" : "}
+          <strong dir="ltr">{String(priceByOffer[offerValue] * adultsCount).replace(/\B(?=(\d{3})+(?!\d))/g, " ")}</strong> {lang === "ar" ? "د.ت" : "TND"}
+          <span className="block text-xs text-gray-500 mt-0.5">
+            {lang === "ar" ? `${adultsCount} × ${priceByOffer[offerValue]} د.ت للبالغين — تقدير غير ملزم، يؤكده مستشارنا.` : lang === "en" ? `${adultsCount} adult(s) × ${priceByOffer[offerValue]} TND — indicative, confirmed by an advisor.` : `${adultsCount} adulte(s) × ${priceByOffer[offerValue]} TND — indicatif, confirmé par un conseiller.`}
+          </span>
+        </p>
       )}
 
       {askEmail && (

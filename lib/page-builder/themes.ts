@@ -46,8 +46,8 @@ const RAMADAN_FEATURES = ["طيران تونس – جدة – تونس", "تأش
 const RAMADAN_PRESET: ThemePreset = {
   name: "عمرة رمضان كامل",
   slug: "omra-ramadan-complet",
-  headline: "عمرة شهر رمضان كامل في مكة المكرمة مع رحلة إلى المدينة المنورة",
-  description: "برنامج عمرة شهر رمضان كامل في مكة المكرمة والمدينة المنورة مع Easy2Book: طيران تونس – جدة – تونس، تأشيرة، وتأطير كامل مع مرشدين مرافقين خطوة بخطوة، وإقامة مريحة في فندق ميسان الملتزم، مع رحلة إلى المدينة المنورة. عدد الغرف محدود جداً.",
+  headline: "عمرة رمضان الكل في مكة المكرمة… بسفر أسهل وقلب مطمئن",
+  description: "برنامج متكامل من Easy2Book يشمل طيران تونس – جدة – تونس، التأشيرة، التأطير الديني والإداري خطوة بخطوة، إقامة مريحة في فندق ميسان الملتزم، ورحلة روحانية للمدينة المنورة. عدد الغرف محدود جداً.",
   offers: [
     { name: "غرفة رباعية أو خماسية", destination: "مكة المكرمة والمدينة المنورة", nights_detail: "شهر رمضان كامل — 4 أو 5 أشخاص في الغرفة", price: "5900", features: RAMADAN_FEATURES },
     { name: "غرفة ثلاثية", destination: "مكة المكرمة والمدينة المنورة", nights_detail: "شهر رمضان كامل — 3 أشخاص في الغرفة", price: "6400", features: RAMADAN_FEATURES },
@@ -55,6 +55,7 @@ const RAMADAN_PRESET: ThemePreset = {
   ],
   design: {
     colors: { preset: "famille", custom: "#0b162c" },
+    hero: "split",
     cta: { label: "احجز مكانك الآن", whatsapp: true },
     deadline: "2026-12-15",
     // vidéo publicitaire : fichier du site (public/), chargé seulement au clic ; sa carte finale annonce la même échéance que la page
