@@ -118,7 +118,7 @@ export function LandingView({ category, offers, preview = false, design = null }
           <h2 className={`text-2xl font-black ${st.sectionTitle}`}>{b.title}</h2>
           {b.text && <p className="mt-2 text-gray-700 whitespace-pre-line">{b.text}</p>}
           {b.cta === "whatsapp"
-            ? <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: `block-${b.id}` })} className="mt-4 inline-block bg-[#25D366] text-white font-black px-6 py-3 rounded-2xl">💬 {b.ctaLabel}</a>
+            ? <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: `block-${b.id}` })} className="mt-4 inline-block bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black px-6 py-3 rounded-2xl">💬 {b.ctaLabel}</a>
             : <a href="#reservation" className={`mt-4 inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{b.ctaLabel}</a>}
         </div>, true)
       case "video":
@@ -312,7 +312,7 @@ export function LandingView({ category, offers, preview = false, design = null }
   }
 
   return (
-    <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
+    <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} lang={lang} data-page-lang={lang} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
       {preview && <div className="bg-amber-100 text-amber-900 text-sm font-bold text-center py-2 px-3" role="status">{t.preview}</div>}
       {design?.deadline ? <Countdown deadline={design.deadline} lang={lang} /> : null}
       {split ? (
@@ -335,7 +335,7 @@ export function LandingView({ category, offers, preview = false, design = null }
               )}
               <div className="mt-5 flex flex-wrap gap-3">
                 <a href="#reservation" className={`inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{ctaLabel}</a>
-                {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#25D366] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
+                {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
               </div>
             </div>
             {heroVideo && (
@@ -370,7 +370,7 @@ export function LandingView({ category, offers, preview = false, design = null }
             )}
             <div className="mt-4 hidden sm:flex flex-wrap gap-3">
               <a href="#reservation" className={`inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{ctaLabel}</a>
-              {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#25D366] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
+              {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
             </div>
           </div>
         </div>
@@ -381,7 +381,7 @@ export function LandingView({ category, offers, preview = false, design = null }
 
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
         <a href="#reservation" className={`text-white font-black rounded-xl py-3 text-center ${st.button}`}>{ctaLabel}</a>
-        <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "sticky" })} className="bg-[#25D366] text-white font-black rounded-xl px-4 py-3" aria-label="WhatsApp">💬</a>
+        <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "sticky" })} className="bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black rounded-xl px-4 py-3" aria-label="WhatsApp">💬</a>
         <a href={`tel:+216${PHONE_NUMBER}`} aria-label={t.call} className="border rounded-xl px-4 py-3">📞</a>
       </div>
     </div>
