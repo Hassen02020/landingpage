@@ -15,10 +15,9 @@ import { SECTIONS, STYLE, derive, type FamilyStyle } from "@/lib/page-builder/st
 import { resolvePrimary, tint, visibleSections, type DesignSection, type PageDesign } from "@/lib/page-builder/design"
 import { Countdown } from "./Countdown"
 import { ReviewsSection } from "@/app/omra/ReviewsSection"
-import Image from "next/image"
-import Link from "next/link"
 import { SiteHeader, formatPhone } from "@/app/components/SiteHeader"
 import { SiteFooter } from "@/app/components/SiteFooter"
+import { Easy2BookButton, Easy2BookConditionsBand, Easy2BookFAQ, Easy2BookFooter, Easy2BookHeader, Easy2BookHero, Easy2BookLeadForm, Easy2BookOfferCard, Easy2BookTrustSection, Easy2BookWhatsAppCTA } from "@/app/components/easy2book"
 import { REVIEW_PAGE_KEYS } from "@/lib/review-pages"
 
 const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
@@ -48,17 +47,6 @@ const N = {
   en: { video: "Video", services: "Services", prices: "Departures & prices", reviews: "Reviews", faq: "FAQ", menu: "Menu" },
   ar: { video: "الفيديو الإعلاني", services: "تفاصيل البرنامج", prices: "الأسعار والحجز", reviews: "آراء الزوار", faq: "أسئلة شائعة", menu: "القائمة" },
 } as const
-
-// Icônes simples (trait) des cartes « services » de la mise en page « split » : avion, bouclier, hôtel, boussole
-const ICONS = [
-  "M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4s-1 0-3.5 3.5L7 6 5 8l6 3-3 3-3-.5L4 15l4 1 1 4 1.5-1-.5-3 3-3 3 6z",
-  "M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4",
-  "M4 21V5l8-2v18M12 7h8v14M7 8h2M7 12h2M7 16h2M15 11h2M15 15h2M3 21h18",
-  "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5 14 14l-5.5 1.5L10 10z",
-]
-const Icon = ({ i }: { i: number }) => (
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[i % ICONS.length]} /></svg>
-)
 
 export function LandingView({ category, offers, preview = false, design = null }: { category: Category; offers: PublicOffer[]; preview?: boolean; design?: PageDesign | null }) {
   const lang = category.lang
@@ -129,7 +117,7 @@ export function LandingView({ category, offers, preview = false, design = null }
           <h2 className={`text-2xl font-black ${st.sectionTitle}`}>{b.title}</h2>
           {b.text && <p className="mt-2 text-gray-700 whitespace-pre-line">{b.text}</p>}
           {b.cta === "whatsapp"
-            ? <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: `block-${b.id}` })} className="mt-4 inline-block bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black px-6 py-3 rounded-2xl">💬 {b.ctaLabel}</a>
+            ? <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: `block-${b.id}` })} className="mt-4 inline-block bg-e2b-wa hover:bg-e2b-wa-dark text-white font-black px-6 py-3 rounded-2xl">💬 {b.ctaLabel}</a>
             : <a href="#reservation" className={`mt-4 inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{b.ctaLabel}</a>}
         </div>, true)
       case "video":
@@ -165,35 +153,31 @@ export function LandingView({ category, offers, preview = false, design = null }
               {offers.map((o) => {
                 const n = left(o)
                 return (
-                  <article key={o.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {o.image_url && <img src={o.image_url} alt={o.name} className="w-full h-44 object-cover" loading="lazy" />}
-                    <div className="p-5 flex flex-col flex-1">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="text-lg font-black">{o.name}</h3>
-                        {o.tag && <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${st.chip}`}>{o.tag}</span>}
-                      </div>
-                      <div className="text-sm text-gray-600 space-y-0.5 mb-3">
-                        {o.destination && <div>📍 {o.destination}</div>}
-                        {o.departure_date && <div>🗓️ {lang === "ar" ? arDate(o.departure_date).full : lang === "en" ? enDate(o.departure_date) : frDate(o.departure_date)}</div>}
-                        {o.nights !== null && <div>🛏️ {o.nights} {t.nights}{o.nights_detail ? ` — ${o.nights_detail}` : ""}</div>}
-                      </div>
-                      {o.features.length > 0 && (
-                        <ul className="text-sm text-gray-700 space-y-1 mb-3">{o.features.slice(0, 6).map((f) => <li key={f}>✓ {f}</li>)}</ul>
-                      )}
-                      <div className="mt-auto">
-                        {showBefore && o.price_before !== null && Number(o.price_before) > Number(o.price) && <div className="text-sm text-gray-400 line-through" dir="ltr">{fmt(Number(o.price_before))} TND</div>}
-                        <div className={`text-3xl font-black ${st.priceText}`}><span dir="ltr">{fmt(Number(o.price))}</span> <span className="text-base">TND</span>{split && <span className="text-sm font-bold text-gray-600"> {t.perPerson}</span>}</div>
-                        {n !== null && n > 0 && n <= 10 && <p className="text-sm font-bold text-red-600 mt-1">🔥 {t.left(n)}</p>}
-                        {n === 0 ? (
-                          <div className="mt-3 text-center bg-gray-200 text-gray-600 font-black py-3 rounded-2xl">{t.full}</div>
-                        ) : (
-                          <button type="button" onClick={() => choose(o)} className={`mt-3 w-full text-white font-black py-3 rounded-2xl ${st.button}`}>{t.reserve}</button>
-                        )}
-                        <a href={wa(o)} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: `category-${category.slug}`, offer: label(o), value: Number(o.price) })} className={`mt-2 block text-center text-sm font-bold py-1 ${st.buttonSoft}`}>💬 {t.ask}</a>
-                      </div>
-                    </div>
-                  </article>
+                  <Easy2BookOfferCard
+                    key={o.id}
+                    name={o.name}
+                    tag={o.tag}
+                    imageUrl={o.image_url}
+                    details={[
+                      ...(o.destination ? [`📍 ${o.destination}`] : []),
+                      ...(o.departure_date ? [`🗓️ ${lang === "ar" ? arDate(o.departure_date).full : lang === "en" ? enDate(o.departure_date) : frDate(o.departure_date)}`] : []),
+                      ...(o.nights !== null ? [`🛏️ ${o.nights} ${t.nights}${o.nights_detail ? ` — ${o.nights_detail}` : ""}`] : []),
+                    ]}
+                    features={o.features.slice(0, 6)}
+                    priceBefore={showBefore && o.price_before !== null && Number(o.price_before) > Number(o.price) ? fmt(Number(o.price_before)) : null}
+                    price={fmt(Number(o.price))}
+                    unit={split ? <span className="text-sm font-bold text-gray-600"> {t.perPerson}</span> : null}
+                    urgency={n !== null && n > 0 && n <= 10 ? t.left(n) : null}
+                    soldOut={n === 0}
+                    labels={{ reserve: t.reserve, ask: t.ask, full: t.full }}
+                    onReserve={() => choose(o)}
+                    askHref={wa(o)}
+                    onAsk={onWa({ location: `category-${category.slug}`, offer: label(o), value: Number(o.price) })}
+                    chipClass={st.chip}
+                    priceClass={st.priceText}
+                    buttonClass={st.button}
+                    softClass={st.buttonSoft}
+                  />
                 )
               })}
             </div>
@@ -234,31 +218,11 @@ export function LandingView({ category, offers, preview = false, design = null }
         ) : null
       case "services":
         return design && design.services.length > 0 ? (
-          <section key={key} id="services" className="max-w-5xl mx-auto px-4 py-6" aria-label={t.servicesTitle} data-testid="services">
-            {title(t.servicesTitle)}
-            <div className={`grid grid-cols-1 gap-4 ${split ? "sm:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2"}`}>
-              {design.services.map((x, i) => (
-                <div key={x.title + i} className={`rounded-2xl border p-6 ${split ? "bg-[#fbf8f2] border-[#efe7d6]" : "bg-white border-gray-100"}`}>
-                  {split ? <span className={`block ${st.priceText}`}><Icon i={i} /></span> : <p className={`text-xs font-black ${st.priceText}`} dir="ltr">{String(i + 1).padStart(2, "0")}</p>}
-                  <h3 className="mt-1 text-lg font-black">{x.title}</h3>
-                  <p className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-line">{x.text}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          <Easy2BookTrustSection key={key} title={t.servicesTitle} ariaLabel={t.servicesTitle} items={design.services} variant={split ? "icons" : "numbers"} accentClass={st.priceText} family={family} heading={title} />
         ) : null
       case "conditions":
         return design && design.conditions.length > 0 ? (
-          <section key={key} id="conditions" className="max-w-5xl mx-auto px-4 py-6" aria-label={t.conditionsTitle} data-testid="conditions">
-            <div className={`rounded-2xl p-6 grid gap-5 ${design.conditions.length === 1 ? "md:grid-cols-1" : design.conditions.length === 2 || design.conditions.length === 4 ? "md:grid-cols-2" : design.conditions.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-3"} ${st.formBand}`}>
-              {design.conditions.map((x, i) => (
-                <div key={x.title + i}>
-                  <p className={`text-xs font-black ${st.priceText}`}>{x.title}</p>
-                  <p className="mt-1 text-sm font-bold text-gray-900 whitespace-pre-line">{x.text}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          <Easy2BookConditionsBand key={key} ariaLabel={t.conditionsTitle} items={design.conditions} bandClass={st.formBand} titleClass={st.priceText} />
         ) : null
       case "testimonials":
         return design && design.testimonials.length > 0 ? (
@@ -275,48 +239,30 @@ export function LandingView({ category, offers, preview = false, design = null }
           </section>
         ) : null
       case "faq":
-        return (
-          <section key={key} id="faq" className="max-w-3xl mx-auto px-4 py-6 scroll-mt-4">
-            {title(t.faq)}
-            <div className="space-y-2">
-              {faq.map((f) => (
-                <details key={f.q} className="bg-white rounded-2xl border border-gray-100 px-5 py-3">
-                  <summary className="font-bold cursor-pointer">{f.q}</summary>
-                  <p className="mt-2 text-gray-700">{f.a}</p>
-                </details>
-              ))}
-            </div>
-          </section>
-        )
+        return <Easy2BookFAQ key={key} title={t.faq} items={faq} heading={title} />
       case "form":
         return (
           <Fragment key={key}>
           {reviewed && <ReviewsSection page={category.slug} />}
-          <section id="reservation" className={`scroll-mt-4 py-10 ${st.formBand}`}>
-            <div className="max-w-xl mx-auto px-4">
-              <h2 className="text-2xl font-black text-center mb-1">{t.formTitle}</h2>
-              <p className="text-center text-gray-600 mb-5">{t.formSub}</p>
-              <div className="bg-white rounded-3xl shadow-xl p-5">
-                <fieldset disabled={preview} className="border-0 p-0 m-0 min-w-0">
-                  <LeadCaptureForm
-                    product={category.product}
-                    lang={lang}
-                    accentColor={st.accentColor}
-                    formId={`category-${category.slug}`}
-                    niche={category.slug}
-                    offers={offers.filter((o) => left(o) !== 0).map(label)}
-                    offerIds={Object.fromEntries(offers.map((o) => [label(o), o.id]))}
-                    offerValue={offer}
-                    onOfferChange={setOffer}
-                    showPromo
-                    askEmail={design?.form.email === true}
-                    askTravelers={family === "voyage" || family === "hotel" || family === "omra"}
-                    priceByOffer={split ? priceByOffer : undefined}
-                  />
-                </fieldset>
-              </div>
-            </div>
-          </section>
+          <Easy2BookLeadForm
+            title={t.formTitle}
+            subtitle={t.formSub}
+            preview={preview}
+            bandClass={st.formBand}
+            product={category.product}
+            lang={lang}
+            accentColor={st.accentColor}
+            formId={`category-${category.slug}`}
+            niche={category.slug}
+            offers={offers.filter((o) => left(o) !== 0).map(label)}
+            offerIds={Object.fromEntries(offers.map((o) => [label(o), o.id]))}
+            offerValue={offer}
+            onOfferChange={setOffer}
+            showPromo
+            askEmail={design?.form.email === true}
+            askTravelers={family === "voyage" || family === "hotel" || family === "omra"}
+            priceByOffer={split ? priceByOffer : undefined}
+          />
           </Fragment>
         )
     }
@@ -325,30 +271,20 @@ export function LandingView({ category, offers, preview = false, design = null }
   return (
     <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} lang={lang} data-page-lang={lang} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
       {!preview && split && (
-        <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b-2 border-e2b-yellow" data-testid="brochure-header">
-          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
-            <Link href="/" className="flex items-center gap-2.5 min-w-0">
-              <Image src="/logo.png" alt="" width={44} height={44} priority className="w-11 h-11 object-contain" />
-              <span className="leading-tight min-w-0">
-                <span className="block font-black text-e2b-blue text-base">Easy2Book</span>
-                <span className="block text-[11px] font-bold text-e2b-ink/70 truncate max-w-[10rem] sm:max-w-xs">{category.name}</span>
-              </span>
-            </Link>
-            <nav aria-label="Navigation principale" className="hidden lg:flex items-center gap-6 text-sm font-semibold text-e2b-ink/80">
-              {heroVideo && <a href="#video" className="hover:text-e2b-blue">{N[lang].video}</a>}
-              {design && design.services.length > 0 && <a href="#services" className="hover:text-e2b-blue">{N[lang].services}</a>}
-              <a href="#offres" className="hover:text-e2b-blue">{N[lang].prices}</a>
-              {reviewed && <a href="#avis" className="hover:text-e2b-blue">{N[lang].reviews}</a>}
-              <a href="#faq" className="hover:text-e2b-blue">{N[lang].faq}</a>
-            </nav>
-            <div className="flex items-center gap-2 shrink-0">
-              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "header" })} className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-e2b-wa bg-white px-3 py-2 text-sm font-extrabold text-e2b-wa" aria-label="WhatsApp">
-                <span dir="ltr">{formatPhone(PHONE_NUMBER)}</span><span aria-hidden="true">💬</span>
-              </a>
-              <a href="#reservation" className="text-white text-sm font-bold px-4 py-2.5 rounded-lg bg-e2b-blue hover:bg-e2b-blue-dark">{ctaLabel}</a>
-            </div>
-          </div>
-        </header>
+        <Easy2BookHeader
+          name={category.name}
+          nav={[
+            ...(heroVideo ? [{ href: "#video", label: N[lang].video }] : []),
+            ...(design && design.services.length > 0 ? [{ href: "#services", label: N[lang].services }] : []),
+            { href: "#offres", label: N[lang].prices },
+            ...(reviewed ? [{ href: "#avis", label: N[lang].reviews }] : []),
+            { href: "#faq", label: N[lang].faq },
+          ]}
+          phoneLabel={formatPhone(PHONE_NUMBER)}
+          whatsappHref={wa()}
+          onWhatsApp={onWa({ location: "header" })}
+          cta={<Easy2BookButton href="#reservation" variant="brand" className="text-sm font-bold px-4 py-2.5 rounded-lg">{ctaLabel}</Easy2BookButton>}
+        />
       )}
       {!preview && !split && (
         <SiteHeader
@@ -368,37 +304,24 @@ export function LandingView({ category, offers, preview = false, design = null }
       {preview && <div className="bg-amber-100 text-amber-900 text-sm font-bold text-center py-2 px-3" role="status">{t.preview}</div>}
       {design?.deadline ? <Countdown deadline={design.deadline} lang={lang} /> : null}
       {split ? (
-        <header className="bg-[#fbf8f2] border-b border-[#efe7d6]" data-testid="hero-split">
-          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12 grid gap-8 lg:grid-cols-2 items-center">
-            <div>
-              <span className="inline-block text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200">{category.name}</span>
-              {(() => {
-                const h = category.headline || category.name
-                const cut = h.search(/…|\.\.\./)
-                return (
-                  <h1 className="mt-4 text-3xl sm:text-5xl font-black leading-tight text-gray-900">
-                    {cut > 0 ? <>{h.slice(0, cut).trim()}… <span className="text-e2b-blue [background-image:linear-gradient(transparent_62%,var(--e2b-yellow)_62%)]">{h.slice(cut).replace(/^(…|\.\.\.)\s*/, "")}</span></> : h}
-                  </h1>
-                )
-              })()}
-              {category.description && <p className="mt-4 text-gray-600 leading-relaxed whitespace-pre-line">{category.description}</p>}
-              {showFrom && from !== null && (
-                <p className="mt-3 font-black text-lg text-gray-900">{t.from} <span dir="ltr">{fmt(from)}</span> TND {t.perPerson}</p>
-              )}
-              <div className="mt-5 flex flex-wrap gap-3">
-                <a href="#reservation" className={`inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{ctaLabel}</a>
-                {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
-              </div>
-            </div>
-            {heroVideo && (
-              <figure id="video" className="mx-auto w-full max-w-[300px] scroll-mt-20">
-                <video controls playsInline preload="none" poster={heroVideo.images[0]} className="w-full aspect-[9/16] rounded-3xl bg-black object-cover shadow-2xl" aria-label={heroVideo.title} data-testid="block-video">
-                  <source src={heroVideo.video} type={heroVideo.video.endsWith(".webm") ? "video/webm" : "video/mp4"} />
-                </video>
-              </figure>
-            )}
-          </div>
-        </header>
+        <Easy2BookHero
+          family={family}
+          eyebrow={category.name}
+          headline={category.headline || category.name}
+          description={category.description}
+          priceLine={showFrom && from !== null ? <p className="mt-3 font-black text-lg text-gray-900">{t.from} <span dir="ltr">{fmt(from)}</span> TND {t.perPerson}</p> : null}
+          actions={<>
+            <Easy2BookButton href="#reservation" variant="page" className={`inline-block font-black px-6 py-3 rounded-2xl ${st.button}`}>{ctaLabel}</Easy2BookButton>
+            {design?.cta.whatsapp && <Easy2BookWhatsAppCTA href={wa()} onClick={onWa({ location: "hero" })} className="inline-block font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</Easy2BookWhatsAppCTA>}
+          </>}
+          media={heroVideo ? (
+            <figure id="video" className="mx-auto w-full max-w-[300px] scroll-mt-20">
+              <video controls playsInline preload="none" poster={heroVideo.images[0]} className="w-full aspect-[9/16] rounded-3xl bg-black object-cover shadow-2xl" aria-label={heroVideo.title} data-testid="block-video">
+                <source src={heroVideo.video} type={heroVideo.video.endsWith(".webm") ? "video/webm" : "video/mp4"} />
+              </video>
+            </figure>
+          ) : null}
+        />
       ) : (
       <header className="relative">
         {category.banner_desktop || category.banner_mobile ? (
@@ -422,7 +345,7 @@ export function LandingView({ category, offers, preview = false, design = null }
             )}
             <div className="mt-4 hidden sm:flex flex-wrap gap-3">
               <a href="#reservation" className={`inline-block text-white font-black px-6 py-3 rounded-2xl ${st.button}`}>{ctaLabel}</a>
-              {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
+              {design?.cta.whatsapp && <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "hero" })} className="inline-block bg-e2b-wa hover:bg-e2b-wa-dark text-white font-black px-6 py-3 rounded-2xl">💬 {t.whatsappCta}</a>}
             </div>
           </div>
         </div>
@@ -431,30 +354,12 @@ export function LandingView({ category, offers, preview = false, design = null }
 
       {(design ? visibleSections(design) : (SECTIONS[family] as DesignSection[])).map((k) => section(k))}
 
-      {!preview && split && (
-        <footer className="bg-e2b-blue text-white border-t-4 border-e2b-yellow" data-testid="brochure-footer">
-          <div className="max-w-6xl mx-auto px-4 py-6 flex flex-wrap items-center justify-between gap-4 text-sm text-white/85">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl bg-white p-1"><Image src="/logo.png" alt="Easy2Book, centrale de réservation" width={44} height={44} className="w-11 h-11 object-contain" /></span>
-              <span className="leading-tight">
-                <span className="block font-black text-white">Easy2Book · Centrale de Réservation</span>
-                <span className="block text-xs text-white/75">{category.name}</span>
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-semibold">
-              <a href={`tel:+216${PHONE_NUMBER}`} className="text-white" dir="ltr">📞 {formatPhone(PHONE_NUMBER)}</a>
-              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "footer" })} className="text-white underline">WhatsApp</a>
-              <span dir="ltr">www.easy2book.tn</span>
-              <Link href="/mentions-legales" className="text-xs font-normal underline">Mentions légales</Link>
-            </div>
-          </div>
-        </footer>
-      )}
-      {!preview && !split && <SiteFooter whatsappHref={wa()} onWhatsApp={onWa({ location: "footer" })} />}
+      {!preview && split && <Easy2BookFooter name={category.name} phone={`+216${PHONE_NUMBER}`} phoneLabel={formatPhone(PHONE_NUMBER)} whatsappHref={wa()} onWhatsApp={onWa({ location: "footer" })} lang={lang} />}
+      {!preview && !split && <SiteFooter whatsappHref={wa()} onWhatsApp={onWa({ location: "footer" })} lang={lang} />}
 
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
         <a href="#reservation" className={`text-white font-black rounded-xl py-3 text-center ${st.button}`}>{ctaLabel}</a>
-        <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "sticky" })} className="bg-[#0e7a3c] hover:bg-[#0b6a33] text-white font-black rounded-xl px-4 py-3" aria-label="WhatsApp">💬</a>
+        <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "sticky" })} className="bg-e2b-wa hover:bg-e2b-wa-dark text-white font-black rounded-xl px-4 py-3" aria-label="WhatsApp">💬</a>
         <a href={`tel:+216${PHONE_NUMBER}`} aria-label={t.call} className="border rounded-xl px-4 py-3">📞</a>
       </div>
     </div>

@@ -33,12 +33,10 @@ describe("E3 : variables de marque", () => {
 })
 
 describe("E3 : application aux composants de marque", () => {
-  const view = read("app/p/[slug]/LandingView.tsx")
-  const block = (tag: string, id: string) => { const at = view.indexOf(`data-testid="${id}"`); return view.slice(view.lastIndexOf(`<${tag}`, at), view.indexOf(`</${tag}>`, at)) }
-  const hdr = block("header", "brochure-header"), ftr = block("footer", "brochure-footer")
+  const hdr = read("app/components/easy2book/Easy2BookHeader.tsx"), ftr = read("app/components/easy2book/Easy2BookFooter.tsx")
   it("en-tête et pied de page de marque : bleu, jaune et vert WhatsApp viennent des variables, jamais d'une valeur en dur", () => {
     for (const part of [hdr, ftr]) expect(part).not.toMatch(/#[0-9a-fA-F]{6}\b/)
-    expect(hdr).toMatch(/bg-e2b-blue/); expect(hdr).toMatch(/border-e2b-yellow/); expect(hdr).toMatch(/text-e2b-wa/)
+    expect(hdr).toMatch(/border-e2b-yellow/); expect(hdr).toMatch(/text-e2b-wa/); expect(hdr).toMatch(/text-e2b-blue/)
     expect(ftr).toMatch(/bg-e2b-blue/); expect(ftr).toMatch(/border-e2b-yellow/)
   })
   it("les modèles Omra du Créateur partent du bleu Easy2Book et la personnalisation reste valide", () => {

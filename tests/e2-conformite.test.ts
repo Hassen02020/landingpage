@@ -29,7 +29,7 @@ describe("E2 : contraste du bouton WhatsApp (WCAG 2.2 AA, 4,5:1)", () => {
     expect(contrast("#ffffff", "#25d366")).toBeLessThan(4.5)
     const h = html()
     expect(h).not.toMatch(/25D366/i)
-    expect(h).toContain("bg-[#0e7a3c]")
+    expect(h).toContain("bg-e2b-wa")
     expect(contrast("#ffffff", "#0e7a3c")).toBeGreaterThanOrEqual(4.5)
     expect(contrast("#ffffff", "#0b6a33")).toBeGreaterThanOrEqual(4.5) // état « survol »
   })
