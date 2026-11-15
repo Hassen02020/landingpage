@@ -17,7 +17,19 @@ export function TrackingConsent() {
   // ID des pixels réglés dans /admin/integrations ; à défaut, valeurs de compilation
   const [pixels, setPixels] = useState<{ meta: string | null; tiktok: string | null } | null>(null)
   const pathname = usePathname()
-  const isArabic = pathname?.startsWith("/omra")
+  // langue de la page : annoncée par les pages du Créateur (data-page-lang) ; /omra est arabe ; sinon français
+  const [pageLang, setPageLang] = useState<"fr" | "ar" | "en" | null>(null)
+  useEffect(() => {
+    const v = document.querySelector("[data-page-lang]")?.getAttribute("data-page-lang")
+    setPageLang(v === "ar" || v === "en" || v === "fr" ? v : null)
+  }, [pathname])
+  const lang: "fr" | "ar" | "en" = pageLang ?? (pathname?.startsWith("/omra") ? "ar" : "fr")
+  const isArabic = lang === "ar"
+  const TXT = {
+    fr: { label: "Consentement cookies", msg: "Nous utilisons des traceurs Meta et TikTok pour mesurer l'efficacité de nos publicités. Ils ne sont activés qu'avec votre accord.", no: "Refuser", yes: "Accepter" },
+    en: { label: "Cookie consent", msg: "We use Meta and TikTok trackers to measure the effectiveness of our ads. They are only enabled with your consent.", no: "Decline", yes: "Accept" },
+    ar: { label: "الموافقة على ملفات تعريف الارتباط", msg: "نستعمل ملفات تعريف الارتباط الخاصة بـ Meta و TikTok لقياس أداء إعلاناتنا. لا يتم تفعيلها إلا بموافقتك.", no: "رفض", yes: "قبول" },
+  }[lang]
   // Pages d'une entreprise cliente (/o/<identifiant>) : ni bandeau, ni pixels, ni suivi d'Easy2Book pour leurs visiteurs
   const isOrgPage = pathname?.startsWith("/o/") ?? false
 
@@ -108,15 +120,13 @@ export function TrackingConsent() {
         <div
           role="dialog"
           aria-live="polite"
-          aria-label="Consentement cookies"
+          aria-label={TXT.label}
           dir={isArabic ? "rtl" : "ltr"}
           className="fixed inset-x-0 bottom-0 z-[60] bg-gray-950/95 text-white px-4 py-4 shadow-2xl"
         >
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-3 sm:items-center">
             <p className="text-sm leading-relaxed flex-1">
-              {isArabic
-                ? "نستعمل ملفات تعريف الارتباط الخاصة بـ Meta و TikTok لقياس أداء إعلاناتنا. لا يتم تفعيلها إلا بموافقتك."
-                : "Nous utilisons des traceurs Meta et TikTok pour mesurer l'efficacité de nos publicités. Ils ne sont activés qu'avec votre accord."}
+              {TXT.msg}
             </p>
             <div className="flex gap-2 shrink-0">
               <button
@@ -124,14 +134,14 @@ export function TrackingConsent() {
                 onClick={() => choose("denied")}
                 className="px-4 py-2 rounded-xl border border-white/40 text-sm font-bold hover:bg-white/10"
               >
-                {isArabic ? "رفض" : "Refuser"}
+                {TXT.no}
               </button>
               <button
                 type="button"
                 onClick={() => choose("granted")}
                 className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-sm font-bold"
               >
-                {isArabic ? "قبول" : "Accepter"}
+                {TXT.yes}
               </button>
             </div>
           </div>

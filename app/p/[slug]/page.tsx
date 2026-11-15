@@ -17,11 +17,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!r || r.status !== "found") return { title: "Easy2Book", robots: { index: false, follow: false } }
   const c = r.data.category
   const image = c.banner_desktop || c.banner_mobile
+  // image de partage : la bannière de la page ; à défaut, l'image de marque Easy2Book (1200×630) pour que le lien partagé ne soit jamais sans image
+  const shareImage = image ? { url: image.startsWith("/") ? `${SITE_URL}${image}` : image } : { url: `${SITE_URL}/og-easy2book.jpg`, width: 1200, height: 630, alt: "Easy2Book" }
   return {
     title: c.seo_title || `${c.name} — Easy2Book`,
     description: c.seo_description || c.headline || undefined,
     robots: { index: false, follow: true }, // pages publicitaires : hors des moteurs de recherche (comme /c/)
-    openGraph: { title: c.seo_title || c.name, description: c.seo_description || c.headline || undefined, url: `${SITE_URL}/p/${c.slug}`, images: image ? [{ url: image.startsWith("/") ? `${SITE_URL}${image}` : image }] : undefined },
+    openGraph: { title: c.seo_title || c.name, description: c.seo_description || c.headline || undefined, url: `${SITE_URL}/p/${c.slug}`, images: [shareImage] },
   }
 }
 
