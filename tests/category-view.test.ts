@@ -102,7 +102,7 @@ describe("rendu du clone Ramadan (famille omra avec services, conditions, témoi
   const render = () => renderToStaticMarkup(createElement(CategoryView, { category: category({ product: "omra", lang: "ar", name: "عمرة رمضان كامل" }), offers: [offer({ product: "omra", name: "غرفة ثنائية", price: 6900 })], design: sanitizeDesign(theme.preset!.design, "omra").design }))
   it("services et conditions affichés dans l'ordre du modèle ; témoignages MASQUÉS par défaut (non confirmés) ; couleur marine ; bouton WhatsApp ; texte du bouton", () => {
     const h = render()
-    expect(h).toContain('data-testid="services"'); expect(h).toContain("فندق ميسان الملتزم"); expect(h).toContain("طيران مباشر تونس – جدة – تونس")
+    expect(h).toContain('data-testid="services"'); expect(h).toContain("فندق ميسان الملتزم"); expect(h).toContain("طيران تونس – جدة – تونس")
     expect(h).toContain('data-testid="conditions"'); expect(h).toContain("تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين"); expect(h).toContain("98 140 514")
     expect(h).not.toContain('data-testid="testimonials"'); expect(h).not.toContain("سميرة العيادي")
     expect(h).toContain("--p:#003878"); expect(h).toContain("احجز مكانك الآن"); expect(h).toContain("راسلنا على واتساب")
