@@ -15,6 +15,10 @@ import { SECTIONS, STYLE, derive, type FamilyStyle } from "@/lib/page-builder/st
 import { resolvePrimary, tint, visibleSections, type DesignSection, type PageDesign } from "@/lib/page-builder/design"
 import { Countdown } from "./Countdown"
 import { ReviewsSection } from "@/app/omra/ReviewsSection"
+import Image from "next/image"
+import Link from "next/link"
+import { SiteHeader, formatPhone } from "@/app/components/SiteHeader"
+import { SiteFooter } from "@/app/components/SiteFooter"
 import { REVIEW_PAGE_KEYS } from "@/lib/review-pages"
 
 const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
@@ -37,6 +41,13 @@ const T = {
 
 // Style personnalisé : une SEULE couleur choisie (contraste du texte blanc vérifié à l'enregistrement) pilote boutons, titres, pastilles et bandeaux.
 const CUSTOM: FamilyStyle = { page: "bg-gray-50", heroNoImage: "bg-[var(--p)]", accentText: "text-white", priceText: "text-[var(--p)]", button: "bg-[var(--p)] hover:brightness-90", buttonSoft: "text-[var(--p)]", chip: "bg-[var(--pl)] text-[var(--p)]", formBand: "bg-[var(--pl)]", sectionTitle: "text-[var(--p)]", ring: "ring-[var(--pl)]", accentColor: "#000000" }
+
+// Libellés du menu de l'en-tête (liens d'ancrage vers les sections de la page)
+const N = {
+  fr: { video: "Vidéo", services: "Services", prices: "Départs et prix", reviews: "Avis", faq: "Questions", menu: "Menu" },
+  en: { video: "Video", services: "Services", prices: "Departures & prices", reviews: "Reviews", faq: "FAQ", menu: "Menu" },
+  ar: { video: "الفيديو الإعلاني", services: "تفاصيل البرنامج", prices: "الأسعار والحجز", reviews: "آراء الزوار", faq: "أسئلة شائعة", menu: "القائمة" },
+} as const
 
 // Icônes simples (trait) des cartes « services » de la mise en page « split » : avion, bouclier, hôtel, boussole
 const ICONS = [
@@ -313,6 +324,47 @@ export function LandingView({ category, offers, preview = false, design = null }
 
   return (
     <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} lang={lang} data-page-lang={lang} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
+      {!preview && split && (
+        <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b-2 border-e2b-yellow" data-testid="brochure-header">
+          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+            <Link href="/" className="flex items-center gap-2.5 min-w-0">
+              <Image src="/logo.png" alt="" width={44} height={44} priority className="w-11 h-11 object-contain" />
+              <span className="leading-tight min-w-0">
+                <span className="block font-black text-e2b-blue text-base">Easy2Book</span>
+                <span className="block text-[11px] font-bold text-e2b-ink/70 truncate max-w-[10rem] sm:max-w-xs">{category.name}</span>
+              </span>
+            </Link>
+            <nav aria-label="Navigation principale" className="hidden lg:flex items-center gap-6 text-sm font-semibold text-e2b-ink/80">
+              {heroVideo && <a href="#video" className="hover:text-e2b-blue">{N[lang].video}</a>}
+              {design && design.services.length > 0 && <a href="#services" className="hover:text-e2b-blue">{N[lang].services}</a>}
+              <a href="#offres" className="hover:text-e2b-blue">{N[lang].prices}</a>
+              {reviewed && <a href="#avis" className="hover:text-e2b-blue">{N[lang].reviews}</a>}
+              <a href="#faq" className="hover:text-e2b-blue">{N[lang].faq}</a>
+            </nav>
+            <div className="flex items-center gap-2 shrink-0">
+              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "header" })} className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-e2b-wa bg-white px-3 py-2 text-sm font-extrabold text-e2b-wa" aria-label="WhatsApp">
+                <span dir="ltr">{formatPhone(PHONE_NUMBER)}</span><span aria-hidden="true">💬</span>
+              </a>
+              <a href="#reservation" className="text-white text-sm font-bold px-4 py-2.5 rounded-lg bg-e2b-blue hover:bg-e2b-blue-dark">{ctaLabel}</a>
+            </div>
+          </div>
+        </header>
+      )}
+      {!preview && !split && (
+        <SiteHeader
+          nav={[
+            ...(design && design.services.length > 0 ? [{ href: "#services", label: N[lang].services }] : []),
+            { href: "#offres", label: N[lang].prices },
+            ...(reviewed ? [{ href: "#avis", label: N[lang].reviews }] : []),
+            { href: "#faq", label: N[lang].faq },
+          ]}
+          tagline={lang === "ar" ? category.name : "Centrale de réservation"}
+          taglineOnMobile={lang === "ar"}
+          phoneAriaLabel={t.call}
+          menuLabel={N[lang].menu}
+          cta={<a href="#reservation" className={`text-white text-sm sm:text-base font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 ${st.button}`}>{ctaLabel}</a>}
+        />
+      )}
       {preview && <div className="bg-amber-100 text-amber-900 text-sm font-bold text-center py-2 px-3" role="status">{t.preview}</div>}
       {design?.deadline ? <Countdown deadline={design.deadline} lang={lang} /> : null}
       {split ? (
@@ -325,7 +377,7 @@ export function LandingView({ category, offers, preview = false, design = null }
                 const cut = h.search(/…|\.\.\./)
                 return (
                   <h1 className="mt-4 text-3xl sm:text-5xl font-black leading-tight text-gray-900">
-                    {cut > 0 ? <>{h.slice(0, cut).trim()}… <span className="text-amber-600">{h.slice(cut).replace(/^(…|\.\.\.)\s*/, "")}</span></> : h}
+                    {cut > 0 ? <>{h.slice(0, cut).trim()}… <span className="text-e2b-blue [background-image:linear-gradient(transparent_62%,var(--e2b-yellow)_62%)]">{h.slice(cut).replace(/^(…|\.\.\.)\s*/, "")}</span></> : h}
                   </h1>
                 )
               })()}
@@ -339,7 +391,7 @@ export function LandingView({ category, offers, preview = false, design = null }
               </div>
             </div>
             {heroVideo && (
-              <figure className="mx-auto w-full max-w-[300px]">
+              <figure id="video" className="mx-auto w-full max-w-[300px] scroll-mt-20">
                 <video controls playsInline preload="none" poster={heroVideo.images[0]} className="w-full aspect-[9/16] rounded-3xl bg-black object-cover shadow-2xl" aria-label={heroVideo.title} data-testid="block-video">
                   <source src={heroVideo.video} type={heroVideo.video.endsWith(".webm") ? "video/webm" : "video/mp4"} />
                 </video>
@@ -378,6 +430,27 @@ export function LandingView({ category, offers, preview = false, design = null }
       )}
 
       {(design ? visibleSections(design) : (SECTIONS[family] as DesignSection[])).map((k) => section(k))}
+
+      {!preview && split && (
+        <footer className="bg-e2b-blue text-white border-t-4 border-e2b-yellow" data-testid="brochure-footer">
+          <div className="max-w-6xl mx-auto px-4 py-6 flex flex-wrap items-center justify-between gap-4 text-sm text-white/85">
+            <div className="flex items-center gap-3">
+              <span className="rounded-xl bg-white p-1"><Image src="/logo.png" alt="Easy2Book, centrale de réservation" width={44} height={44} className="w-11 h-11 object-contain" /></span>
+              <span className="leading-tight">
+                <span className="block font-black text-white">Easy2Book · Centrale de Réservation</span>
+                <span className="block text-xs text-white/75">{category.name}</span>
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-semibold">
+              <a href={`tel:+216${PHONE_NUMBER}`} className="text-white" dir="ltr">📞 {formatPhone(PHONE_NUMBER)}</a>
+              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "footer" })} className="text-white underline">WhatsApp</a>
+              <span dir="ltr">www.easy2book.tn</span>
+              <Link href="/mentions-legales" className="text-xs font-normal underline">Mentions légales</Link>
+            </div>
+          </div>
+        </footer>
+      )}
+      {!preview && !split && <SiteFooter whatsappHref={wa()} onWhatsApp={onWa({ location: "footer" })} />}
 
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
         <a href="#reservation" className={`text-white font-black rounded-xl py-3 text-center ${st.button}`}>{ctaLabel}</a>

@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---- Identité Easy2Book : fondations de marque (chantier E3, validé par le propriétaire) ----
+   Bleu et jaune MESURÉS sur les pixels du logo officiel public/logo.png (aucune charte écrite n'existe dans le dépôt).
+   Ces variables sont la seule source des couleurs de marque des composants Easy2Book ; ne pas recopier de valeur en dur. */
+:root {
+  --e2b-blue: #003878;        /* bleu Easy2Book (logo) */
+  --e2b-blue-dark: #00285a;   /* survol / pied de page */
+  --e2b-blue-soft: #e4edf9;   /* bleu clair : fonds secondaires et surfaces */
+  --e2b-yellow: #f0c848;      /* jaune Easy2Book (logo) : accents, jamais en texte sur fond clair */
+  --e2b-ink: #0b1b3a;         /* texte principal */
+  --e2b-wa: #0e7a3c;          /* vert WhatsApp accessible (texte blanc 5,43:1) */
+}
+
 /* ---- Site public : confort tactile et lisibilité (n'affecte pas l'espace équipe, repéré par .admin-root) ---- */
 body:not(:has(.admin-root)) {
   -webkit-text-size-adjust: 100%;

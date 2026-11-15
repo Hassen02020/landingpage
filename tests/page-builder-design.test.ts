@@ -163,7 +163,7 @@ describe("clone du modèle Ramadan : services, conditions, date limite, prérég
     expect(errors).toEqual({})
     expect(designBytes(design)).toBeLessThan(MAX_DESIGN_BYTES)
     expect({ services: design.services.length, conditions: design.conditions.length, testimonials: design.testimonials.length, deadline: design.deadline, wa: design.cta.whatsapp }).toEqual({ services: 4, conditions: 3, testimonials: 4, deadline: "2026-12-15", wa: true })
-    expect(resolvePrimary(design)).toBe("#0b162c")
+    expect(resolvePrimary(design)).toBe("#003878")
     expect(design.sections.find((x) => x.key === "inclusions")!.visible).toBe(false)
     expect(visibleSections(design)).toEqual(["intro", "block:vid0001", "services", "offers", "conditions", "programme", "faq", "form"])
     expect(theme.preset!.offers.map((o) => [o.name, o.price])).toEqual([["غرفة رباعية أو خماسية", "5900"], ["غرفة ثلاثية", "6400"], ["غرفة ثنائية", "6900"]])

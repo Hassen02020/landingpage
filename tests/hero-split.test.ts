@@ -46,6 +46,21 @@ describe("en-tête split", () => {
   })
 })
 
+describe("en-tête et pied de page du site sur les pages du Créateur", () => {
+  it("présents sur une page publiée, avec menu d'ancres vers des sections réelles", () => {
+    const h = view("omra-ramadan-complet")
+    expect(h).toContain('data-testid="brochure-header"'); expect(h).toContain('data-testid="brochure-footer"'); expect(h).toContain('aria-label="Navigation principale"'); expect(h).toMatch(/logo\.png/)
+    const std = view("autre-page", { ...design(), hero: "standard" }); expect(std).toContain("<header"); expect(std).toContain("<footer"); expect(std).not.toContain('data-testid="brochure-header"')
+    for (const id of ["video", "services", "offres", "avis", "faq", "reservation"]) expect(h).toContain(`id="${id}"`)
+    for (const href of ["#video", "#services", "#offres", "#avis", "#faq"]) expect(h).toContain(`href="${href}"`)
+    expect(h).toContain("tel:+216")
+  })
+  it("absents de l'aperçu de l'administration", () => {
+    const h = renderToStaticMarkup(createElement(LandingView, { category: category({ slug: "x", product: "omra", lang: "ar" }), offers: [offer({ product: "omra" })], design: design(), preview: true }))
+    expect(h).not.toContain("<footer"); expect(h).not.toContain('aria-label="Navigation principale"')
+  })
+})
+
 describe("avis étoilés sur la page Ramadan", () => {
   it("la liste des pages d'avis est partagée entre le serveur et le navigateur", () => {
     expect(Array.from(REVIEW_PAGES).sort()).toEqual(Array.from(REVIEW_PAGE_KEYS).sort())
