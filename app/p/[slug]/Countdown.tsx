@@ -31,7 +31,7 @@ export function Countdown({ deadline, lang, className = "" }: { deadline: string
   const [y, m, d] = deadline.split("-").map(Number)
   const dateText = lang === "ar" ? `${d} ${MONTHS_AR[m - 1]} ${y}` : lang === "en" ? `${MONTHS_EN[m - 1]} ${d}, ${y}` : `${d} ${MONTHS_FR[m - 1]} ${y}`
   return (
-    <div className={`bg-gray-900 text-white ${className}`} data-testid="countdown" role="timer" aria-live="off">
+    <div className={`bg-e2b-blue-dark text-white ${className}`} data-testid="countdown" role="timer" aria-live="off">
       <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center">
         <span className="font-bold">{u.title}</span>
         <span className="flex gap-3" dir="ltr">

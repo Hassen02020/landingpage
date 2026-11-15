@@ -325,27 +325,27 @@ export function LandingView({ category, offers, preview = false, design = null }
   return (
     <div className={`min-h-screen ${st.page} text-gray-900 pb-20 sm:pb-0`} dir={dir} lang={lang} data-page-lang={lang} data-family={family} style={vars} data-custom-colors={primary ? "yes" : undefined}>
       {!preview && split && (
-        <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100" data-testid="brochure-header">
+        <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b-2 border-e2b-yellow" data-testid="brochure-header">
           <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2.5 min-w-0">
               <Image src="/logo.png" alt="" width={44} height={44} priority className="w-11 h-11 object-contain" />
               <span className="leading-tight min-w-0">
-                <span className="block font-black text-gray-900 text-base">Easy2Book</span>
-                <span className="block text-[11px] font-bold text-amber-700 truncate max-w-[10rem] sm:max-w-xs">{category.name}</span>
+                <span className="block font-black text-e2b-blue text-base">Easy2Book</span>
+                <span className="block text-[11px] font-bold text-e2b-ink/70 truncate max-w-[10rem] sm:max-w-xs">{category.name}</span>
               </span>
             </Link>
-            <nav aria-label="Navigation principale" className="hidden lg:flex items-center gap-6 text-sm font-semibold text-gray-700">
-              {heroVideo && <a href="#video" className="hover:text-gray-900">{N[lang].video}</a>}
-              {design && design.services.length > 0 && <a href="#services" className="hover:text-gray-900">{N[lang].services}</a>}
-              <a href="#offres" className="hover:text-gray-900">{N[lang].prices}</a>
-              {reviewed && <a href="#avis" className="hover:text-gray-900">{N[lang].reviews}</a>}
-              <a href="#faq" className="hover:text-gray-900">{N[lang].faq}</a>
+            <nav aria-label="Navigation principale" className="hidden lg:flex items-center gap-6 text-sm font-semibold text-e2b-ink/80">
+              {heroVideo && <a href="#video" className="hover:text-e2b-blue">{N[lang].video}</a>}
+              {design && design.services.length > 0 && <a href="#services" className="hover:text-e2b-blue">{N[lang].services}</a>}
+              <a href="#offres" className="hover:text-e2b-blue">{N[lang].prices}</a>
+              {reviewed && <a href="#avis" className="hover:text-e2b-blue">{N[lang].reviews}</a>}
+              <a href="#faq" className="hover:text-e2b-blue">{N[lang].faq}</a>
             </nav>
             <div className="flex items-center gap-2 shrink-0">
-              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "header" })} className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-extrabold text-emerald-900" aria-label="WhatsApp">
+              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "header" })} className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-e2b-wa bg-white px-3 py-2 text-sm font-extrabold text-e2b-wa" aria-label="WhatsApp">
                 <span dir="ltr">{formatPhone(PHONE_NUMBER)}</span><span aria-hidden="true">💬</span>
               </a>
-              <a href="#reservation" className={`text-white text-sm font-bold px-4 py-2.5 rounded-lg ${st.button}`}>{ctaLabel}</a>
+              <a href="#reservation" className="text-white text-sm font-bold px-4 py-2.5 rounded-lg bg-e2b-blue hover:bg-e2b-blue-dark">{ctaLabel}</a>
             </div>
           </div>
         </header>
@@ -377,7 +377,7 @@ export function LandingView({ category, offers, preview = false, design = null }
                 const cut = h.search(/…|\.\.\./)
                 return (
                   <h1 className="mt-4 text-3xl sm:text-5xl font-black leading-tight text-gray-900">
-                    {cut > 0 ? <>{h.slice(0, cut).trim()}… <span className="text-amber-600">{h.slice(cut).replace(/^(…|\.\.\.)\s*/, "")}</span></> : h}
+                    {cut > 0 ? <>{h.slice(0, cut).trim()}… <span className="text-e2b-blue [background-image:linear-gradient(transparent_62%,var(--e2b-yellow)_62%)]">{h.slice(cut).replace(/^(…|\.\.\.)\s*/, "")}</span></> : h}
                   </h1>
                 )
               })()}
@@ -432,18 +432,18 @@ export function LandingView({ category, offers, preview = false, design = null }
       {(design ? visibleSections(design) : (SECTIONS[family] as DesignSection[])).map((k) => section(k))}
 
       {!preview && split && (
-        <footer className="bg-[#fbf8f2] border-t border-[#efe7d6]" data-testid="brochure-footer">
-          <div className="max-w-6xl mx-auto px-4 py-6 flex flex-wrap items-center justify-between gap-4 text-sm text-gray-600">
+        <footer className="bg-e2b-blue text-white border-t-4 border-e2b-yellow" data-testid="brochure-footer">
+          <div className="max-w-6xl mx-auto px-4 py-6 flex flex-wrap items-center justify-between gap-4 text-sm text-white/85">
             <div className="flex items-center gap-3">
-              <Image src="/logo.png" alt="Easy2Book, centrale de réservation" width={44} height={44} className="w-11 h-11 object-contain" />
+              <span className="rounded-xl bg-white p-1"><Image src="/logo.png" alt="Easy2Book, centrale de réservation" width={44} height={44} className="w-11 h-11 object-contain" /></span>
               <span className="leading-tight">
-                <span className="block font-black text-gray-900">Easy2Book · Centrale de Réservation</span>
-                <span className="block text-xs text-gray-500">{category.name}</span>
+                <span className="block font-black text-white">Easy2Book · Centrale de Réservation</span>
+                <span className="block text-xs text-white/75">{category.name}</span>
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-semibold">
-              <a href={`tel:+216${PHONE_NUMBER}`} className="text-gray-800" dir="ltr">📞 {formatPhone(PHONE_NUMBER)}</a>
-              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "footer" })} className="text-emerald-800">WhatsApp</a>
+              <a href={`tel:+216${PHONE_NUMBER}`} className="text-white" dir="ltr">📞 {formatPhone(PHONE_NUMBER)}</a>
+              <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "footer" })} className="text-white underline">WhatsApp</a>
               <span dir="ltr">www.easy2book.tn</span>
               <Link href="/mentions-legales" className="text-xs font-normal underline">Mentions légales</Link>
             </div>

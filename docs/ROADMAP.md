@@ -90,6 +90,9 @@ Application Meta **MarketingEasy** (ID `1103466232321935`, portefeuille « Easy2
 ## Pages Omra par départ (14/11/2026)
 Trois modèles du Créateur — « Omra — Groupe 1 », « Omra — Groupe 2 », « Omra — Chawwal » — reprennent le principe de la page « Omra Ramadan complet » (services, offre, conditions, FAQ, formulaire, WhatsApp) avec **uniquement les données de /omra** (date, durée, prix, hôtel, prestations) : adresses `/p/omra-foj-1`, `/p/omra-foj-2`, `/p/omra-chawwal`. Pas de vidéo, pas de témoignage, pas d'échéance inventés. Ils s'utilisent depuis **Admin → Créateur → Nouvelle page** (brouillon, publication par l'équipe). Test : `tests/omra-group-presets.test.ts`.
 
+## E3 — fondations de l'identité Easy2Book (15/11/2026, autorisé par le propriétaire)
+Variables de marque `--e2b-*` (`app/globals.css`) et couleurs Tailwind `e2b.*` ; bleu de référence **#003878, mesuré sur le logo** (choix du propriétaire), jaune #f0c848, vert WhatsApp accessible #0e7a3c. En-tête et pied de page de marque sur les pages du Créateur, compte à rebours en bleu de marque, modèles Omra partant du bleu Easy2Book. Documentation : `docs/DESIGN_SYSTEM_EASY2BOOK.md`. **Non fait, faute de ressource ou de décision** : police (non choisie), mascotte EAZY (fichiers absents), photographies. CRM, `SiteHeader` / `SiteFooter` partagés, `/omra` et `/c` inchangés. Tests : `tests/brand-tokens.test.ts`.
+
 ## E2 — conformité des pages du Créateur (15/11/2026, autorisé par le propriétaire)
 Sans changement visuel de fond : bouton WhatsApp en vert plus foncé (contraste 5,43:1 au lieu de 1,98:1, WCAG 2.2 AA), `lang` posé sur la page, bandeau de cookies dans la langue de la page (fr / en / ar, même logique de consentement), image de partage par défaut (1200×630) quand la page n'a pas de bannière. `noindex` et CRM inchangés. Tests : `tests/e2-conformite.test.ts`.
 

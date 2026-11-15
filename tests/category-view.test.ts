@@ -105,7 +105,7 @@ describe("rendu du clone Ramadan (famille omra avec services, conditions, témoi
     expect(h).toContain('data-testid="services"'); expect(h).toContain("فندق ميسان الملتزم"); expect(h).toContain("طيران تونس – جدة – تونس وتأشيرة العمرة الكاملة")
     expect(h).toContain('data-testid="conditions"'); expect(h).toContain("تخفيض 200 د.ت للعائلات انطلاقاً من شخصين"); expect(h).toContain("98 140 514")
     expect(h).not.toContain('data-testid="testimonials"'); expect(h).not.toContain("سميرة العيادي")
-    expect(h).toContain("--p:#0b162c"); expect(h).toContain("احجز مكانك الآن"); expect(h).toContain("راسلنا على واتساب")
+    expect(h).toContain("--p:#003878"); expect(h).toContain("احجز مكانك الآن"); expect(h).toContain("راسلنا على واتساب")
     expect(h.indexOf('id="services"')).toBeLessThan(h.indexOf('id="offres"'))
     expect(h.indexOf('id="offres"')).toBeLessThan(h.indexOf('id="conditions"'))
     expect(h.indexOf('id="conditions"')).toBeLessThan(h.indexOf('id="reservation"'))

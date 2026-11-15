@@ -54,7 +54,7 @@ const RAMADAN_PRESET: ThemePreset = {
     { name: "غرفة ثنائية", destination: "مكة المكرمة والمدينة المنورة", nights_detail: "شهر رمضان كامل — شخصان في الغرفة", price: "6900", features: RAMADAN_FEATURES },
   ],
   design: {
-    colors: { preset: "famille", custom: "#0b162c" },
+    colors: { preset: "famille", custom: "#003878" },
     hero: "split",
     cta: { label: "احجز مكانك الآن", whatsapp: true },
     deadline: "2026-12-15",
@@ -93,7 +93,7 @@ function groupPreset(o: { name: string; slug: string; date: string; nights: stri
     description: `رحلة عمرة مع Easy2Book: ${o.nights} ليلة (${o.nightsDetail})، طيران ذهاباً وإياباً، تأشيرة العمرة والتأمين الصحي، إقامة في فندق أرائك غزة ⭐⭐⭐ قريب من الحرم، تنقلات بحافلات سياحية مريحة، مرافقون ذوو خبرة ومرافقة نسائية، وهدايا للمعتمرين. عدد الأماكن محدود.`,
     offers: [{ name: o.name, destination: "مكة المكرمة والمدينة المنورة", nights_detail: o.nightsDetail, price: o.price, features: GROUP_FEATURES, departure_date: o.date, nights: o.nights, tag: o.tag }],
     design: {
-      colors: { preset: "famille", custom: "#0b162c" },
+      colors: { preset: "famille", custom: "#003878" },
       cta: { label: "احجز مكانك الآن", whatsapp: true },
       sections: [{ key: "intro", visible: true }, { key: "services", visible: true }, { key: "offers", visible: true }, { key: "conditions", visible: true }, { key: "inclusions", visible: false }, { key: "programme", visible: true }, { key: "testimonials", visible: false }, { key: "faq", visible: true }, { key: "form", visible: true }],
       services: [
