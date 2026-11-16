@@ -55,7 +55,7 @@ const side = page.locator("aside")
 for (const item of ["Leads", "Pipeline", "Relances", "Nouveau lead", "Statistiques", "Calculateur", "Offres et catégories", "Codes promo", "Intégrations", "Protection", "Équipe", "Modèles WhatsApp", "Export CSV"]) {
   if (!(await side.getByRole("link", { name: item, exact: true }).isVisible())) check(`menu : « ${item} » visible`, false)
 }
-check("menu groupé : les 4 groupes sont présents", (await side.getByText(/^(Leads|Analyse|Catalogue|Réglages)$/i).count()) >= 4)
+check("menu groupé : les 4 groupes sont présents", (await side.getByText(/^(Leads|Intelligence|Catalogue|Réglages)$/i).count()) >= 4)
 check("menu : « Leads » est actif sur l'accueil", (await side.locator('a[aria-current="page"]').innerText()).trim() === "Leads")
 
 await page.goto(`${BASE}/admin/pipeline`, { waitUntil: "networkidle" })
