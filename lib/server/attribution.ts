@@ -1,9 +1,15 @@
 // Nettoie les données d'attribution envoyées par le navigateur (non fiables) et
 // les aplatit en colonnes pour Supabase / le CRM.
 
+// Caractères de contrôle (dont le caractère nul, refusé par PostgreSQL) et de sens d'écriture / zéro-largeur
+// (inversion d'affichage dans le CRM) : retirés de toute chaîne reçue d'un visiteur. Les retours à la ligne et tabulations restent.
+// eslint-disable-next-line no-control-regex
+const HIDDEN_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g
+export const stripHiddenChars = (v: string): string => v.replace(HIDDEN_CHARS, "")
+
 const str = (v: unknown, max = 255): string | undefined => {
   if (typeof v !== "string") return undefined
-  const s = v.trim()
+  const s = stripHiddenChars(v).trim()
   return s ? s.slice(0, max) : undefined
 }
 

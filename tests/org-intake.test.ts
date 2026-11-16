@@ -46,10 +46,10 @@ describe("collecte d'une entreprise cliente (platform: false)", () => {
 
   it("la limitation de débit est PAR entreprise (l'abus chez l'une ne bloque pas l'autre)", async () => {
     installFetchMock()
-    const mk = (n: number) => post("/api/o/x/leads", { ...base, eventId: `evt-rate-${n}0000`, phone: `9814${n}000`, email: "z@x.tn", custom: { c1: "T" } }, { "x-forwarded-for": "9.9.9.9" })
-    for (let i = 0; i < 5; i++) expect((await handleLeadPost(mk(i), { platform: false, orgSlug: "a", formConfig: config })).status).toBe(200)
-    expect((await handleLeadPost(mk(7), { platform: false, orgSlug: "a", formConfig: config })).status).toBe(429)
-    expect((await handleLeadPost(mk(8), { platform: false, orgSlug: "b", formConfig: config })).status).toBe(200)
+    const mk = (n: number) => post("/api/o/x/leads", { ...base, eventId: `evt-rate-${String(n).padStart(2, "0")}0000`, phone: `98${String(100000 + n)}`, email: "z@x.tn", custom: { c1: "T" } }, { "x-forwarded-for": "9.9.9.9" })
+    for (let i = 0; i < 20; i++) expect((await handleLeadPost(mk(i), { platform: false, orgSlug: "a", formConfig: config })).status).toBe(200)
+    expect((await handleLeadPost(mk(30), { platform: false, orgSlug: "a", formConfig: config })).status).toBe(429)
+    expect((await handleLeadPost(mk(31), { platform: false, orgSlug: "b", formConfig: config })).status).toBe(200)
   })
 })
 
