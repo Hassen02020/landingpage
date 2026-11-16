@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { isolateNumbers } from "@/lib/design-system/bidi"
 
 export interface FaqItem { q: string; a: string }
 
@@ -11,7 +12,7 @@ export function Easy2BookFAQ({ id = "faq", title, items, heading }: { id?: strin
         {items.map((f) => (
           <details key={f.q} className="bg-white rounded-2xl border border-gray-100 px-5 py-3">
             <summary className="font-bold cursor-pointer">{f.q}</summary>
-            <p className="mt-2 text-gray-700">{f.a}</p>
+            <p className="mt-2 text-gray-700">{isolateNumbers(f.a)}</p>
           </details>
         ))}
       </div>

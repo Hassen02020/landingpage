@@ -1,3 +1,5 @@
+import { isolateNumbers } from "@/lib/design-system/bidi"
+
 export interface ConditionItem { title: string; text: string }
 
 /** Bandeau « avantages et conditions » : texte d'information validé par l'équipe, jamais un calcul. 1 à 3 blocs sur une ligne, davantage sur deux ou trois colonnes. */
@@ -10,7 +12,7 @@ export function Easy2BookConditionsBand({ id = "conditions", ariaLabel, items, b
         {items.map((x, i) => (
           <div key={x.title + i}>
             <p className={`text-xs font-black ${titleClass}`}>{x.title}</p>
-            <p className="mt-1 text-sm font-bold text-gray-900 whitespace-pre-line">{x.text}</p>
+            <p className="mt-1 text-sm font-bold text-gray-900 whitespace-pre-line">{isolateNumbers(x.text)}</p>
           </div>
         ))}
       </div>
