@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { isolateNumbers } from "@/lib/design-system/bidi"
 import { ambianceForFamily, type Ambiance } from "@/lib/design-system/ambiance"
 
 // Icônes à trait (avion, bouclier, hôtel, boussole) pour les cartes de réassurance
@@ -26,7 +27,7 @@ export function Easy2BookTrustSection({ id = "services", title, ariaLabel, items
           <div key={x.title + i} className={`rounded-2xl border p-6 ${icons ? `${a.surface} ${a.line}` : "bg-white border-gray-100"}`}>
             {icons ? <span className={`block ${accentClass}`}><Easy2BookIcon i={i} /></span> : <p className={`text-xs font-black ${accentClass}`} dir="ltr">{String(i + 1).padStart(2, "0")}</p>}
             <h3 className="mt-1 text-lg font-black">{x.title}</h3>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-line">{x.text}</p>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-line">{isolateNumbers(x.text)}</p>
           </div>
         ))}
       </div>

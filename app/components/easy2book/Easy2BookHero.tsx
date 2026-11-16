@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { isolateNumbers } from "@/lib/design-system/bidi"
 import { ambianceForFamily, type Ambiance } from "@/lib/design-system/ambiance"
 
 /** Titre en deux temps : la partie après « … » est soulignée au jaune Easy2Book. */
@@ -19,7 +20,7 @@ export function Easy2BookHero({ eyebrow, headline, description, priceLine, actio
           <h1 className="mt-4 text-3xl sm:text-5xl font-black leading-tight text-gray-900">
             {parts ? <>{parts.lead}… <span className="text-e2b-blue [background-image:linear-gradient(transparent_62%,var(--e2b-yellow)_62%)]">{parts.accent}</span></> : headline}
           </h1>
-          {description && <p className="mt-4 text-gray-600 leading-relaxed whitespace-pre-line">{description}</p>}
+          {description && <p className="mt-4 text-gray-600 leading-relaxed whitespace-pre-line">{isolateNumbers(description)}</p>}
           {priceLine}
           <div className="mt-5 flex flex-wrap gap-3">{actions}</div>
         </div>

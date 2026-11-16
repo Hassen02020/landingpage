@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import type { MouseEvent } from "react"
 import { SOCIAL } from "@/lib/social-links"
+import { PhoneText } from "@/lib/design-system/bidi"
 
 const FOOTER_TXT = {
   fr: { whatsapp: "WhatsApp", legal: "Mentions légales", social: "Réseaux sociaux" },
@@ -19,16 +20,16 @@ export function Easy2BookFooter({ name, phone, phoneLabel, whatsappHref, onWhats
     <footer className="bg-white text-e2b-ink border-t-4 border-e2b-yellow" data-testid="brochure-footer">
       <div className="max-w-6xl mx-auto px-4 py-6 flex flex-wrap items-center justify-between gap-5 text-sm">
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Easy2Book, centrale de réservation" width={64} height={64} className="w-16 h-16 object-contain" />
+          <Image src="/logo.png" alt="Easy2Book, centrale de réservation" width={96} height={96} className="w-20 h-20 object-contain" />
           <span className="leading-tight">
-            <span className="block font-black text-e2b-blue text-lg">Easy2Book</span>
+            <span className="block font-black text-e2b-blue text-2xl">Easy2Book</span>
             <span className="block text-xs text-e2b-ink/70">{name}</span>
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-semibold">
-          <a href={`tel:${phone}`} className="text-e2b-ink" dir="ltr">📞 {phoneLabel}</a>
+          <a href={`tel:${phone}`} className="text-e2b-ink">📞 <PhoneText>{phoneLabel}</PhoneText></a>
           <a href={whatsappHref} target="_blank" rel="noopener noreferrer" onClick={onWhatsApp} className="text-e2b-wa underline">{t.whatsapp}</a>
-          <span dir="ltr">{website}</span>
+          <PhoneText>{website}</PhoneText>
           <Link href={legalHref} className="text-xs font-normal underline">{t.legal}</Link>
         </div>
         <ul className="flex items-center gap-2" aria-label={t.social} data-testid="footer-social">
