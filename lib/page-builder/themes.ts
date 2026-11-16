@@ -71,11 +71,12 @@ const RAMADAN_PRESET: ThemePreset = {
       { title: "رحلة روحانية للمدينة المنورة", text: "زيارة المسجد النبوي الشريف والروضة والمزارات التاريخية في أجواء هادئة ومؤطرة. زيارة الروضة الشريفة ضمن تنظيم البرنامج وبحسب التصاريح والمواعيد التي تمنحها السلطات المختصة." },
     ],
     // fiche commerciale confirmée par le propriétaire : départ le 8 février 2027, acompte 50 % avant le 15/12/2026, solde 50 % avant début février 2027, bébé 450, famille 200 par personne, annulation gratuite avant l'émission des billets et des visas.
-    // NON écrits tant qu'ils ne sont pas tranchés : durée (« 30 jours » ne correspond pas aux dates de vol), réduction enfants (15 % ou 25 %), cumul des réductions, remboursement.
+    // Réduction enfants : 15 % (arbitrage du propriétaire le 15/11/2026, la fiche disait 25 %). NON écrits tant qu'ils ne sont pas tranchés : durée (« 30 jours » ne correspond pas aux dates de vol), cumul des réductions, remboursement.
     conditions: [
       { title: "موعد السفر", text: "الانطلاق يوم 8 فيفري 2027 (بداية شهر رمضان 1448 هـ)." },
       { title: "الدفع", text: "عربون 50% قبل 15 ديسمبر 2026 · الباقي 50% قبل بداية شهر فيفري 2027." },
       { title: "تخفيض العائلات", text: "تخفيض 200 د.ت للشخص للعائلات انطلاقاً من شخصين." },
+      { title: "تخفيض الأطفال", text: "تخفيض 15% للأطفال من 2 إلى 11 سنة." },
       { title: "الرضيع", text: "سعر الرضيع 450 د.ت." },
       { title: "المجموعات الكبيرة", text: "مجموعات تفوق 10 أشخاص: الاتصال على 98 140 514 للحصول على الإمكانية." },
       { title: "تنبيه التوفر", text: "عدد غرف محدود جداً · عرض صالح لـ 15 ديسمبر 2026." },

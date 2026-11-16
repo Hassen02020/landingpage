@@ -429,7 +429,7 @@ describe("modèle « Omra Ramadan complet » : préréglage appliqué à la cré
     const r = await as(E2B, () => saveDraft({ themeId: "ramadan-complet", category: cat({ name: "عمرة رمضان كامل", lang: "ar" }), offers }, "u1"))
     expect(r.ok, JSON.stringify(r)).toBe(true)
     const d = T.landing_categories[0].design as { services: unknown[]; conditions: unknown[]; testimonials: unknown[]; deadline: string }
-    expect(d.services).toHaveLength(4); expect(d.conditions).toHaveLength(7); expect(d.testimonials).toHaveLength(4); expect(d.deadline).toBe("2026-12-15")
+    expect(d.services).toHaveLength(4); expect(d.conditions).toHaveLength(8); expect(d.testimonials).toHaveLength(4); expect(d.deadline).toBe("2026-12-15")
     expect(T.landing_categories[0]).toMatchObject({ product: "omra", lang: "ar", visible: false, slug: "omra-ramadan-complet" })
   })
   it("modification d'une page existante : le préréglage n'est JAMAIS réappliqué (la personnalisation de l'équipe n'est pas écrasée)", async () => {
