@@ -22,7 +22,7 @@ import { maxRank, type FunnelActivity } from "@/lib/server/analytics"
 import { STATUSES, isBooking, type Status } from "@/lib/status"
 
 export type Network = "meta" | "tiktok" | "autre"
-export type Dimension = "network" | "campaign" | "product" | "niche" | "ad"
+export type Dimension = "network" | "campaign" | "adset" | "ad" | "product" | "niche" | "region" | "age"
 
 export interface EconLead {
   id: string
@@ -36,6 +36,13 @@ export interface EconLead {
   ad_id?: string | null
   product: string | null
   niche: string | null
+  /** gouvernorat déclaré (facultatif) */
+  region?: string | null
+  /** nom de l'ensemble de publicités (utm_term) et identifiant, tels que transmis par le lien de campagne */
+  utm_term?: string | null
+  adset_id?: string | null
+  /** tranche d'âge DÉCLARÉE par le visiteur (facultatif, jamais déduite) */
+  age_range?: string | null
 }
 export interface SpendRow { id?: number; spend_date: string; network: "meta" | "tiktok"; campaign: string; amount_tnd: number | string; voids_id?: number | null }
 export interface CostRow {
@@ -163,6 +170,9 @@ function groupKeyOf(f: LeadFacts, dim: Dimension): { key: string; label: string 
     case "product": return { key: l.product || "(inconnu)", label: l.product || "(inconnu)" }
     case "niche": return { key: l.niche || "(général)", label: l.niche || "(général)" }
     case "ad": { const a = l.ad_id || l.utm_content || "(inconnue)"; return { key: String(a), label: String(a) } }
+    case "adset": { const a = l.utm_term || l.adset_id || "(inconnu)"; return { key: String(a), label: String(a) } }
+    case "region": return { key: l.region || "(non renseignée)", label: l.region || "(non renseignée)" }
+    case "age": return { key: l.age_range || "(non renseignée)", label: l.age_range || "(non renseignée)" }
   }
 }
 
