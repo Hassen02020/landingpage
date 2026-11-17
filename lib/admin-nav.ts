@@ -32,6 +32,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Intelligence",
     items: [
       { href: "/admin/intelligence", label: "Vue d'ensemble", icon: "chart", permission: "reports.view", match: (p) => p === "/admin/intelligence" },
+      { href: "/admin/intelligence/dirigeant", label: "Tableau dirigeant", icon: "chart", permission: "reports.view" },
       { href: "/admin/stats", label: "Statistiques", icon: "chart" },
       { href: "/admin/segments", label: "Segments", icon: "team" },
       { href: "/admin/rentabilite", label: "Rentabilité", icon: "chart", permission: "ads.view" },

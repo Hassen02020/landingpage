@@ -69,3 +69,15 @@ Contrôles dépendant de la migration de gouvernance (PR B) : leads de test (exc
 - **Compatible avant la migration :** aucun journal, comportement historique ; la page Qualité des données déclare le contrôle indisponible.
 - **Prérequis :** 0026 seulement (indépendante de 0027). Fichiers : `supabase/migrations/0028_conversion_log.sql`, `supabase/rollback/0028_rollback.sql` (refusé si le journal contient des lignes), `supabase/scripts/postcheck-0028.sql` (5 contrôles), `tests/migration-0028.test.ts`, `tests/conversion-log.test.ts`.
 - **Limite connue :** le cron Vercel Hobby est quotidien : une conversion échouée est rattrapée au plus tard le lendemain matin (ou immédiatement par le bouton).
+
+## Tableau dirigeant — les cinq questions (`/admin/intelligence/dirigeant`)
+
+Une page, cinq réponses, chacune avec sa fiabilité (« Chiffre exact », « Partiel » ou « Non disponible ») :
+
+1. **Combien dépensé ?** Dépenses saisies dans Rentabilité. Aucune dépense saisie : « non disponible » (jamais 0). Dépense sans lead rattaché : « partiel ».
+2. **Combien de qualifiés ?** A atteint « qualifié » ou plus loin, avec le coût par lead qualifié si des dépenses existent.
+3. **Combien de réservations ?** Comptées une seule fois, avec le coût par réservation si calculable.
+4. **Combien gagné ?** Marge nette sur commissions CONFIRMÉES seulement. « Partiel » tant que des réservations n'ont pas de commission importée ; les provisoires ne sont jamais comptées.
+5. **Quelle campagne financer ?** Reprend la gagnante du moteur de rentabilité (résultat positif, dépenses, au moins 5 réservations confirmées). Sinon : « Aucune pour l'instant » avec la raison.
+
+Droits : page « reports.view » ; les questions financières (1, 4, 5) exigent « ads.view », sinon elles s'affichent « non disponible ». Aucune donnée personnelle. Code : `lib/executive.ts` (pur, testé), `loadExecutive` dans `lib/server/intelligence.ts`. Aucune migration.
