@@ -84,7 +84,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: { p
                     const late = c.next_follow_up_at && Date.parse(c.next_follow_up_at) <= Date.now() && isOpen(c.status)
                     return (
                       <div key={c.id} className="bg-white rounded-xl p-3 shadow-sm text-sm">
-                        <Link href={`/admin/leads/${c.id}`} className="font-bold hover:underline">{c.first_name} {c.last_name ?? ""}</Link>
+                        <Link href={`/admin/leads/${c.id}`} className="font-bold hover:underline [overflow-wrap:anywhere]">{c.first_name} {c.last_name ?? ""}</Link>
                         <div className="text-xs text-gray-500">{c.ref} · {PRODUCTS[c.product as Product]} · il y a {age(c.created_at)}</div>
                         {c.offer && <div className="text-xs text-gray-700 truncate">{c.offer}</div>}
                         <div className="flex items-center justify-between mt-1 text-xs">

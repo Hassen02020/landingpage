@@ -25,7 +25,7 @@ export default async function ClientPage({ params }: { params: { phone: string }
     <div className="space-y-4">
       <Link href="/admin/clients" className="text-sm underline">← Clients</Link>
       <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-2xl font-black">{c.name}</h1>
+        <h1 className="text-2xl font-black [overflow-wrap:anywhere]">{c.name}</h1>
         <span className="font-mono text-gray-500">+{c.phone}</span>
         {s.tier && <span data-testid="tier" className={`px-3 py-1 rounded-full text-sm font-bold ${TIER_COLORS[s.tier]}`}>{TIER_LABELS[s.tier]}</span>}
         {c.email && <span className="text-gray-500">{c.email}</span>}
