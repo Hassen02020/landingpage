@@ -63,6 +63,8 @@ export interface QualityOptions {
   governanceColumns?: boolean
   /** délai (heures) au-delà duquel un lead non traité est signalé */
   untreatedAfterHours?: number
+  /** journal des conversions Meta (migration 0028) : comptages ; null = journal absent ; undefined = non demandé */
+  conversions?: { failed: number; abandoned: number; pending: number } | null
 }
 
 const HOUR = 3_600_000
@@ -96,6 +98,15 @@ export function qualityReport(allLeads: QualityLead[], opts: QualityOptions = {}
   } else {
     add("bookings_without_commission", "Réservations sans commission importée", opts.bookingsWithoutCommission, "critical",
       "Sans commission importée d'EasyV4, la marge de ces ventes n'est pas représentative.")
+  }
+
+  if (opts.conversions === null) {
+    unavailable.push({ key: "conversions", label: "Conversions Meta en échec", reason: "Journal des conversions non disponible : migration « journal des conversions » (0028) non appliquée." })
+  } else if (opts.conversions) {
+    add("conversions_failed", "Conversions Meta en échec (relance prévue)", opts.conversions.failed, "critical",
+      "Meta n'a pas reçu ces ventes ou qualifications. Elles sont relancées chaque jour, ou tout de suite avec « Relancer maintenant ».")
+    add("conversions_abandoned", "Conversions Meta abandonnées", opts.conversions.abandoned, "critical",
+      "5 tentatives échouées ou évènement de plus de 7 jours : Meta ne les acceptera plus. Les ventes restent dans le CRM ; Meta ne les a pas vues.")
   }
 
   if (gov) {

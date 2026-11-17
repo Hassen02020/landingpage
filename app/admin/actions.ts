@@ -18,6 +18,7 @@ import {
 import { isPlatformAdmin } from "@/lib/server/tenant"
 import { rateLimited } from "@/lib/server/guard"
 import { can, canAssignLead, canModifyLead } from "@/lib/permissions"
+import { retryConversions } from "@/lib/server/conversions"
 import { STATUSES, isBooking } from "@/lib/status"
 import {
   addNote,
@@ -110,6 +111,21 @@ export async function changeStatusAction(fd: FormData): Promise<void> {
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(result.conversion === "envoyée" ? "Statut enregistré — vente transmise à Meta/TikTok" : result.qualified === "envoyé" ? "Statut enregistré — lead qualifié transmis à Meta" : "Statut enregistré")}`)
+}
+
+/** Relance les conversions Meta échouées (journal, migration 0028) : réservé aux responsables. */
+export async function retryConversionsAction(): Promise<void> {
+  const staff = await requireStaff()
+  if (!can(staff.orgRole, "reports.view")) redirect(`/admin/intelligence/qualite?erreur=${encodeURIComponent("Réservé aux responsables.")}`)
+  let msg: string
+  try {
+    const r = await retryConversions()
+    msg = r.examined === 0 ? "Aucune conversion à relancer pour l'instant." : `Relance terminée : ${r.sent} envoyée(s), ${r.failed} encore en échec, ${r.skipped} écartée(s), ${r.expired} expirée(s).`
+  } catch {
+    msg = "Relance impossible pour l'instant."
+  }
+  revalidatePath("/admin/intelligence/qualite")
+  redirect(`/admin/intelligence/qualite?ok=${encodeURIComponent(msg)}`)
 }
 
 /** Marque / démarque un lead de test : réservé aux responsables (même droit que les rapports). */

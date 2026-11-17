@@ -147,9 +147,9 @@ describe("selectRealLeads : les tests sont exclus des analyses", () => {
 describe("garde-fou : aucune analyse ne lit les leads sans exclure les tests", () => {
   const dir = new URL("../lib/server/", import.meta.url)
   // fichiers autorisés à lire landing_leads directement : recherches opérationnelles (par référence, téléphone, identifiant),
-  // fiche et liste de travail des conseillers (les tests y restent visibles et marqués), recherche de doublon à la réception d'un lead
+  // fiche et liste de travail des conseillers (les tests y restent visibles et marqués), relance des conversions (lit aussi les leads de test pour les ÉCARTER), recherche de doublon à la réception d'un lead
   // (un test et un vrai lead du même numéro restent des doublons), et le chargeur de qualité (gère is_test lui-même).
-  const ALLOWED = new Set(["ad-spend.ts", "catalog.ts", "commissions.ts", "crm.ts", "customer.ts", "inbound-leads.ts", "intelligence.ts", "lead-intake.ts", "lead-scope.ts", "variable-costs.ts"])
+  const ALLOWED = new Set(["ad-spend.ts", "catalog.ts", "commissions.ts", "conversions.ts", "crm.ts", "customer.ts", "inbound-leads.ts", "intelligence.ts", "lead-intake.ts", "lead-scope.ts", "variable-costs.ts"])
   it("un fichier serveur qui lit directement landing_leads doit être déclaré ici (décision explicite : test visible ou exclu)", () => {
     const offenders = readdirSync(dir)
       .filter((f) => f.endsWith(".ts") && !ALLOWED.has(f))

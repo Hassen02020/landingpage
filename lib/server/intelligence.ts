@@ -4,6 +4,7 @@
 import { select } from "@/lib/server/db"
 import { loadAnalytics } from "@/lib/server/analytics"
 import { loadProfitability } from "@/lib/server/profitability"
+import { conversionStats } from "@/lib/server/conversions"
 import { periodFilter, type Period } from "@/lib/server/stats"
 import { isUntreated } from "@/lib/status"
 import { overviewAlerts, qualityReport, type OverviewAlert, type OverviewInput, type QualityLead, type QualityReport } from "@/lib/intelligence"
@@ -36,7 +37,8 @@ export async function loadQuality(p: Period, finance: boolean): Promise<QualityD
   const { leads, governanceColumns, truncated } = await loadQualityLeads(p)
   let bookingsWithoutCommission: number | null = null
   if (finance) bookingsWithoutCommission = (await loadProfitability(p, "network")).result.total.metrics.bookingsWithoutCommission
-  return { ...qualityReport(leads, { bookingsWithoutCommission, governanceColumns }), truncated, governanceColumns, financeIncluded: finance }
+  const conversions = await conversionStats()
+  return { ...qualityReport(leads, { bookingsWithoutCommission, governanceColumns, conversions }), truncated, governanceColumns, financeIncluded: finance }
 }
 
 export interface OverviewData extends OverviewInput { alerts: OverviewAlert[]; financeIncluded: boolean; period: Period; funnel: { key: string; label: string; count: number }[] }
