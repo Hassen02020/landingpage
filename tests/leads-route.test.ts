@@ -142,14 +142,16 @@ describe("POST /api/leads", () => {
     expect(f.calls).toHaveLength(0)
   })
 
-  it("limite le débit par IP (5 envois / 10 min)", async () => {
+  it("limite le débit par IP (20 envois / 10 min) : large, car des abonnés mobiles partagent une adresse", async () => {
     installFetchMock()
     const statuses: number[] = []
-    for (let i = 0; i < 6; i++) {
-      const res = await POST(post("/api/leads", { ...base, eventId: `rate-evt-000${i}`, phone: `2212345${i}` }, { "x-forwarded-for": "9.9.9.9" }))
+    for (let i = 0; i < 21; i++) {
+      const res = await POST(post("/api/leads", { ...base, eventId: `rate-evt-${String(1000 + i)}`, phone: `22${String(100000 + i)}` }, { "x-forwarded-for": "9.9.9.9" }))
       statuses.push(res.status)
     }
-    expect(statuses).toEqual([200, 200, 200, 200, 200, 429])
+    expect(statuses).toEqual([...Array(20).fill(200), 429])
+    // une autre adresse reste acceptée
+    expect((await POST(post("/api/leads", { ...base, eventId: "rate-evt-9999", phone: "22900001" }, { "x-forwarded-for": "9.9.9.8" }))).status).toBe(200)
   })
 
   it("répond quand même (WhatsApp) si la base n'est pas configurée ou en erreur", async () => {

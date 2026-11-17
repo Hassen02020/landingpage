@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { flattenAttribution, obj, str } from "@/lib/server/attribution"
-import { clientIp, normalizePhone, randomRef } from "@/lib/server/hash"
+import { clientIp, normalizePhone, randomRef, sha256 } from "@/lib/server/hash"
 import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
 import { sendMetaEvent } from "@/lib/server/meta"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
@@ -17,6 +17,10 @@ import { discountLabel, findUsablePromo, normalizeCode, redeemPromo, type PromoR
 import { applyFormConfig, type FormConfig } from "@/lib/form-config"
 
 const DUPLICATE_WINDOW_MS = 10 * 60 * 1000
+// Limites de débit (en mémoire, par instance) : l'IP est large car des abonnés mobiles d'un même opérateur partagent une adresse publique ;
+// le numéro de téléphone, lui, est propre à une personne : au plus 3 NOUVELLES demandes par 10 minutes (les doublons ne comptent pas).
+export const IP_RATE_LIMIT = 20
+export const PHONE_RATE_LIMIT = 3
 
 // Entier borné, ou null si la valeur n'a pas été fournie : on n'invente JAMAIS une donnée (ex. « 1 adulte »).
 const optInt = (v: unknown, min: number, max: number): number | null => {
@@ -59,6 +63,20 @@ function degradeRow(row: Record<string, unknown>, code: string | undefined): boo
   return changed
 }
 
+/** Consigne une nouvelle demande dans l'historique du lead existant (jamais d'erreur : la réponse au visiteur prime). */
+async function noteRepeatRequest(existing: { id?: string; ref: string }, summary: string): Promise<void> {
+  try {
+    let id = existing.id
+    if (!id) {
+      const rows = await select<{ id: string }>("landing_leads", `select=id&ref=eq.${encodeURIComponent(existing.ref)}&limit=1`)
+      id = rows[0]?.id
+    }
+    if (id) await logActivity(id, { id: null, label: "système" }, "note", { body: summary })
+  } catch {
+    console.error("[leads] nouvelle demande du même numéro non consignée")
+  }
+}
+
 /**
  * POST /api/leads — formulaire des landing pages.
  * 1. contrôles : origine, débit, champ piège, validation, accord de recontact
@@ -93,7 +111,7 @@ export async function handleLeadPost(request: NextRequest, ctx: IntakeContext = 
   if (str(body.website)) return NextResponse.json({ ok: true, ref: randomRef() })
 
   const ip = clientIp(request.headers)
-  if (rateLimited(ip && `lead:${ctx.orgSlug ?? "-"}:${ip}`, 5, 10 * 60 * 1000)) {
+  if (rateLimited(ip && `lead:${ctx.orgSlug ?? "-"}:${ip}`, IP_RATE_LIMIT, 10 * 60 * 1000)) {
     return NextResponse.json({ error: "Trop de demandes. Contactez-nous directement sur WhatsApp." }, { status: 429 })
   }
 
@@ -168,11 +186,32 @@ export async function handleLeadPost(request: NextRequest, ctx: IntakeContext = 
 
   // Anti-doublon : double clic (même event_id) ou nouvel envoi identique en 10 min
   const orgKey = (await currentOrgKey()) ?? "none"
-  const already =
-    rememberOnce(["event", orgKey, eventId], ref, DUPLICATE_WINDOW_MS) ??
-    rememberOnce(["lead", orgKey, phone!, product], ref, DUPLICATE_WINDOW_MS)
-  if (already) {
-    return NextResponse.json({ ok: true, duplicate: true, ref: already, stored: false, whatsappUrl: whatsappUrlFor(already) })
+  // Nouvelle demande du même numéro pour le même produit : elle n'ajoute pas de lead, mais ses précisions (offre, voyageurs,
+  // région, annonce) sont consignées dans l'historique du lead existant au lieu d'être perdues.
+  const repeatSummary = (): string =>
+    [
+      `Nouvelle demande du même numéro (${PRODUCTS[product]})`,
+      offer ? `offre : ${offer}` : null,
+      adults !== null ? `${adults} adulte(s)${children ? ` + ${children} enfant(s)` : ""}` : null,
+      ctx.platform && isRegion(body.region) ? `région : ${body.region}` : null,
+      attr.utm_campaign ? `campagne : ${attr.utm_campaign}` : null,
+      attr.utm_content ? `annonce : ${attr.utm_content}` : null,
+      attr.landing_page ? `page : ${attr.landing_page}` : null,
+    ]
+      .filter(Boolean)
+      .join(" — ")
+  const sameSubmission = rememberOnce(["event", orgKey, eventId], ref, DUPLICATE_WINDOW_MS)
+  if (sameSubmission) {
+    return NextResponse.json({ ok: true, duplicate: true, ref: sameSubmission, stored: false, whatsappUrl: whatsappUrlFor(sameSubmission) })
+  }
+  const repeatOf = rememberOnce(["lead", orgKey, phone!, product], ref, DUPLICATE_WINDOW_MS)
+  if (repeatOf) {
+    await noteRepeatRequest({ ref: repeatOf }, repeatSummary())
+    return NextResponse.json({ ok: true, duplicate: true, ref: repeatOf, stored: false, whatsappUrl: whatsappUrlFor(repeatOf) })
+  }
+  // un même numéro ne peut pas multiplier les nouvelles demandes (autres produits, autres offres) : 3 par 10 minutes
+  if (rateLimited(`leadphone:${orgKey}:${sha256(phone!)}`, PHONE_RATE_LIMIT, 10 * 60 * 1000)) {
+    return NextResponse.json({ error: "Trop de demandes. Contactez-nous directement sur WhatsApp." }, { status: 429 })
   }
 
   const row: Record<string, unknown> = {
@@ -257,17 +296,19 @@ export async function handleLeadPost(request: NextRequest, ctx: IntakeContext = 
           break
         }
         // vrai doublon (même envoi, ou même téléphone + produit le même jour) : on renvoie la référence existante
-        let existing: { ref: string }[] = []
+        let existing: { id?: string; ref: string; idempotency_key?: string }[] = []
         try {
-          existing = await select<{ ref: string }>(
+          existing = await select<{ id?: string; ref: string; idempotency_key?: string }>(
             "landing_leads",
-            `select=ref&or=(idempotency_key.eq.${encodeURIComponent(eventId)},and(phone.eq.${phone},product.eq.${product},lead_day.eq.${tunisDay()}))&limit=1`
+            `select=id,ref,idempotency_key&or=(idempotency_key.eq.${encodeURIComponent(eventId)},and(phone.eq.${phone},product.eq.${product},lead_day.eq.${tunisDay()}))&limit=1`
           )
         } catch {
           console.error("[leads] vérification de doublon impossible")
           break
         }
         if (existing[0]) {
+          // même envoi rejoué : rien à ajouter ; autre demande du même numéro le même jour : consignée dans l'historique
+          if (existing[0].idempotency_key !== eventId) await noteRepeatRequest(existing[0], repeatSummary())
           return NextResponse.json({ ok: true, duplicate: true, ref: existing[0].ref, stored: true, whatsappUrl: whatsappUrlFor(existing[0].ref) })
         }
         ref = randomRef() // sinon : collision sur la référence aléatoire, nouvel essai
