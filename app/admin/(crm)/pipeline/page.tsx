@@ -50,12 +50,12 @@ export default async function PipelinePage({ searchParams }: { searchParams: { p
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black">Pipeline</h1>
-        <form className="flex gap-2 text-sm">
-          <select name="product" defaultValue={searchParams.product ?? ""} className="border rounded-lg px-2 py-1.5">
+        <form className="flex flex-wrap gap-2 text-sm min-w-0">
+          <select name="product" defaultValue={searchParams.product ?? ""} className="border rounded-lg px-2 py-1.5 min-w-0 max-w-full">
             <option value="">Tous produits</option>
             {Object.entries(PRODUCTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <select name="assigned" defaultValue={searchParams.assigned ?? ""} className="border rounded-lg px-2 py-1.5">
+          <select name="assigned" defaultValue={searchParams.assigned ?? ""} className="border rounded-lg px-2 py-1.5 min-w-0 max-w-full">
             <option value="">Toute l&apos;équipe</option>
             <option value="me">Mes leads</option>
             <option value="none">Non assignés</option>

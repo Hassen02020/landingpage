@@ -87,11 +87,11 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
               {all.length === 0 ? "Aucune page pour l'instant. Cliquez sur « Nouvelle page » pour commencer." : "Aucune page ne correspond à ces critères."}
             </div>
           ) : (
-            <ul className="grid gap-3 md:grid-cols-2" data-testid="page-list">
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2" data-testid="page-list">
               {rows.map(({ category: c, status, offers }) => {
                 const life = lifecycleOf(c)
                 return (
-                  <li key={c.id} className="bg-white rounded-2xl border p-4 space-y-3" data-testid="page-card" data-slug={c.slug} data-life={life}>
+                  <li key={c.id} className="bg-white rounded-2xl border p-4 space-y-3 min-w-0" data-testid="page-card" data-slug={c.slug} data-life={life}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h2 className="font-black truncate">{c.name}</h2>
