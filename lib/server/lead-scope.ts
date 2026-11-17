@@ -7,7 +7,9 @@ const RECHECK_MS = 60_000
 let missingSince: number | null = null // horodatage du dernier constat « colonne absente »
 
 export const __resetLeadScope = () => { missingSince = null }
-const isMissingColumn = (e: unknown) => e instanceof DbError && e.code === "42703"
+// 42703 = colonne inconnue. On ne conclut « is_test absente » que si le message de la base NOMME is_test : une autre colonne manquante
+// dans la liste demandée (ex. tranche d'âge avant sa migration) ne doit jamais désactiver l'exclusion des leads de test.
+const isMissingColumn = (e: unknown) => e instanceof DbError && e.code === "42703" && /is_test/.test(e.pgMessage ?? "")
 
 /** Lecture des leads RÉELS (hors test). `query` est une requête PostgREST sans filtre is_test. */
 export async function selectRealLeads<T>(query: string): Promise<T[]> {

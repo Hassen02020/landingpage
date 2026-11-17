@@ -36,3 +36,11 @@ Contrôles dépendant de la migration de gouvernance (PR B) : leads de test (exc
 - **Garde-fou de test :** `tests/data-governance.test.ts` échoue si un nouveau fichier serveur lit `landing_leads` sans passer par `selectRealLeads` (liste d'exceptions justifiée).
 - **Fichiers :** `supabase/migrations/0026_data_governance.sql`, `supabase/rollback/0026_rollback.sql` (refusé si des données existent), `supabase/scripts/postcheck-0026.sql` (4 contrôles), `tests/migration-0026.test.ts` (PostgreSQL de test).
 - **À faire par le propriétaire, après ses GO distincts :** appliquer la migration (condition de sécurité + contrôle postcheck), puis déployer. Marquer le lead de test existant `d3518f63-b61f-4c47-a4fd-958dab2888bf` = une seule écriture, soumise à un GO séparé.
+
+## Lot 4 — Rentabilité par région, ensemble de publicités, annonce et tranche d'âge déclarée
+- Nouvelles vues de `/admin/rentabilite/analyse` : **Ensemble de publicités** (`utm_term`, à défaut `adset_id`), **Annonce**, **Région**, **Tranche d'âge (déclarée)** ; les vues Réseau, Campagne, Produit et Niche sont inchangées.
+- La dépense d'une campagne est **répartie au prorata des leads** dans ces vues : elle est marquée « estimée » (≈), jamais présentée comme réelle. Les totaux restent exacts.
+- **Échantillon** : chaque ligne sous 5 réservations confirmées affiche « échantillon insuffisant : X lead(s), Y réservation(s) confirmée(s) sur 5 minimum ». Aucune ligne n'est « gagnante » sans ce minimum.
+- Lecture de repli selon les colonnes présentes (tranche d'âge avant sa migration, région avant 0006) ; les leads de test sont exclus (`selectRealLeads`).
+- Correctif : `selectRealLeads` ne conclut « colonne `is_test` absente » que si le message de la base nomme `is_test` ; une autre colonne manquante (ex. tranche d'âge) ne désactive jamais l'exclusion des tests.
+- Jeu de données des tests **fictif et déclaré comme tel** ; aucune conclusion commerciale n'est tirée de ces vues tant qu'il n'y a pas de réservations réelles.
