@@ -30,3 +30,33 @@ jobs:
         env:
           # aucune valeur réelle : le build ne se connecte à aucune base
           NEXT_PUBLIC_SITE_URL: https://landingpage-easy2book.vercel.app
+
+  # Parcours de bout en bout (faux Supabase en mémoire : aucune donnée réelle, aucun appel Meta ni TikTok).
+  # Ils protègent ce que les tests unitaires ne voient pas : cloisonnement entre entreprises, droits par rôle, consentement, formulaire, Créateur.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Navigateur de test
+        run: npx playwright install --with-deps chromium
+      - name: Build de production
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://landingpage-easy2book.vercel.app
+      - name: Parcours e2e
+        run: |
+          set -u
+          failed=0
+          run() { echo "::group::$*"; if "$@"; then echo "OK : $*"; else echo "::error::ÉCHEC : $*"; failed=1; fi; echo "::endgroup::"; }
+          run bash tests/e2e/run-multi.sh
+          run bash tests/e2e/run-admin.sh
+          run bash tests/e2e/run-creator.sh
+          run bash tests/e2e/run-public.sh tests/e2e/consent.e2e.mjs
+          for s in collect omra-journey whatsapp reviews social; do run bash tests/e2e/run-fake.sh "tests/e2e/$s.e2e.mjs"; done
+          exit $failed
