@@ -1,6 +1,7 @@
 // Statistiques de l'espace équipe : marketing (campagne / groupe d'annonces / annonce) et équipe.
 // Les agrégations sont des fonctions pures (testées) ; aucune donnée personnelle n'est lue.
 import { select } from "./db"
+import { selectRealLeads } from "./lead-scope"
 import { STATUSES, isBooking, isUntreated, type Status } from "@/lib/status"
 
 export interface Period {
@@ -149,8 +150,7 @@ export function groupByOffer(rows: LeadStatRow[]): OfferRow[] {
 }
 
 export async function loadLeadStats(p: Period): Promise<LeadStatRow[]> {
-  return select<LeadStatRow>(
-    "landing_leads",
+  return selectRealLeads<LeadStatRow>(
     `select=status,booking_value,channel,utm_source,utm_medium,utm_campaign,utm_term,utm_content,campaign_id,adset_id,ad_id,assigned_to,product,offer&${periodFilter("created_at", p)}&limit=10000`
   )
 }

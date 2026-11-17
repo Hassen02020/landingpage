@@ -1,6 +1,7 @@
 // Export des leads (CSV/JSON), partagé par l'API (clé admin) et l'interface /admin (session).
 import { NextResponse } from "next/server"
 import { DbError, select } from "./db"
+import { selectRealLeads } from "./lead-scope"
 import { STATUSES } from "@/lib/status"
 import { loadFormConfig } from "./org-public"
 
@@ -46,10 +47,10 @@ export async function exportLeads(p: URLSearchParams): Promise<NextResponse> {
     // Base pas encore migrée (0006) : repli sur l'ancienne liste, les nouvelles colonnes sortent vides.
     let raw: Record<string, unknown>[]
     try {
-      raw = await select<Record<string, unknown>>("landing_leads", [`select=${COLUMNS.join(",")}`, ...q].join("&"))
+      raw = await selectRealLeads<Record<string, unknown>>([`select=${COLUMNS.join(",")}`, ...q].join("&"))
     } catch (e) {
       if (!(e instanceof DbError) || e.status !== 400) throw e
-      raw = await select<Record<string, unknown>>("landing_leads", [`select=${COLUMNS.filter((c) => !NEW_COLUMNS.includes(c)).join(",")}`, ...q].join("&"))
+      raw = await selectRealLeads<Record<string, unknown>>([`select=${COLUMNS.filter((c) => !NEW_COLUMNS.includes(c)).join(",")}`, ...q].join("&"))
     }
     // réponses aux champs personnalisés de l'entreprise : « Ville: Sfax ; Société: X » (intitulés de SA configuration)
     const labels = new Map((await loadFormConfig().catch(() => null))?.custom.map((c) => [c.key, c.label]) ?? [])

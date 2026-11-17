@@ -2,6 +2,7 @@
 // on ne lit ici que ce qui a été saisi ou importé dans Landing, cloisonné par entreprise (contexte de la requête).
 // Cohorte = leads CRÉÉS sur la période ; dépenses et coûts = datés sur la période.
 import { select } from "@/lib/server/db"
+import { selectRealLeads } from "@/lib/server/lead-scope"
 import { economics, type CommissionRow, type CostRow, type Dimension, type EconLead, type EconomicsResult, type SpendRow } from "@/lib/ad-economics"
 import type { FunnelActivity } from "@/lib/server/analytics"
 import { isMissingTable } from "@/lib/server/ad-spend"
@@ -20,7 +21,7 @@ async function safe<T>(table: string, query: string, flag: { missing: boolean })
 
 export async function loadProfitability(p: Period, dim: Dimension): Promise<ProfitabilityData> {
   const flag = { missing: false }
-  const leads = await select<EconLead>("landing_leads", `select=id,created_at,status,booking_value,booked_at,channel,utm_campaign,utm_content,ad_id,product,niche&${periodFilter("created_at", p)}&limit=${MAX}`)
+  const leads = await selectRealLeads<EconLead>(`select=id,created_at,status,booking_value,booked_at,channel,utm_campaign,utm_content,ad_id,product,niche&${periodFilter("created_at", p)}&limit=${MAX}`)
   const ids = new Set(leads.map((l) => l.id))
   const rawActs = await select<FunnelActivity>("landing_lead_activities", `select=lead_id,type,to_status,created_at,actor_id&limit=50000`)
   const activities = rawActs.filter((a) => ids.has(a.lead_id))

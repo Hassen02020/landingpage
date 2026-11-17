@@ -1,6 +1,7 @@
 // Customer 360 : vue unifiée d'un client = tous ses leads (même téléphone) + chronologie commune.
 // Aucune table « clients » : le téléphone normalisé est la clé. Fonctions pures testées + chargeurs en lecture seule.
 import { select } from "./db"
+import { selectRealLeads } from "./lead-scope"
 import { isBooking, isOpen, type Status } from "@/lib/status"
 import type { Activity, LeadRow } from "./crm"
 import { tierOf, type Tier } from "@/lib/loyalty"
@@ -119,13 +120,13 @@ export async function listCustomers(term: string | undefined, page = 0, pageSize
     else if (/^[A-Za-zÀ-ÿ؀-ۿ\s'-]{2,40}$/.test(t)) q.push(`or=(first_name.ilike.*${encodeURIComponent(t)}*,last_name.ilike.*${encodeURIComponent(t)}*)`)
     else return []
   }
-  const leads = await select<LeadRow>("landing_leads", q.join("&"))
+  const leads = await selectRealLeads<LeadRow>(q.join("&"))
   return groupCustomers(leads).slice(page * pageSize, (page + 1) * pageSize)
 }
 
 /** Tous les clients (jusqu'à 5 000 demandes récentes), pour la segmentation. Lecture seule. */
 export async function loadAllCustomers(): Promise<CustomerSummary[]> {
-  const leads = await select<LeadRow>("landing_leads", "select=*&order=created_at.desc&limit=5000&phone=not.is.null")
+  const leads = await selectRealLeads<LeadRow>("select=*&order=created_at.desc&limit=5000&phone=not.is.null")
   return groupCustomers(leads)
 }
 
