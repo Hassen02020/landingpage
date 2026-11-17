@@ -31,7 +31,7 @@ describe("changeStatus", () => {
   it("réservation : vente envoyée UNE seule fois, même après réservé → perdu → réservé", async () => {
     const f = installFetchMock()
     let lead = seedLead(f)
-    expect(await changeStatus(lead, "reserve", actor, { bookingValue: 4800 })).toEqual({ ok: true, conversion: "envoyée" })
+    expect(await changeStatus(lead, "reserve", actor, { bookingValue: 4800 })).toEqual({ ok: true, conversion: "envoyée", qualified: "envoyé" }) // 1re qualification : QualifiedLead aussi
     lead = (await getLead(lead.id))!
     await changeStatus(lead, "perdu", actor)
     lead = (await getLead(lead.id))!

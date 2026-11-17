@@ -37,6 +37,15 @@ Contrôles dépendant de la migration de gouvernance (PR B) : leads de test (exc
 - **Fichiers :** `supabase/migrations/0026_data_governance.sql`, `supabase/rollback/0026_rollback.sql` (refusé si des données existent), `supabase/scripts/postcheck-0026.sql` (4 contrôles), `tests/migration-0026.test.ts` (PostgreSQL de test).
 - **À faire par le propriétaire, après ses GO distincts :** appliquer la migration (condition de sécurité + contrôle postcheck), puis déployer. Marquer le lead de test existant `d3518f63-b61f-4c47-a4fd-958dab2888bf` = une seule écriture, soumise à un GO séparé.
 
+## Lot 5 — Évènement « lead qualifié » vers Meta
+- **Définition (validée par le propriétaire) :** la **première** fois qu'un lead atteint « qualifié » **ou plus loin** (devis, négociation, réservé, gagné), une seule fois par lead ; jamais rejoué si le lead revient en arrière puis est requalifié, ni s'il est perdu puis rouvert.
+- **Évènement** : `QualifiedLead` (personnalisé), envoyé côté serveur par `changeStatus`, avec `event_id = qualified-<id du lead>`, **sans valeur monétaire**, téléphone et prénom hachés, **seulement si le visiteur a accepté le suivi**. TikTok non concerné.
+- **Jamais depuis le navigateur** : absent de `ALLOWED_EVENTS` (test).
+- **En cas de doute** (lecture de l'historique impossible) : rien n'est envoyé. Meta non configuré : statut enregistré, pas de fausse mention « envoyé ».
+- Une réservation directe envoie `QualifiedLead` puis `Purchase` (deux évènements distincts).
+- **Test sur le pixel :** utiliser `META_TEST_EVENT_CODE` (Meta → Gestionnaire d'évènements → Tester les évènements) avant le premier envoi réel. Aucun évènement artificiel n'a été envoyé pendant le développement.
+- Une fois l'évènement reçu par Meta, il apparaît comme évènement personnalisé et peut servir d'objectif d'optimisation (à choisir dans Ads Manager, décision du propriétaire).
+
 ## Lot 4 — Rentabilité par région, ensemble de publicités, annonce et tranche d'âge déclarée
 - Nouvelles vues de `/admin/rentabilite/analyse` : **Ensemble de publicités** (`utm_term`, à défaut `adset_id`), **Annonce**, **Région**, **Tranche d'âge (déclarée)** ; les vues Réseau, Campagne, Produit et Niche sont inchangées.
 - La dépense d'une campagne est **répartie au prorata des leads** dans ces vues : elle est marquée « estimée » (≈), jamais présentée comme réelle. Les totaux restent exacts.

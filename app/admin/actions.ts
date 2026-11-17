@@ -109,7 +109,7 @@ export async function changeStatusAction(fd: FormData): Promise<void> {
   })
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
-  redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(result.conversion === "envoyée" ? "Statut enregistré — vente transmise à Meta/TikTok" : "Statut enregistré")}`)
+  redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(result.conversion === "envoyée" ? "Statut enregistré — vente transmise à Meta/TikTok" : result.qualified === "envoyé" ? "Statut enregistré — lead qualifié transmis à Meta" : "Statut enregistré")}`)
 }
 
 /** Marque / démarque un lead de test : réservé aux responsables (même droit que les rapports). */
