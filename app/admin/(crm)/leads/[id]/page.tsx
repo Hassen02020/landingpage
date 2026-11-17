@@ -137,6 +137,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <Row label="Date / période" value={lead.travel_date || lead.travel_period} />
           <Row label="Voyageurs" value={lead.adults === null || lead.adults === undefined ? null : `${lead.adults} adulte(s), ${lead.children ?? 0} enfant(s)`} />
           <Row label="Région" value={lead.region} />
+          <Row label="Tranche d'âge (déclarée)" value={lead.age_range} />
           <Row label="E-mail" value={lead.email} />
           <Row label="Canal préféré" value={lead.contact_channel ? CONTACT_CHANNEL_LABELS[lead.contact_channel] : null} />
           <Row label="Budget déclaré" value={lead.budget} />

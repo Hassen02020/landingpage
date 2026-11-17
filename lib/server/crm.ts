@@ -76,6 +76,7 @@ export interface LeadRow {
   promo_code?: string | null // colonne ajoutée par 0003
   /** gouvernance des données (migration 0026) : absentes tant qu'elle n'est pas appliquée */
   is_test?: boolean | null
+  age_range?: string | null // migration 0027 (tranche d'âge déclarée)
   lost_reason?: string | null
   purchased_product?: string | null
   ad_id: string | null

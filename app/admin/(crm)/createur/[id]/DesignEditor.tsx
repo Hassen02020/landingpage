@@ -73,6 +73,7 @@ export function DesignEditor({ id, initial, available, theme, media = [] }: { id
           </select>
         </label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.form.email} onChange={(e) => upd("form", { ...d.form, email: e.target.checked })} aria-label="Demander l'e-mail dans le formulaire" /> Demander l&apos;e-mail dans le formulaire (facultatif pour le visiteur)</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.form.age === true} onChange={(e) => upd("form", { ...d.form, age: e.target.checked })} aria-label="Demander la tranche d'âge dans le formulaire" data-testid="age-checkbox" /> Demander la tranche d&apos;âge (facultatif, déclarée par le visiteur : n&apos;activez qu&apos;après validation du texte d&apos;information)</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.form.region} onChange={(e) => upd("form", { ...d.form, region: e.target.checked })} aria-label="Demander la région dans le formulaire" /> Demander la région dans le formulaire (liste de gouvernorats, facultatif pour le visiteur)</label>
         <p className="text-xs text-gray-500">Les prix et les dates viennent toujours de vos offres : ce réglage ne change que leur présentation.</p>
       </section>

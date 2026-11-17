@@ -76,13 +76,13 @@ describe("E6 : serveur", () => {
     for (const row of f.db.landing_leads) expect(row.region).toBeUndefined()
   })
   it("base sans la colonne région (avant 0006) : le lead n'est jamais perdu", () => {
-    expect(readFileSync(ROOT + "lib/server/lead-intake.ts", "utf8")).toMatch(/"email", "region", "contact_channel"/)
+    expect(readFileSync(ROOT + "lib/server/lead-intake.ts", "utf8")).toMatch(/"email", "region", "age_range", "contact_channel"/)
   })
 })
 
 describe("E6 : formulaire et réglage de page", () => {
   const theme = THEMES.find((t) => t.id === "ramadan-complet")!
-  const html = (form: { email: boolean; region: boolean }) => renderToStaticMarkup(createElement(LandingView, { category: category({ slug: "omra-ramadan-complet", product: "omra", lang: "ar", name: "عمرة رمضان كامل" }), offers: [offer({ product: "omra" })], design: { ...sanitizeDesign(theme.preset!.design, "omra").design, form } }))
+  const html = (form: { email: boolean; region: boolean; age?: boolean }, askAge = form.age === true) => renderToStaticMarkup(createElement(LandingView, { category: category({ slug: "omra-ramadan-complet", product: "omra", lang: "ar", name: "عمرة رمضان كامل" }), offers: [offer({ product: "omra" })], design: { ...sanitizeDesign(theme.preset!.design, "omra").design, form: { ...form, age: askAge } } }))
   it("réglage désactivé par défaut ; seul le modèle Ramadan l'active", () => {
     expect(defaultDesign("omra").form.region).toBe(false)
     expect(sanitizeDesign({ form: { region: "oui" } }, "omra").design.form.region).toBe(false)
