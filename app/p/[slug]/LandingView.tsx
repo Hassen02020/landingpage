@@ -261,6 +261,7 @@ export function LandingView({ category, offers, preview = false, design = null }
             showPromo
             askEmail={design?.form.email === true}
             askRegion={design?.form.region === true}
+            askAge={design?.form.age === true}
             askTravelers={family === "voyage" || family === "hotel" || family === "omra"}
             priceByOffer={split ? priceByOffer : undefined}
           />

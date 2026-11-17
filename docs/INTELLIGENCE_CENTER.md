@@ -37,6 +37,14 @@ Contrôles dépendant de la migration de gouvernance (PR B) : leads de test (exc
 - **Fichiers :** `supabase/migrations/0026_data_governance.sql`, `supabase/rollback/0026_rollback.sql` (refusé si des données existent), `supabase/scripts/postcheck-0026.sql` (4 contrôles), `tests/migration-0026.test.ts` (PostgreSQL de test).
 - **À faire par le propriétaire, après ses GO distincts :** appliquer la migration (condition de sécurité + contrôle postcheck), puis déployer. Marquer le lead de test existant `d3518f63-b61f-4c47-a4fd-958dab2888bf` = une seule écriture, soumise à un GO séparé.
 
+## Lot 6 — Tranche d'âge DÉCLARÉE (migration 0027 ÉCRITE, NON APPLIQUÉE ; champ désactivé par défaut)
+- **Principes :** facultative ; choisie librement par le visiteur (18-24, 25-34, 35-44, 45-54, 55+, ou « je préfère ne pas répondre » = rien d'enregistré) ; **jamais déduite** d'un nom ou d'une photo ; **jamais envoyée** à Meta ni à TikTok (test) ; jamais pour une entreprise cliente (formulaires `/o/…`).
+- **Activation page par page** dans le Créateur (case « Demander la tranche d'âge »), **désactivée sur tous les modèles**. À n'activer qu'après validation du texte d'information.
+- **Texte d'information proposé (à valider par le propriétaire)** — FR : « Facultatif : votre tranche d'âge nous aide à adapter nos offres. Elle n'est pas partagée avec des tiers. » ; EN : « Optional: your age range helps us tailor our offers. It is not shared with third parties. » ; AR : « اختياري: تساعدنا فئتك العمرية على تحسين عروضنا. لا تتم مشاركتها مع أي طرف ثالث. » (`lib/age-range.ts`).
+- **Compatible avant la migration :** la valeur est retirée de l'enregistrement si la colonne manque (le lead n'est jamais perdu) ; la vue « Tranche d'âge » de la rentabilité (lot 4) lit avec repli.
+- **Fichiers :** `supabase/migrations/0027_age_range.sql`, `supabase/rollback/0027_rollback.sql` (refusé si des données existent), `supabase/scripts/postcheck-0027.sql` (3 contrôles), `tests/migration-0027.test.ts`, `tests/age-range.test.ts`.
+- **Décision laissée au propriétaire :** à l'anonymisation d'un lead, la tranche d'âge (non identifiante seule) est conservée comme donnée statistique ; dites-le si elle doit être effacée.
+
 ## Lot 5 — Évènement « lead qualifié » vers Meta
 - **Définition (validée par le propriétaire) :** la **première** fois qu'un lead atteint « qualifié » **ou plus loin** (devis, négociation, réservé, gagné), une seule fois par lead ; jamais rejoué si le lead revient en arrière puis est requalifié, ni s'il est perdu puis rouvert.
 - **Évènement** : `QualifiedLead` (personnalisé), envoyé côté serveur par `changeStatus`, avec `event_id = qualified-<id du lead>`, **sans valeur monétaire**, téléphone et prénom hachés, **seulement si le visiteur a accepté le suivi**. TikTok non concerné.

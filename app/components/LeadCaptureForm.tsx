@@ -11,6 +11,7 @@ import { buildWhatsAppUrl, generateEventId, trackEvent } from "@/lib/tracking"
 type Lang = "fr" | "ar" | "en"
 
 // Menu « région » : le libellé suit la langue de la page ; les valeurs sont les gouvernorats de la liste officielle (identiques à la contrainte SQL de la migration 0006)
+import { AGE_LABELS, AGE_RANGES, AGE_TEXT } from "@/lib/age-range"
 const REGION_TXT = { fr: { label: "Région (facultatif)" }, en: { label: "Region (optional)" }, ar: { label: "الولاية (اختياري)" } } as const
 
 const T = {
@@ -126,6 +127,8 @@ export interface LeadCaptureFormProps {
   askEmail?: boolean
   /** Menu facultatif « région » (gouvernorats de la liste officielle) : non par défaut ; activé par le réglage de la page. */
   askRegion?: boolean
+  /** menu « tranche d'âge » (déclarée, facultative) : désactivé par défaut */
+  askAge?: boolean
   /** Libellé d'offre → identifiant catalogue (lien lead → offre pour la marge et les places). */
   offerIds?: Record<string, string>
   /** Libellé d'offre → prix par personne : affiche une estimation INDICATIVE (adultes × prix), sans engagement. */
@@ -155,6 +158,7 @@ export function LeadCaptureForm({
   askTravelers = false,
   askEmail = false,
   askRegion = false,
+  askAge = false,
   offerIds,
   priceByOffer,
 }: LeadCaptureFormProps) {
@@ -206,6 +210,7 @@ export function LeadCaptureForm({
       children: askTravelers ? get("children") || undefined : undefined,
       email: askEmail ? get("email") || undefined : undefined,
       region: askRegion ? get("region") || undefined : undefined,
+      age_range: askAge ? get("age_range") || undefined : undefined,
       message: get("message"),
       promo_code: get("promo_code") || undefined,
       contactConsent: true,
@@ -411,6 +416,17 @@ export function LeadCaptureForm({
           <option value="">{REGION_TXT[lang].label}</option>
           {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
+      )}
+
+      {askAge && (
+        <div>
+          <select name="age_range" defaultValue="" disabled={submitting} className={inputCls} aria-label={AGE_TEXT[lang].label} data-testid="age-select" aria-describedby="age-note">
+            <option value="">{AGE_TEXT[lang].label}</option>
+            {AGE_RANGES.map((a) => <option key={a} value={a}>{AGE_LABELS[a][lang]}</option>)}
+            <option value="">{AGE_TEXT[lang].none}</option>
+          </select>
+          <p id="age-note" className="mt-1 text-xs text-gray-500" data-testid="age-note">{AGE_TEXT[lang].note}</p>
+        </div>
       )}
 
       {askEmail && (
