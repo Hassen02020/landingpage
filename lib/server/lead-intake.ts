@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { flattenAttribution, obj, str } from "@/lib/server/attribution"
 import { clientIp, normalizePhone, randomRef, sha256 } from "@/lib/server/hash"
 import { isAllowedOrigin, rateLimited, rememberOnce } from "@/lib/server/guard"
-import { sendMetaEvent } from "@/lib/server/meta"
+import { sendMetaLogged } from "@/lib/server/conversions"
 import { sendTikTokEvent } from "@/lib/server/tiktok"
 import { DbError, currentOrgKey, dbConfigured, insertOne, select, withPublicOrg } from "@/lib/server/db"
 import { CONSENT_TEXT_VERSION, PRODUCTS, isProduct, WHATSAPP_NUMBER, type Product } from "@/lib/config"
@@ -374,7 +374,7 @@ export async function handleLeadPost(request: NextRequest, ctx: IntakeContext = 
         ttclid: attr.ttclid,
       },
     }
-    tasks.push(sendMetaEvent(serverEvent), sendTikTokEvent(serverEvent))
+    tasks.push(sendMetaLogged(serverEvent, { leadId: stored ? leadId : null }), sendTikTokEvent(serverEvent))
   }
 
   await Promise.allSettled(tasks)

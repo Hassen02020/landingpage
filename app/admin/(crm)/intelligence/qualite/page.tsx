@@ -2,6 +2,7 @@ import Link from "next/link"
 import { can } from "@/lib/permissions"
 import { currentStaff } from "@/lib/server/auth"
 import { loadQuality } from "@/lib/server/intelligence"
+import { retryConversionsAction } from "../../../actions"
 import { parsePeriod } from "@/lib/server/stats"
 
 export const dynamic = "force-dynamic"
@@ -10,7 +11,7 @@ const TONE = { critical: "border-red-200 bg-red-50", warn: "border-amber-200 bg-
 const BADGE = { critical: "bg-red-600 text-white", warn: "bg-amber-500 text-white", info: "bg-gray-500 text-white" } as const
 const LABEL = { critical: "À corriger", warn: "À vérifier", info: "Information" } as const
 
-export default async function QualityPage({ searchParams }: { searchParams: { from?: string; to?: string } }) {
+export default async function QualityPage({ searchParams }: { searchParams: { from?: string; to?: string; ok?: string; erreur?: string } }) {
   const staff = await currentStaff()
   if (!staff || !can(staff.orgRole, "reports.view")) return <p className="bg-white rounded-2xl p-6 text-gray-700">Cette page est réservée aux responsables.</p>
   const period = parsePeriod(searchParams.from, searchParams.to, 30)
@@ -37,6 +38,14 @@ export default async function QualityPage({ searchParams }: { searchParams: { fr
         {q.excludedTests > 0 ? ` — ${q.excludedTests} lead(s) de test exclu(s)` : ""}.
         {q.truncated && <span className="text-amber-700"> Résultat tronqué à 10 000 leads : réduisez la période.</span>}
       </p>
+
+      {searchParams.ok && <div className="p-3 rounded-xl bg-green-50 text-green-800 text-sm" data-testid="retry-result">{searchParams.ok}</div>}
+      {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
+      {q.issues.some((i) => i.key === "conversions_failed") && (
+        <form action={retryConversionsAction} data-testid="retry-form">
+          <button className="bg-violet-700 text-white font-bold px-4 py-2 rounded-lg text-sm">Relancer maintenant les conversions Meta</button>
+        </form>
+      )}
 
       {q.issues.length === 0 ? (
         <p className="rounded-2xl border border-green-200 bg-green-50 text-green-900 p-4 text-sm" data-testid="quality-ok">Aucun problème détecté sur les contrôles disponibles pour cette période.</p>

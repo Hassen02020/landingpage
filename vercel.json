@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/publish-scheduled", "schedule": "0 5 * * *" }
+    { "path": "/api/cron/publish-scheduled", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/retry-conversions", "schedule": "30 5 * * *" }
   ]
 }

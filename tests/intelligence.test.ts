@@ -89,6 +89,24 @@ describe("qualityReport : ce qui fausse les analyses", () => {
   })
 })
 
+describe("qualityReport : journal des conversions Meta", () => {
+  it("échecs et abandons signalés comme critiques, avec le nombre ; rien si tout va bien", () => {
+    const r = qualityReport([lead()], { now: NOW, conversions: { failed: 2, abandoned: 1, pending: 0 } })
+    expect(issue(r, "conversions_failed")).toMatchObject({ count: 2, severity: "critical" })
+    expect(issue(r, "conversions_abandoned")).toMatchObject({ count: 1, severity: "critical" })
+    expect(qualityReport([lead()], { now: NOW, conversions: { failed: 0, abandoned: 0, pending: 3 } }).issues.filter((i) => i.key.startsWith("conversions"))).toEqual([])
+  })
+  it("journal absent (migration 0028 non appliquée) : contrôle déclaré indisponible, jamais « 0 échec »", () => {
+    const r = qualityReport([lead()], { now: NOW, conversions: null })
+    expect(r.unavailable.map((u) => u.key)).toContain("conversions")
+    expect(r.issues.filter((i) => i.key.startsWith("conversions"))).toEqual([])
+  })
+  it("non demandé : aucune mention", () => {
+    const r = qualityReport([lead()], { now: NOW })
+    expect(r.unavailable.map((u) => u.key)).not.toContain("conversions")
+  })
+})
+
 describe("overviewAlerts : alertes issues des seuls chiffres de la période", () => {
   const base = { leads: 10, qualified: 4, bookings: 2, spend: 100, marginConfirmed: 0, unattachedSpendCount: 0, untreated: 0 }
   it("0 réservation : aucune conclusion de rentabilité", () => {

@@ -5,7 +5,7 @@ import { CONTACT_CHANNELS, isRegion, type ContactChannel } from "@/lib/regions"
 import { cleanEmail } from "@/lib/validation"
 import { describeAttachment, lookupConversation, parseWaRef } from "./whatsapp"
 import { normalizePhone, randomRef } from "./hash"
-import { sendMetaEvent } from "./meta"
+import { buildConversionEvent, sendMetaLogged } from "./conversions"
 import { sendTikTokEvent } from "./tiktok"
 import { isProduct, type Product } from "../config"
 import { isLossReason } from "@/lib/governance"
@@ -244,21 +244,8 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   if (firstQualification) {
     if (!lead.tracking_consent) qualified = "sans consentement"
     else {
-      const r = await sendMetaEvent({
-        eventName: "QualifiedLead", // évènement personnalisé : aucune valeur monétaire, jamais relayé depuis le navigateur (absent de ALLOWED_EVENTS)
-        eventId: `qualified-${lead.id}`,
-        actionSource: "chat",
-        customData: { product: lead.product, content_category: lead.product, content_name: lead.offer || lead.product },
-        user: {
-          visitorId: lead.visitor_id ?? undefined,
-          phone: lead.phone ?? undefined,
-          firstName: lead.first_name,
-          ip: lead.ip ?? undefined,
-          userAgent: lead.user_agent ?? undefined,
-          fbp: lead.fbp ?? undefined,
-          fbc: lead.fbc ?? undefined,
-        },
-      }).catch(() => ({ ok: false }))
+      // journalisé et relançable ; évènement personnalisé, jamais relayé depuis le navigateur (absent de ALLOWED_EVENTS)
+      const r = await sendMetaLogged(buildConversionEvent(lead, "QualifiedLead", { eventId: `qualified-${lead.id}` }), { leadId: lead.id })
       if (r.ok) qualified = "envoyé"
     }
   }
@@ -286,7 +273,9 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
       ttclid: lead.ttclid ?? undefined,
     },
   }
-  await Promise.allSettled([sendMetaEvent(event), sendTikTokEvent(event)])
+  // Meta : charge utile construite par la source unique (journal + relance) ; TikTok : évènement ci-dessus (inchangé)
+  const amount = Number(value)
+  await Promise.allSettled([sendMetaLogged(buildConversionEvent(lead, "Purchase", { eventId: `purchase-${lead.id}`, value: Number.isFinite(amount) ? amount : 0 }), { leadId: lead.id, valueTnd: Number.isFinite(amount) ? amount : undefined }), sendTikTokEvent(event)])
   return withQualified({ ok: true as const, conversion: "envoyée" as const })
 }
 

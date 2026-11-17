@@ -36,11 +36,13 @@ describe("/api/cron/publish-scheduled", () => {
 })
 
 describe("cron Vercel (vercel.json)", () => {
-  it("déclare la route protégée avec une fréquence valide (5 champs) ; aucune autre tâche planifiée", async () => {
+  it("déclare EXACTEMENT les deux tâches connues (publication programmée, relance des conversions), chacune avec une fréquence valide (5 champs) ; aucune autre", async () => {
     const { readFileSync } = await import("node:fs")
     const cfg = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8")) as { crons?: { path: string; schedule: string }[] }
-    expect(cfg.crons).toHaveLength(1)
-    expect(cfg.crons![0].path).toBe("/api/cron/publish-scheduled")
-    expect(cfg.crons![0].schedule.trim().split(/\s+/)).toHaveLength(5)
+    expect(cfg.crons!.map((c) => c.path).sort()).toEqual(["/api/cron/publish-scheduled", "/api/cron/retry-conversions"])
+    for (const c of cfg.crons!) expect(c.schedule.trim().split(/\s+/)).toHaveLength(5)
+    // offre Vercel Hobby : au plus 2 tâches, au plus une fois par jour (le jour et l'heure sont fixes, pas de « * » dans l'heure)
+    expect(cfg.crons!.length).toBeLessThanOrEqual(2)
+    for (const c of cfg.crons!) expect(c.schedule.trim().split(/\s+/)[1]).toMatch(/^\d+$/)
   })
 })
