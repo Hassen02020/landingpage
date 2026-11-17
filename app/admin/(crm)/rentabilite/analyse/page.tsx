@@ -8,9 +8,11 @@ import { isConventionalCampaign } from "@/lib/campaign-name"
 
 export const dynamic = "force-dynamic"
 
+const DIM_NOUN: Partial<Record<Dimension, string>> = { product: "produit", niche: "niche", ad: "annonce", adset: "ensemble de publicités", region: "région", age: "tranche d'âge" }
 const DIMS: { key: Dimension; label: string }[] = [
-  { key: "network", label: "Réseau" }, { key: "campaign", label: "Campagne" }, { key: "product", label: "Produit" }, { key: "niche", label: "Niche" }, { key: "ad", label: "Annonce" },
+  { key: "network", label: "Réseau" }, { key: "campaign", label: "Campagne" }, { key: "adset", label: "Ensemble de publicités" }, { key: "ad", label: "Annonce" }, { key: "product", label: "Produit" }, { key: "niche", label: "Niche" }, { key: "region", label: "Région" }, { key: "age", label: "Tranche d'âge (déclarée)" },
 ]
+const MIN_BOOKINGS = 5 // identique au seuil de lib/ad-economics (minBookings par défaut)
 const tnd = (n: number | null) => (n === null ? "—" : `${n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} TND`)
 const signed = (n: number) => `${n > 0 ? "+" : ""}${tnd(n)}`
 
@@ -38,8 +40,8 @@ function Row({ r, winner, dim }: { r: GroupRow; winner: boolean; dim: Dimension 
   return (
     <tr className={`border-t align-top ${winner ? "bg-green-50" : ""}`}>
       <td className="py-2 pr-3 font-semibold">{r.label}{winner && <span className="ml-2 text-xs font-bold bg-green-600 text-white px-2 py-0.5 rounded-full">Gagnante</span>}
-        {!r.sufficient && <span className="block text-xs font-normal text-gray-500">échantillon insuffisant ({m.confirmedBookings} réservation(s) confirmée(s))</span>}
-        {est && <span className="block text-xs font-normal text-amber-700">dépense répartie au prorata des leads : estimation, pas une dépense réelle par {dim === "product" ? "produit" : dim === "niche" ? "niche" : "annonce"}</span>}
+        {!r.sufficient && <span className="block text-xs font-normal text-gray-500" data-testid="sample-note">échantillon insuffisant : {m.leads} lead(s), {m.confirmedBookings} réservation(s) confirmée(s) sur {MIN_BOOKINGS} minimum pour comparer</span>}
+        {est && <span className="block text-xs font-normal text-amber-700">dépense répartie au prorata des leads : estimation, pas une dépense réelle par {DIM_NOUN[dim] ?? "groupe"}</span>}
         {offConvention && <span className="block text-xs font-normal text-red-700">nom hors convention : vérifiez le nom de campagne dans l&apos;annonce</span>}
         {m.bookingsWithoutCommission > 0 && <span className="block text-xs font-normal text-red-700">{m.bookingsWithoutCommission} réservation(s) sans commission importée</span>}
       </td>
@@ -81,8 +83,8 @@ export default async function AnalysePage({ searchParams }: { searchParams: { di
       {t.bookings > 0 && t.bookingsWithoutCommission > 0 && t.bookingsWithoutCommission < t.bookings && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm"><strong>{t.bookingsWithoutCommission} réservation(s) sur {t.bookings} n&apos;ont aucune commission importée</strong> : la marge est sous-estimée tant qu&apos;elles ne sont pas rapprochées.</div>
       )}
-      {(dim === "product" || dim === "niche" || dim === "ad") && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl p-4 text-sm">Dans cette vue, la publicité et les coûts de campagne sont <strong>répartis au prorata des prospects</strong> : ce sont des <strong>estimations (≈)</strong>, pas des dépenses réelles par {dim === "product" ? "produit" : dim === "niche" ? "niche" : "annonce"}. Pour des chiffres réels, regardez les vues Réseau et Campagne.</div>
+      {dim !== "network" && dim !== "campaign" && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl p-4 text-sm">Dans cette vue, la publicité et les coûts de campagne sont <strong>répartis au prorata des prospects</strong> : ce sont des <strong>estimations (≈)</strong>, pas des dépenses réelles par {DIM_NOUN[dim] ?? "groupe"}. Pour des chiffres réels, regardez les vues Réseau et Campagne.</div>
       )}
 
       <form className="flex flex-wrap items-end gap-3 text-sm" method="get">

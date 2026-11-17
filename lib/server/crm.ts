@@ -182,8 +182,12 @@ export async function listStaff(): Promise<{ user_id: string; email: string; ful
 }
 
 export type StatusResult =
-  | { ok: true; conversion: "envoyée" | "sans consentement" | null }
+  | { ok: true; conversion: "envoyée" | "sans consentement" | null; /** évènement « lead qualifié » (première qualification seulement) */ qualified?: "envoyé" | "sans consentement" }
   | { ok: false; error: string }
+
+/** « Lead qualifié » : a atteint « qualifié » ou plus loin (même définition que l'entonnoir et la rentabilité). */
+export const QUALIFIED_OR_BEYOND: readonly Status[] = ["qualifie", "devis", "negociation", "reserve", "gagne"]
+const isQualifiedStage = (s: Status): boolean => QUALIFIED_OR_BEYOND.includes(s)
 
 /**
  * Change le statut d'un lead, trace l'action et, au passage à « réservé », envoie la
@@ -209,6 +213,17 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   if (opts.notes) patch.notes = opts.notes.slice(0, 2000)
   if (firstBooking) patch.booked_at = new Date().toISOString()
 
+  // « lead qualifié » : UNE seule fois par lead, à la première fois qu'il atteint « qualifié » (ou plus loin). Décidé AVANT d'écrire l'historique
+  // du changement en cours. En cas de doute (lecture de l'historique impossible) on n'envoie rien : jamais de doublon.
+  let firstQualification = false
+  if (isQualifiedStage(status) && !isQualifiedStage(lead.status)) {
+    try {
+      const past = await select<{ type: string; to_status: string | null }>("landing_lead_activities", `select=type,to_status&lead_id=eq.${lead.id}&limit=500`)
+      firstQualification = !past.some((a) => a.type === "status_change" && a.to_status !== null && isQualifiedStage(a.to_status as Status))
+    } catch {
+      firstQualification = false
+    }
+  }
   // gouvernance des données : motif de perte (seulement pour « perdu », effacé si le lead quitte ce statut) et produit acheté (à la vente)
   const governance: Record<string, unknown> = {}
   if (status === "perdu" && opts.lostReason) governance.lost_reason = opts.lostReason
@@ -223,9 +238,33 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
     })
   }
 
+  let qualified: "envoyé" | "sans consentement" | undefined
+  if (firstQualification) {
+    if (!lead.tracking_consent) qualified = "sans consentement"
+    else {
+      const r = await sendMetaEvent({
+        eventName: "QualifiedLead", // évènement personnalisé : aucune valeur monétaire, jamais relayé depuis le navigateur (absent de ALLOWED_EVENTS)
+        eventId: `qualified-${lead.id}`,
+        actionSource: "chat",
+        customData: { product: lead.product, content_category: lead.product, content_name: lead.offer || lead.product },
+        user: {
+          visitorId: lead.visitor_id ?? undefined,
+          phone: lead.phone ?? undefined,
+          firstName: lead.first_name,
+          ip: lead.ip ?? undefined,
+          userAgent: lead.user_agent ?? undefined,
+          fbp: lead.fbp ?? undefined,
+          fbc: lead.fbc ?? undefined,
+        },
+      }).catch(() => ({ ok: false }))
+      if (r.ok) qualified = "envoyé"
+    }
+  }
+  const withQualified = <T extends object>(r: T): T & { qualified?: "envoyé" | "sans consentement" } => (qualified ? { ...r, qualified } : r)
+
   // booked_at n'est posé qu'une fois : la vente n'est jamais renvoyée (pas de double comptage)
-  if (!firstBooking) return { ok: true, conversion: null }
-  if (!lead.tracking_consent) return { ok: true, conversion: "sans consentement" }
+  if (!firstBooking) return withQualified({ ok: true as const, conversion: null })
+  if (!lead.tracking_consent) return withQualified({ ok: true as const, conversion: "sans consentement" as const })
 
   const value = opts.bookingValue ?? lead.booking_value ?? 0
   const event = {
@@ -246,7 +285,7 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
     },
   }
   await Promise.allSettled([sendMetaEvent(event), sendTikTokEvent(event)])
-  return { ok: true, conversion: "envoyée" }
+  return withQualified({ ok: true as const, conversion: "envoyée" as const })
 }
 
 /** Écrit le patch ; si la base ne connaît pas encore les colonnes de gouvernance (migration 0026), les écrit sans elles plutôt que d'échouer. */

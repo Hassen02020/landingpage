@@ -21,7 +21,7 @@ beforeEach(() => {
     if (dec.includes("/rest/v1/organizations?")) return json([{ id: E2B }, { id: BOB }])
     const table = dec.match(/\/rest\/v1\/([a-z_]+)/)?.[1] ?? ""
     if (table === "landing_leads") {
-      if (!govCols && dec.includes("is_test")) return json({ code: "42703", message: "column does not exist" }, 400)
+      if (!govCols && dec.includes("is_test")) return json({ code: "42703", message: "column landing_leads.is_test does not exist" }, 400)
       const org = dec.match(/organization_id=eq\.([0-9a-f-]+)/)?.[1]
       return json(leads.filter((r) => r.organization_id === org))
     }

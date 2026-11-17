@@ -44,3 +44,20 @@ Contrôles dépendant de la migration de gouvernance (PR B) : leads de test (exc
 - **Compatible avant la migration :** la valeur est retirée de l'enregistrement si la colonne manque (le lead n'est jamais perdu) ; la vue « Tranche d'âge » de la rentabilité (lot 4) lit avec repli.
 - **Fichiers :** `supabase/migrations/0027_age_range.sql`, `supabase/rollback/0027_rollback.sql` (refusé si des données existent), `supabase/scripts/postcheck-0027.sql` (3 contrôles), `tests/migration-0027.test.ts`, `tests/age-range.test.ts`.
 - **Décision laissée au propriétaire :** à l'anonymisation d'un lead, la tranche d'âge (non identifiante seule) est conservée comme donnée statistique ; dites-le si elle doit être effacée.
+
+## Lot 5 — Évènement « lead qualifié » vers Meta
+- **Définition (validée par le propriétaire) :** la **première** fois qu'un lead atteint « qualifié » **ou plus loin** (devis, négociation, réservé, gagné), une seule fois par lead ; jamais rejoué si le lead revient en arrière puis est requalifié, ni s'il est perdu puis rouvert.
+- **Évènement** : `QualifiedLead` (personnalisé), envoyé côté serveur par `changeStatus`, avec `event_id = qualified-<id du lead>`, **sans valeur monétaire**, téléphone et prénom hachés, **seulement si le visiteur a accepté le suivi**. TikTok non concerné.
+- **Jamais depuis le navigateur** : absent de `ALLOWED_EVENTS` (test).
+- **En cas de doute** (lecture de l'historique impossible) : rien n'est envoyé. Meta non configuré : statut enregistré, pas de fausse mention « envoyé ».
+- Une réservation directe envoie `QualifiedLead` puis `Purchase` (deux évènements distincts).
+- **Test sur le pixel :** utiliser `META_TEST_EVENT_CODE` (Meta → Gestionnaire d'évènements → Tester les évènements) avant le premier envoi réel. Aucun évènement artificiel n'a été envoyé pendant le développement.
+- Une fois l'évènement reçu par Meta, il apparaît comme évènement personnalisé et peut servir d'objectif d'optimisation (à choisir dans Ads Manager, décision du propriétaire).
+
+## Lot 4 — Rentabilité par région, ensemble de publicités, annonce et tranche d'âge déclarée
+- Nouvelles vues de `/admin/rentabilite/analyse` : **Ensemble de publicités** (`utm_term`, à défaut `adset_id`), **Annonce**, **Région**, **Tranche d'âge (déclarée)** ; les vues Réseau, Campagne, Produit et Niche sont inchangées.
+- La dépense d'une campagne est **répartie au prorata des leads** dans ces vues : elle est marquée « estimée » (≈), jamais présentée comme réelle. Les totaux restent exacts.
+- **Échantillon** : chaque ligne sous 5 réservations confirmées affiche « échantillon insuffisant : X lead(s), Y réservation(s) confirmée(s) sur 5 minimum ». Aucune ligne n'est « gagnante » sans ce minimum.
+- Lecture de repli selon les colonnes présentes (tranche d'âge avant sa migration, région avant 0006) ; les leads de test sont exclus (`selectRealLeads`).
+- Correctif : `selectRealLeads` ne conclut « colonne `is_test` absente » que si le message de la base nomme `is_test` ; une autre colonne manquante (ex. tranche d'âge) ne désactive jamais l'exclusion des tests.
+- Jeu de données des tests **fictif et déclaré comme tel** ; aucune conclusion commerciale n'est tirée de ces vues tant qu'il n'y a pas de réservations réelles.

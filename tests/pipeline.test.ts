@@ -76,7 +76,7 @@ describe("statuts : la vente est comptée UNE fois, la conversion publicitaire e
     }
     expect(results.filter((c) => c === "envoyée")).toHaveLength(1) // à l'étape « reserve » seulement
     expect(results.at(-1)).toBeNull() // réservé → gagné : aucune seconde conversion
-    expect(f.meta()).toHaveLength(1)
+    expect(f.meta().filter((c) => c.body.data[0].event_name === "Purchase")).toHaveLength(1) // le lead qualifié (QualifiedLead) est un autre évènement, testé dans qualified-lead.test.ts
     expect(f.tiktok()).toHaveLength(1)
     expect(Number(row().booking_value)).toBe(15600)
     expect(row().booked_at).toBeTruthy()
@@ -97,7 +97,7 @@ describe("statuts : la vente est comptée UNE fois, la conversion publicitaire e
     const again = await changeStatus(current(), "gagne", actor)
     expect(again).toMatchObject({ ok: true, conversion: null })
     expect(row().booked_at).toBe(bookedAt)
-    expect(f.meta()).toHaveLength(1)
+    expect(f.meta().filter((c) => c.body.data[0].event_name === "Purchase")).toHaveLength(1) // le lead qualifié (QualifiedLead) est un autre évènement, testé dans qualified-lead.test.ts
   })
 
   it("« gagné » sans montant refusé (comme « réservé ») ; devis / négociation n'exigent aucun montant ; saut direct vers gagné = 1re vente", async () => {
@@ -110,7 +110,7 @@ describe("statuts : la vente est comptée UNE fois, la conversion publicitaire e
     expect(await changeStatus(current(), "reserve", actor)).toMatchObject({ ok: false })
     expect((await changeStatus(current(), "devis", actor)).ok).toBe(true)
     expect(await changeStatus(current(), "gagne", actor, { bookingValue: 7800 })).toMatchObject({ ok: true, conversion: "envoyée" })
-    expect(f.meta()).toHaveLength(1)
+    expect(f.meta().filter((c) => c.body.data[0].event_name === "Purchase")).toHaveLength(1) // le lead qualifié (QualifiedLead) est un autre évènement, testé dans qualified-lead.test.ts
   })
 
   it("visiteur sans consentement aux traceurs : vente enregistrée, aucune conversion envoyée", async () => {

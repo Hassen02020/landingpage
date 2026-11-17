@@ -119,7 +119,7 @@ describe("selectRealLeads : les tests sont exclus des analyses", () => {
   it("base non migrée (42703) : relit sans filtre, puis ne retente le filtre qu'après 1 minute", async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date("2026-11-20T10:00:00Z"))
     let migrated = false
-    stub((u) => (u.includes("is_test") && !migrated ? new Response(JSON.stringify({ code: "42703" }), { status: 400 }) : new Response(JSON.stringify([{ id: "a" }]), { status: 200 })))
+    stub((u) => (u.includes("is_test") && !migrated ? new Response(JSON.stringify({ code: "42703", message: "column landing_leads.is_test does not exist" }), { status: 400 }) : new Response(JSON.stringify([{ id: "a" }]), { status: 200 })))
     await selectRealLeads("select=id")
     const first = urls().length
     expect(first).toBe(2) // essai filtré refusé, puis lecture sans filtre
@@ -131,6 +131,12 @@ describe("selectRealLeads : les tests sont exclus des analyses", () => {
     expect(urls().at(-1)).toMatch(/is_test=eq\.false$/) // la migration est reprise sans redémarrage
     await selectRealLeads("select=id")
     expect(urls().at(-1)).toMatch(/is_test=eq\.false$/)
+  })
+  it("une AUTRE colonne manquante (42703 sans is_test) est propagée et ne désactive PAS l'exclusion des tests", async () => {
+    stub((u) => (u.includes("age_range") ? new Response(JSON.stringify({ code: "42703", message: "column landing_leads.age_range does not exist" }), { status: 400 }) : new Response(JSON.stringify([{ id: "a" }]), { status: 200 })))
+    await expect(selectRealLeads("select=id,age_range")).rejects.toBeInstanceOf(DbError)
+    await selectRealLeads("select=id")
+    expect(urls().at(-1)).toMatch(/is_test=eq\.false$/) // le filtre est toujours appliqué
   })
   it("toute autre erreur est propagée (jamais masquée)", async () => {
     stub(() => new Response(JSON.stringify({ code: "XX000" }), { status: 500 }))
