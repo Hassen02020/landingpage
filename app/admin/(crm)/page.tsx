@@ -146,7 +146,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
                       <td className="p-3"><input type="checkbox" name="ids" value={l.id} aria-label={`Sélectionner ${l.ref}`} /></td>
                       <td className="p-3 whitespace-nowrap">{formatDate(l.created_at)}</td>
                       <td className="p-3 font-mono whitespace-nowrap"><Link href={`/admin/leads/${l.id}`} className="text-violet-700 underline">{l.ref}</Link></td>
-                      <td className="p-3">{l.first_name} {l.last_name ?? ""}<div className="text-gray-500">{l.phone ? `+${l.phone}` : "—"}</div></td>
+                      <td className="p-3">{l.first_name} {l.last_name ?? ""}{l.is_test && <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-800 text-white text-[10px] font-bold" data-testid="test-badge">TEST</span>}<div className="text-gray-500">{l.phone ? `+${l.phone}` : "—"}</div></td>
                       <td className="p-3">{PRODUCTS[l.product]}<div className="text-gray-500 truncate max-w-[200px]">{l.offer ?? ""}</div></td>
                       <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[l.status]}`}>{STATUS_LABELS[l.status]}</span></td>
                       <td className="p-3 whitespace-nowrap">{l.assigned_to ? staffName.get(l.assigned_to) ?? "—" : <span className="text-amber-600">non assigné</span>}</td>

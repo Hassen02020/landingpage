@@ -3,7 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
 import { SOURCE_LABELS, STATUSES, STATUS_LABELS, findDuplicates, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
-import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
+import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, markTestAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
 import { CONTACT_CHANNEL_LABELS, CONTACT_CHANNELS, REGIONS } from "@/lib/regions"
 import { listTemplates, renderTemplate } from "@/lib/server/templates"
 import { STATUS_COLORS, formatDate } from "../../../format"
@@ -11,6 +11,7 @@ import { blockLeadPhoneAction } from "../../../settings-actions"
 import { currentStaff } from "@/lib/server/auth"
 import { waText } from "@/lib/wa-text"
 import { loadFormConfig } from "@/lib/server/org-public"
+import { LOSS_REASONS, LOSS_REASON_LABELS } from "@/lib/governance"
 
 export const dynamic = "force-dynamic"
 
@@ -51,10 +52,19 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
         <span className="font-mono text-gray-500">{lead.ref}</span>
         {lead.phone && !locked && <Link href={`/admin/clients/${lead.phone}`} className="text-sm underline">Voir le client (360°)</Link>}
         <span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>
+        {lead.is_test && <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-800 text-white" data-testid="test-badge">TEST : exclu des analyses</span>}
         {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="ml-auto bg-green-500 text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>}
       </div>
       {searchParams.ok && <div className="p-3 rounded-xl bg-green-50 text-green-800 text-sm">{searchParams.ok}</div>}
       {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
+      {!locked && can(me?.orgRole, "reports.view") && (
+        <form action={markTestAction} className="flex flex-wrap items-center gap-3 text-sm" data-testid="test-form">
+          <input type="hidden" name="id" value={lead.id} />
+          <input type="hidden" name="is_test" value={lead.is_test ? "0" : "1"} />
+          <button className="border rounded-lg px-3 py-1.5 font-semibold hover:bg-gray-50">{lead.is_test ? "Retirer la marque test" : "Marquer comme test"}</button>
+          <span className="text-gray-500">{lead.is_test ? "Ce lead est exclu des statistiques, de la rentabilité, des clients et de l'export." : "Pour un essai ou une démonstration : le lead reste visible ici mais n'entre plus dans les analyses."}</span>
+        </form>
+      )}
       {locked && <div className="p-3 rounded-xl bg-gray-100 text-gray-700 text-sm">Lead anonymisé le {formatDate(lead.anonymized_at)} : lecture seule.</div>}
 
       {lead.phone && !locked && templates.length > 0 && (
@@ -216,6 +226,17 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
               {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
             <input name="booking_value" inputMode="decimal" placeholder="Montant TND (obligatoire si réservé ou gagné)" defaultValue={lead.booking_value ?? ""} className="w-full px-3 py-2 rounded-lg border" />
+            <label className="block text-xs text-gray-500">Produit acheté (si réservé ou gagné)
+              <select name="purchased_product" defaultValue={lead.purchased_product ?? lead.product} className="mt-1 w-full px-3 py-2 rounded-lg border text-sm text-gray-900" data-testid="purchased-product">
+                {Object.entries(PRODUCTS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </label>
+            <label className="block text-xs text-gray-500">Motif de perte (si perdu, facultatif)
+              <select name="lost_reason" defaultValue={lead.lost_reason ?? ""} className="mt-1 w-full px-3 py-2 rounded-lg border text-sm text-gray-900" data-testid="lost-reason">
+                <option value="">Non précisé</option>
+                {LOSS_REASONS.map((r) => <option key={r} value={r}>{LOSS_REASON_LABELS[r]}</option>)}
+              </select>
+            </label>
             <input name="notes" placeholder="Commentaire (facultatif)" className="w-full px-3 py-2 rounded-lg border" />
             <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Enregistrer</button>
           </form>

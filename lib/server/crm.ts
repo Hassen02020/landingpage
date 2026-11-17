@@ -1,6 +1,6 @@
 // Logique du mini-CRM (serveur) : lecture des leads, statuts, historique, saisie manuelle.
 // Toutes les écritures passent ici et laissent une trace dans landing_lead_activities.
-import { insertOne, insertQuiet, select, update } from "./db"
+import { DbError, insertOne, insertQuiet, select, update } from "./db"
 import { CONTACT_CHANNELS, isRegion, type ContactChannel } from "@/lib/regions"
 import { cleanEmail } from "@/lib/validation"
 import { describeAttachment, lookupConversation, parseWaRef } from "./whatsapp"
@@ -8,6 +8,7 @@ import { normalizePhone, randomRef } from "./hash"
 import { sendMetaEvent } from "./meta"
 import { sendTikTokEvent } from "./tiktok"
 import { isProduct, type Product } from "../config"
+import { isLossReason } from "@/lib/governance"
 
 import { OPEN_STATUSES, STATUSES, STATUS_LABELS, inFilter, isBooking, isStatus, parseStatusList, type Status } from "@/lib/status"
 
@@ -73,6 +74,10 @@ export interface LeadRow {
   utm_term?: string | null
   adset_id?: string | null
   promo_code?: string | null // colonne ajoutée par 0003
+  /** gouvernance des données (migration 0026) : absentes tant qu'elle n'est pas appliquée */
+  is_test?: boolean | null
+  lost_reason?: string | null
+  purchased_product?: string | null
   ad_id: string | null
   landing_page: string | null
   visitor_id: string | null
@@ -183,11 +188,13 @@ export type StatusResult =
  * Change le statut d'un lead, trace l'action et, au passage à « réservé », envoie la
  * conversion Purchase / CompletePayment UNE seule fois (si le prospect a accepté les traceurs).
  */
-export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, opts: { bookingValue?: number; notes?: string } = {}): Promise<StatusResult> {
+export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, opts: { bookingValue?: number; notes?: string; lostReason?: string; purchasedProduct?: string } = {}): Promise<StatusResult> {
   if (lead.anonymized_at) return { ok: false, error: "Lead anonymisé : modification impossible" }
   if (opts.bookingValue !== undefined && (!Number.isFinite(opts.bookingValue) || opts.bookingValue < 0 || opts.bookingValue > 1e9)) {
     return { ok: false, error: "Montant invalide" }
   }
+  if (opts.lostReason && !isLossReason(opts.lostReason)) return { ok: false, error: "Motif de perte invalide" }
+  if (opts.purchasedProduct && !isProduct(opts.purchasedProduct)) return { ok: false, error: "Produit acheté invalide" }
   // vente (réservé OU gagné) : montant obligatoire
   if (isBooking(status) && opts.bookingValue === undefined && lead.booking_value === null) {
     return { ok: false, error: "Montant de la réservation obligatoire" }
@@ -201,7 +208,12 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   if (opts.notes) patch.notes = opts.notes.slice(0, 2000)
   if (firstBooking) patch.booked_at = new Date().toISOString()
 
-  await update("landing_leads", `id=eq.${lead.id}`, patch)
+  // gouvernance des données : motif de perte (seulement pour « perdu », effacé si le lead quitte ce statut) et produit acheté (à la vente)
+  const governance: Record<string, unknown> = {}
+  if (status === "perdu" && opts.lostReason) governance.lost_reason = opts.lostReason
+  else if (status !== "perdu" && lead.lost_reason) governance.lost_reason = null
+  if (isBooking(status) && opts.purchasedProduct) governance.purchased_product = opts.purchasedProduct
+  await updateWithGovernance(lead.id, patch, governance)
   if (lead.status !== status || opts.notes) {
     await logActivity(lead.id, actor, "status_change", {
       from_status: lead.status,
@@ -234,6 +246,35 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   }
   await Promise.allSettled([sendMetaEvent(event), sendTikTokEvent(event)])
   return { ok: true, conversion: "envoyée" }
+}
+
+/** Écrit le patch ; si la base ne connaît pas encore les colonnes de gouvernance (migration 0026), les écrit sans elles plutôt que d'échouer. */
+async function updateWithGovernance(id: string, patch: Record<string, unknown>, governance: Record<string, unknown>): Promise<void> {
+  if (Object.keys(governance).length === 0) {
+    await update("landing_leads", `id=eq.${id}`, patch)
+    return
+  }
+  try {
+    await update("landing_leads", `id=eq.${id}`, { ...patch, ...governance })
+  } catch (e) {
+    if (!(e instanceof DbError) || (e.code !== "42703" && e.code !== "PGRST204")) throw e
+    await update("landing_leads", `id=eq.${id}`, patch)
+  }
+}
+
+export type TestFlagResult = { ok: true } | { ok: false; error: string }
+
+/** Marque (ou retire la marque) « lead de test » : exclu des analyses, jamais supprimé. Tracé dans l'historique. */
+export async function setTestFlag(lead: LeadRow, isTest: boolean, actor: Actor): Promise<TestFlagResult> {
+  if (lead.anonymized_at) return { ok: false, error: "Lead anonymisé : modification impossible" }
+  try {
+    await update("landing_leads", `id=eq.${lead.id}`, { is_test: isTest })
+  } catch (e) {
+    if (e instanceof DbError && (e.code === "42703" || e.code === "PGRST204")) return { ok: false, error: "La migration « gouvernance des données » (0026) n'est pas encore appliquée." }
+    throw e
+  }
+  await logActivity(lead.id, actor, "note", { body: isTest ? "Marqué comme lead de TEST : exclu des analyses." : "Marque « test » retirée : le lead compte de nouveau dans les analyses." })
+  return { ok: true }
 }
 
 export type EditResult = { ok: true } | { ok: false; error: string }

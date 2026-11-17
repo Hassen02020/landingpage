@@ -17,12 +17,13 @@ import {
 } from "@/lib/server/auth"
 import { isPlatformAdmin } from "@/lib/server/tenant"
 import { rateLimited } from "@/lib/server/guard"
-import { canAssignLead, canModifyLead } from "@/lib/permissions"
+import { can, canAssignLead, canModifyLead } from "@/lib/permissions"
 import { STATUSES, isBooking } from "@/lib/status"
 import {
   addNote,
   assignLead,
   changeStatus,
+  setTestFlag,
   createManualLead,
   getLead,
   isStatus,
@@ -103,10 +104,23 @@ export async function changeStatusAction(fd: FormData): Promise<void> {
   const result = await changeStatus(lead, status, actorOf(staff), {
     bookingValue: raw ? Number(raw.replace(",", ".")) : undefined,
     notes: field(fd, "notes") || undefined,
+    lostReason: field(fd, "lost_reason") || undefined,
+    purchasedProduct: field(fd, "purchased_product") || undefined,
   })
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(result.conversion === "envoyée" ? "Statut enregistré — vente transmise à Meta/TikTok" : "Statut enregistré")}`)
+}
+
+/** Marque / démarque un lead de test : réservé aux responsables (même droit que les rapports). */
+export async function markTestAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadForEdit(fd, staff)
+  if (!can(staff.orgRole, "reports.view")) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent("Réservé aux responsables.")}`)
+  const result = await setTestFlag(lead, field(fd, "is_test") === "1", actorOf(staff))
+  revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
+  redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(field(fd, "is_test") === "1" ? "Lead marqué comme test" : "Marque test retirée")}`)
 }
 
 export async function addNoteAction(fd: FormData): Promise<void> {
