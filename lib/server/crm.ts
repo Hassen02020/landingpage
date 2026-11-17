@@ -215,8 +215,10 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
 
   // « lead qualifié » : UNE seule fois par lead, à la première fois qu'il atteint « qualifié » (ou plus loin). Décidé AVANT d'écrire l'historique
   // du changement en cours. En cas de doute (lecture de l'historique impossible) on n'envoie rien : jamais de doublon.
+  // Un lead marqué « test » ne nourrit JAMAIS les plateformes publicitaires (ni QualifiedLead, ni Purchase) : ce serait de fausses conversions.
+  const adsEnabled = lead.is_test !== true
   let firstQualification = false
-  if (isQualifiedStage(status) && !isQualifiedStage(lead.status)) {
+  if (adsEnabled && isQualifiedStage(status) && !isQualifiedStage(lead.status)) {
     try {
       const past = await select<{ type: string; to_status: string | null }>("landing_lead_activities", `select=type,to_status&lead_id=eq.${lead.id}&limit=500`)
       firstQualification = !past.some((a) => a.type === "status_change" && a.to_status !== null && isQualifiedStage(a.to_status as Status))
@@ -263,7 +265,7 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   const withQualified = <T extends object>(r: T): T & { qualified?: "envoyé" | "sans consentement" } => (qualified ? { ...r, qualified } : r)
 
   // booked_at n'est posé qu'une fois : la vente n'est jamais renvoyée (pas de double comptage)
-  if (!firstBooking) return withQualified({ ok: true as const, conversion: null })
+  if (!firstBooking || !adsEnabled) return withQualified({ ok: true as const, conversion: null })
   if (!lead.tracking_consent) return withQualified({ ok: true as const, conversion: "sans consentement" as const })
 
   const value = opts.bookingValue ?? lead.booking_value ?? 0
