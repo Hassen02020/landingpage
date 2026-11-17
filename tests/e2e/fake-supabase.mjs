@@ -175,7 +175,8 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
       const m = /^(not\.)?(eq|neq|is|in|gte|lte|gt|lt|like|ilike)\.(.*)$/.exec(raw)
       if (!m) continue
       const [, not, op, val] = m
-      const cell = row[k]
+      // is_test est NOT NULL DEFAULT false en base (migration 0026) : une ligne sans la valeur est un lead RÉEL
+      const cell = row[k] === undefined && k === "is_test" ? false : row[k]
       let ok = true
       if (op === "eq") ok = String(cell) === val
       else if (op === "neq") ok = String(cell) !== val

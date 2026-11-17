@@ -20,7 +20,7 @@ page.on("request", (r) => { if (r.url().includes("/api/")) api.push({ url: new U
 
 // 1. Arrivée depuis une pub, sans choix de consentement
 await page.goto(`${BASE}/omra?utm_source=facebook&utm_campaign=e2e&fbclid=FB_E2E`, { waitUntil: "networkidle" })
-check("bandeau de consentement affiché", await page.getByRole("dialog", { name: "Consentement cookies" }).isVisible())
+check("bandeau de consentement affiché", await page.getByRole("dialog", { name: "الموافقة على ملفات تعريف الارتباط" }).isVisible())
 check("aucun script Meta/TikTok chargé avant consentement", thirdParty.length === 0)
 check("aucun cookie _fbc posé avant consentement", !(await ctx.cookies()).some((c) => c.name === "_fbc"))
 check("attribution gardée en session uniquement", (await page.evaluate(() => [localStorage.getItem("e2b_lt"), sessionStorage.getItem("e2b_lt")])).every((v, i) => (i === 0 ? v === null : Boolean(v?.includes('"utm_campaign":"e2e"')))))
