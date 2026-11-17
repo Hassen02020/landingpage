@@ -1,6 +1,7 @@
 // Entonnoir WhatsApp : chaque étape garde sa NATURE (observé / saisi par l'équipe / calculé).
 // Un clic prouve une intention, pas un message envoyé : sans API officielle, « envoyé » et « reçu » sont saisis.
 import { select } from "./db"
+import { selectRealLeads } from "./lead-scope"
 import { isBooking } from "@/lib/status"
 import { periodFilter, type Period } from "./stats"
 
@@ -59,7 +60,7 @@ export function whatsappFunnel(clicks: WaClick[], leads: WaLead[], activities: W
 export async function loadWhatsApp(p: Period) {
   const [clicks, leads, activities] = await Promise.all([
     select<WaClick>("landing_events", `select=visitor_ref&event_name=eq.Contact&${periodFilter("created_at", p)}&limit=50000`),
-    select<WaLead>("landing_leads", `select=id,source,status,visitor_ref,booking_value&${periodFilter("created_at", p)}&limit=20000`),
+    selectRealLeads<WaLead>(`select=id,source,status,visitor_ref,booking_value&${periodFilter("created_at", p)}&limit=20000`),
     select<WaActivity>("landing_lead_activities", `select=lead_id,type&type=in.(wa_in,wa_out)&${periodFilter("created_at", p)}&limit=50000`).catch(() => []),
   ])
   return whatsappFunnel(clicks, leads, activities)

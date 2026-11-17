@@ -1,6 +1,7 @@
 // Analytics commerciales : entonnoir réel (étapes atteintes, y compris par les dossiers perdus), délai de premier
 // traitement, séries par jour. Fonctions pures testées ; aucune donnée personnelle n'est lue.
 import { select } from "./db"
+import { selectRealLeads } from "./lead-scope"
 import { STATUSES, isBooking, type Status } from "@/lib/status"
 import { periodFilter, type Period } from "./stats"
 
@@ -91,7 +92,7 @@ export function dailySeries(leads: FunnelLead[], p: Period): DayPoint[] {
 }
 
 export async function loadAnalytics(p: Period) {
-  const leads = await select<FunnelLead>("landing_leads", `select=id,created_at,status,booking_value,booked_at&${periodFilter("created_at", p)}&limit=10000`)
+  const leads = await selectRealLeads<FunnelLead>(`select=id,created_at,status,booking_value,booked_at&${periodFilter("created_at", p)}&limit=10000`)
   const ids = new Set(leads.map((l) => l.id))
   const raw = await select<FunnelActivity>("landing_lead_activities", `select=lead_id,type,to_status,created_at,actor_id&${periodFilter("created_at", { from: p.from, to: "9999-12-30" })}&limit=50000`)
   const activities = raw.filter((a) => ids.has(a.lead_id))

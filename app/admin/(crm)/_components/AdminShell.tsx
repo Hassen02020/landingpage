@@ -1,14 +1,16 @@
 "use client"
 
 // Cadre de l'espace équipe : menu latéral groupé (bureau), barre haute + tiroir (mobile).
-import { can, ROLE_LABELS, type OrgRole, type Permission } from "@/lib/permissions"
+import { ROLE_LABELS, type OrgRole } from "@/lib/permissions"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { logoutAction } from "../../actions"
 
-type IconName = "leads" | "pipeline" | "clock" | "plus" | "chart" | "calc" | "box" | "ticket" | "shield" | "plug" | "link" | "team" | "chat" | "download" | "user"
+import type { IconName } from "@/lib/admin-nav"
+import { visibleGroups } from "@/lib/admin-nav"
+import type { NavItem as Item } from "@/lib/admin-nav"
 
 const ICONS: Record<IconName, React.ReactNode> = {
   leads: (<><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><path d="M16 5.5a3 3 0 0 1 0 5.6M18 14.4c1.8.8 3 2.6 3 5.6" /></>),
@@ -36,69 +38,13 @@ function Icon({ name }: { name: IconName }) {
   )
 }
 
-interface Item {
-  href: string
-  label: string
-  icon: IconName
-  permission?: Permission // absent : visible par tous les rôles
-  plain?: boolean // lien « normal » (téléchargement) au lieu de <Link>
-  match?: (path: string, params: URLSearchParams) => boolean
-}
-interface Group {
-  title: string
-  items: Item[]
-}
-
-const GROUPS: Group[] = [
-  {
-    title: "Leads",
-    items: [
-      { href: "/admin", label: "Leads", icon: "leads", match: (p, q) => (p === "/admin" && q.get("followUp") !== "due") || (p.startsWith("/admin/leads/") && p !== "/admin/leads/new") },
-      { href: "/admin/pipeline", label: "Pipeline", icon: "pipeline" },
-      { href: "/admin/clients", label: "Clients", icon: "team" },
-      { href: "/admin?followUp=due", label: "Relances", icon: "clock", match: (p, q) => p === "/admin" && q.get("followUp") === "due" },
-      { href: "/admin/leads/new", label: "Nouveau lead", icon: "plus" },
-    ],
-  },
-  {
-    title: "Analyse",
-    items: [
-      { href: "/admin/stats", label: "Statistiques", icon: "chart" },
-      { href: "/admin/segments", label: "Segments", icon: "team" },
-      { href: "/admin/rentabilite", label: "Rentabilité", icon: "chart", permission: "ads.view" },
-      { href: "/admin/liens", label: "Liens de campagne", icon: "link" },
-      { href: "/admin/calculateur", label: "Calculateur", icon: "calc" },
-    ],
-  },
-  {
-    title: "Catalogue",
-    items: [
-      { href: "/admin/createur", label: "Créateur de Landing Pages", icon: "plus", permission: "catalog.manage" },
-      { href: "/admin/catalogue", label: "Offres et catégories", icon: "box", permission: "catalog.manage" },
-      { href: "/admin/promos", label: "Codes promo", icon: "ticket", permission: "promos.manage" },
-      { href: "/admin/avis", label: "Avis des visiteurs", icon: "chat", permission: "catalog.manage" },
-    ],
-  },
-  {
-    title: "Réglages",
-    items: [
-      { href: "/admin/integrations", label: "Intégrations", icon: "plug", permission: "social.connect" },
-      { href: "/admin/formulaire", label: "Formulaire", icon: "chat", permission: "site.manage" },
-      { href: "/admin/protection", label: "Protection", icon: "shield", permission: "protection.manage" },
-      { href: "/admin/equipe", label: "Équipe", icon: "team", permission: "employees.view" },
-      { href: "/admin/modeles", label: "Modèles WhatsApp", icon: "chat", permission: "templates.manage" },
-      { href: "/admin/export", label: "Export CSV", icon: "download", plain: true, permission: "data.export" },
-    ],
-  },
-]
-
 function Nav({ role, onNavigate }: { role: OrgRole; onNavigate: () => void }) {
   const path = usePathname() || "/admin"
   const params = useSearchParams()
   const isActive = (it: Item) => (it.match ? it.match(path, params) : path === it.href || path.startsWith(`${it.href}/`))
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5" aria-label="Navigation principale">
-      {GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => !it.permission || can(role, it.permission)) })).filter((g) => g.items.length > 0).map((g) => (
+      {visibleGroups(role).map((g) => (
         <div key={g.title}>
           <div className="px-3 mb-1.5 text-[11px] font-bold uppercase tracking-wider text-violet-300/70">{g.title}</div>
           <ul className="space-y-0.5">
