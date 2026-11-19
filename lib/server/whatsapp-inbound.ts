@@ -23,6 +23,8 @@ export interface WaMessage {
   wamid: string
   from: string
   type: string
+  /** vrai si Meta n'a transmis aucun numéro de téléphone (nom d'utilisateur WhatsApp) : seul l'identifiant spécifique à l'entreprise (BSUID) existe */
+  noPhone?: boolean
   /** texte reçu : lu pour y trouver la référence, JAMAIS enregistré */
   text?: string
   profileName?: string
@@ -41,16 +43,22 @@ export function parseWhatsAppPayload(json: unknown): WaMessage[] {
       const phoneNumberId = String((v.metadata as { phone_number_id?: unknown } | undefined)?.phone_number_id ?? "")
       if (!/^\d{5,25}$/.test(phoneNumberId) || !Array.isArray(v.messages)) continue
       const contacts = Array.isArray(v.contacts) ? (v.contacts as { wa_id?: unknown; profile?: { name?: unknown } }[]) : []
-      for (const m of v.messages as { id?: unknown; from?: unknown; type?: unknown; text?: { body?: unknown } }[]) {
+      for (const m of v.messages as { id?: unknown; from?: unknown; from_user_id?: unknown; type?: unknown; text?: { body?: unknown } }[]) {
         const wamid = String(m?.id ?? "")
         const from = String(m?.from ?? "")
-        if (!/^[A-Za-z0-9_.=\-]{6,100}$/.test(wamid) || !/^\d{6,20}$/.test(from)) continue
+        if (!/^[A-Za-z0-9_.=\-]{6,100}$/.test(wamid)) continue
+        // Nom d'utilisateur WhatsApp : Meta peut omettre le numéro et n'envoyer que l'identifiant d'entreprise (BSUID). Le message est alors
+        // gardé (pour être JOURNALISÉ, jamais perdu en silence) mais ne crée pas de lead : un lead exige un numéro de téléphone.
+        const hasBsuid = typeof m?.from_user_id === "string" && m.from_user_id.length > 0
+        const noPhone = !from && hasBsuid
+        if (!noPhone && !/^\d{6,20}$/.test(from)) continue
         const contact = contacts.find((c) => String(c?.wa_id ?? "") === from)
         const profileName = String(contact?.profile?.name ?? "").replace(/\s+/g, " ").trim().slice(0, 100)
         out.push({
           phoneNumberId,
           wamid,
-          from,
+          from: noPhone ? "" : from,
+          ...(noPhone ? { noPhone: true } : {}),
           type: String(m.type ?? ""),
           text: m.type === "text" ? String(m.text?.body ?? "").slice(0, 4096) : undefined,
           ...(profileName ? { profileName } : {}),
@@ -98,6 +106,8 @@ async function decide(m: WaMessage): Promise<Decision> {
   }
   const orgId = row.organization_id
   if (!row.enabled) return { outcome: "ignored", reason: "numero_desactive", orgId }
+  // reçu sans numéro de téléphone (nom d'utilisateur WhatsApp) : impossible de créer un lead ; journalisé pour que l'équipe sache qu'il existe
+  if (m.noPhone) return { outcome: "ignored", reason: "sans_telephone_bsuid", orgId }
   if (m.type !== "text") return { outcome: "ignored", reason: `type_${m.type || "inconnu"}`.slice(0, 40), orgId } // images, vocaux… : pas de lead
   if (await alreadyHandled(orgId, m.wamid)) return { outcome: "duplicate", reason: "deja_traite", orgId }
 
