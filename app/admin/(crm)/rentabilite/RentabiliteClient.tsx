@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react"
 import { useFormState, useFormStatus } from "react-dom"
-import { addCostAction, voidCostAction, addSpendAction, commitImportAction, confirmCommissionsAction, previewImportAction, voidSpendAction } from "../../rentabilite-actions"
+import { previewSpendImportAction, commitSpendImportAction, addCostAction, voidCostAction, addSpendAction, commitImportAction, confirmCommissionsAction, previewImportAction, voidSpendAction } from "../../rentabilite-actions"
 import type { PreviewResult } from "@/lib/server/commissions"
+import type { SpendPreview } from "@/lib/server/spend-import"
 import { COST_CATEGORIES, COST_LABELS } from "@/lib/variable-cost-categories"
 
 interface SpendRow { id: number; date: string; network: string; campaign: string; amount: number; voids: number | null; reference: string | null }
@@ -29,6 +30,23 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
   const [csv, setCsv] = useState("")
   const [preview, setPreview] = useState<PreviewResult | null>(null)
   const [validated, setValidated] = useState<string[]>([])
+  const [scsv, setScsv] = useState("")
+  const [rate, setRate] = useState("")
+  const [spreview, setSpreview] = useState<SpendPreview | null>(null)
+  const rateNum = Number(rate.replace(",", "."))
+  const rateArg = rate.trim() && Number.isFinite(rateNum) && rateNum > 0 ? rateNum : null
+  const runSpendPreview = () => start(async () => {
+    setMsg(null)
+    const r = await previewSpendImportAction(scsv, rateArg)
+    if (r.fatal) { setSpreview(null); setMsg(r.fatal); return }
+    setSpreview(r)
+  })
+  const runSpendCommit = () => start(async () => {
+    const r = await commitSpendImportAction(scsv, rateArg)
+    if (r.fatal) { setMsg(r.fatal); return }
+    setMsg(`${r.imported} dépense(s) importée(s)${r.skipped ? `, ${r.skipped} ignorée(s)` : ""}${r.failed ? `, ${r.failed} en échec` : ""}.`)
+    setSpreview(null); setScsv("")
+  })
   const voided = new Set(spend.filter((s) => s.voids != null).map((s) => s.voids))
   const err = (k: string) => state?.errors?.[k]
   const cerr = (k: string) => cstate?.errors?.[k]
@@ -110,6 +128,31 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
             ))}
           </tbody></table></div>
       </section>
+
+      {canManage && (
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3" data-testid="spend-import">
+          <h2 className="font-black">Importer les dépenses Meta (fichier CSV)</h2>
+          <p className="text-sm text-gray-600">Dans Ads Manager : Rapports, puis Exporter en CSV, avec les colonnes <strong>Jour</strong>, <strong>Nom de la campagne</strong> et <strong>Montant dépensé</strong> (ventilation par jour). Collez le contenu ci-dessous. Rien n&apos;est écrit avant l&apos;aperçu et votre validation. Une ligne déjà importée n&apos;est jamais comptée deux fois.</p>
+          <textarea value={scsv} onChange={(e) => setScsv(e.target.value)} rows={5} className={input + " font-mono text-xs"} dir="ltr" aria-label="Contenu CSV des dépenses Meta" />
+          <label className="block text-sm">Taux de change, si le montant n&apos;est pas en TND (1 unité de la devise de l&apos;export = combien de TND ?)
+            <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" placeholder="exemple : 3,1 (à vérifier, jamais deviné par le CRM)" className={input} dir="ltr" />
+          </label>
+          <div className="flex gap-3">
+            <button type="button" disabled={pending || !scsv.trim()} onClick={runSpendPreview} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-gray-900 text-white disabled:opacity-60">Aperçu</button>
+            {spreview && !spreview.needsRate && spreview.counts.nouvelle > 0 && <button type="button" disabled={pending} onClick={runSpendCommit} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 text-white disabled:opacity-60">Importer {spreview.counts.nouvelle} dépense(s)</button>}
+          </div>
+          {spreview?.needsRate && <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">Le fichier est en {spreview.currency} : indiquez le taux de change vers le TND, puis refaites l&apos;aperçu.</p>}
+          {spreview && !spreview.needsRate && (
+            <div className="space-y-2" data-testid="spend-preview">
+              <p className="text-sm">{spreview.counts.nouvelle} nouvelle(s) pour {tnd(spreview.totalNewTnd)} · {spreview.counts.deja_importee} déjà importée(s) · {spreview.counts.conflit} en conflit{spreview.currency && spreview.currency !== "TND" ? ` · devise ${spreview.currency}` : ""}</p>
+              {spreview.errors.length > 0 && <ul className="text-xs text-red-700 list-disc pl-5">{spreview.errors.slice(0, 20).map((e) => <li key={e.line}>Ligne {e.line} : {e.error}</li>)}</ul>}
+              <div className="overflow-x-auto"><table className="w-full text-sm"><tbody>{spreview.rows.map((r) => (
+                <tr key={r.reference} className="border-t"><td className="py-1.5 pr-3">{r.date}</td><td className="pr-3">{r.campaign}</td><td className="pr-3 text-right">{tnd(r.amountTnd)}</td>
+                  <td className="text-xs">{r.status === "nouvelle" ? "Nouvelle" : r.status === "deja_importee" ? "Déjà importée" : `Conflit : ${tnd(r.existingTnd ?? 0)} déjà enregistré. Annulez cette dépense puis ré-importez.`}</td></tr>))}</tbody></table></div>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
         <h2 className="font-black">Commissions EasyV4</h2>

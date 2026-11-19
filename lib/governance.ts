@@ -22,3 +22,14 @@ export const isLossReason = (v: unknown): v is LossReason => typeof v === "strin
 export const PURCHASED_PRODUCTS = Object.keys(PRODUCTS) as Product[]
 export { isProduct as isPurchasedProduct }
 export type { Product }
+
+/**
+ * Passage à « perdu » depuis un écran : le motif est obligatoire (sinon impossible de savoir pourquoi on perd des ventes).
+ * `existing` : motif déjà enregistré sur le lead (un lead déjà perdu avec motif peut être ré-enregistré sans le redemander).
+ * Renvoie le message d'erreur à afficher, ou null si tout est en règle. Les passages automatiques (doublon, API) restent possibles.
+ */
+export function lossReasonError(status: string, reason: string | null | undefined, existing?: string | null): string | null {
+  if (status !== "perdu") return null
+  if (reason) return isLossReason(reason) ? null : "Motif de perte invalide."
+  return existing && isLossReason(existing) ? null : "Choisissez le motif de perte avant d'enregistrer : prix, disponibilité, injoignable…"
+}

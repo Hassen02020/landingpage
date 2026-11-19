@@ -20,6 +20,7 @@ import { rateLimited } from "@/lib/server/guard"
 import { can, canAssignLead, canModifyLead } from "@/lib/permissions"
 import { retryConversions } from "@/lib/server/conversions"
 import { STATUSES, isBooking } from "@/lib/status"
+import { lossReasonError } from "@/lib/governance"
 import {
   addNote,
   assignLead,
@@ -102,6 +103,8 @@ export async function changeStatusAction(fd: FormData): Promise<void> {
   const status = field(fd, "status")
   if (!isStatus(status)) redirect(`/admin/leads/${lead.id}?erreur=statut`)
   const raw = field(fd, "booking_value")
+  const lossError = lossReasonError(status, field(fd, "lost_reason") || null, lead.lost_reason)
+  if (lossError) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(lossError)}`)
   const result = await changeStatus(lead, status, actorOf(staff), {
     bookingValue: raw ? Number(raw.replace(",", ".")) : undefined,
     notes: field(fd, "notes") || undefined,
@@ -253,7 +256,8 @@ export async function bulkAction(fd: FormData): Promise<void> {
     }
     if (action.startsWith("status:")) {
       const st = action.slice(7)
-      if ((QUICK_STATUSES as readonly string[]).includes(st) && lead.status !== st) ok = (await changeStatus(lead, st as (typeof QUICK_STATUSES)[number], actorOf(staff))).ok
+      if (st === "perdu") ok = false // le motif de perte est obligatoire : à saisir sur la fiche de chaque lead
+      else if ((QUICK_STATUSES as readonly string[]).includes(st) && lead.status !== st) ok = (await changeStatus(lead, st as (typeof QUICK_STATUSES)[number], actorOf(staff))).ok
       else ok = lead.status === st
     } else if (action === "assign:none") ok = (await assignLead(lead, null, actorOf(staff))).ok
     else if (action === "assign:me") ok = (await assignLead(lead, staff.userId, actorOf(staff))).ok
@@ -271,6 +275,7 @@ export async function moveLeadAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadForEdit(fd, staff)
   const status = field(fd, "status")
+  if (status === "perdu") redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(lossReasonError("perdu", null, lead.lost_reason) ?? "")}`)
   if ((QUICK_STATUSES as readonly string[]).includes(status)) await changeStatus(lead, status as (typeof QUICK_STATUSES)[number], actorOf(staff)).catch(() => undefined)
   revalidatePath("/admin/pipeline")
   redirect(safeBack(field(fd, "back") || "/admin/pipeline"))
