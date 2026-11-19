@@ -7,6 +7,7 @@ import { loadProfitability } from "@/lib/server/profitability"
 import { conversionStats } from "@/lib/server/conversions"
 import { periodFilter, type Period } from "@/lib/server/stats"
 import { isUntreated } from "@/lib/status"
+import { executiveAnswers, type Answer } from "@/lib/executive"
 import { overviewAlerts, qualityReport, type OverviewAlert, type OverviewInput, type QualityLead, type QualityReport } from "@/lib/intelligence"
 
 const LIMIT = 10000
@@ -58,4 +59,15 @@ export async function loadOverview(p: Period, finance: boolean): Promise<Overvie
   }
   const input: OverviewInput = { leads: a.leads.length, qualified: count("qualifies"), bookings: count("reserves"), spend, marginConfirmed, unattachedSpendCount, untreated }
   return { ...input, alerts: overviewAlerts(input), financeIncluded: finance, period: p, funnel: a.funnel.map((s) => ({ key: s.key, label: s.label, count: s.count })) }
+}
+
+export interface ExecutiveData { answers: Answer[]; period: Period; financeIncluded: boolean; leads: number }
+
+/** Tableau « Dirigeant » : les cinq questions. Les campagnes sont lues une seule fois ; sans le droit « ads.view », la finance reste vide. */
+export async function loadExecutive(p: Period, finance: boolean): Promise<ExecutiveData> {
+  const a = await loadAnalytics(p)
+  const count = (key: string) => a.funnel.find((s) => s.key === key)?.count ?? 0
+  const fin = finance ? (await loadProfitability(p, "campaign")).result : null
+  const answers = executiveAnswers({ leads: a.leads.length, qualified: count("qualifies"), bookings: count("reserves"), finance: fin })
+  return { answers, period: p, financeIncluded: finance, leads: a.leads.length }
 }
