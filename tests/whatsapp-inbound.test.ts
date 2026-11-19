@@ -188,3 +188,41 @@ describe("traitement d'un message", () => {
     expect(w.leads).toHaveLength(1)
   })
 })
+
+describe("nom d'utilisateur WhatsApp : message sans numéro de téléphone", () => {
+  const noPhone = (over: Record<string, unknown> = {}) => JSON.stringify({
+    object: "whatsapp_business_account",
+    entry: [{ id: "1", changes: [{ field: "messages", value: { messaging_product: "whatsapp", metadata: { display_phone_number: "21698140514", phone_number_id: NUM_E2B }, contacts: [{ profile: { name: "Client Anonyme" }, user_id: "TN.1539393327740961" }], messages: [{ from_user_id: "TN.1539393327740961", id: "wamid.NOPHONE1", timestamp: "1794350000", type: "text", text: { body: "Bonjour, je veux la Omra" }, ...over }] } }] }],
+  })
+
+  it("est extrait (jamais perdu en silence), sans numéro", () => {
+    const m = parseWhatsAppPayload(JSON.parse(noPhone()))
+    expect(m).toHaveLength(1)
+    expect(m[0]).toMatchObject({ wamid: "wamid.NOPHONE1", from: "", noPhone: true, phoneNumberId: NUM_E2B })
+  })
+
+  it("est journalisé « ignoré : sans_telephone_bsuid », ne crée aucun lead et répond 200 (Meta ne rejoue pas)", async () => {
+    const body = noPhone()
+    const r = await post(body)
+    expect(r.status).toBe(200)
+    expect(w.leads).toHaveLength(0)
+    expect(w.events).toEqual([expect.objectContaining({ platform: "whatsapp", external_id: "wamid.NOPHONE1", source_ref: NUM_E2B, status: "ignored", reason: "sans_telephone_bsuid" })])
+    expect(JSON.stringify(w.events)).not.toContain("1539393327740961")
+    expect(JSON.stringify(w.events)).not.toContain("Omra")
+  })
+
+  it("ni numéro ni identifiant d'entreprise : toujours ignoré sans journal (rien d'exploitable)", () => {
+    expect(parseWhatsAppPayload(JSON.parse(noPhone({ from_user_id: undefined })))).toHaveLength(0)
+  })
+
+  it("un numéro invalide (non vide) reste refusé comme avant", () => {
+    expect(parseWhatsAppPayload(JSON.parse(noPhone({ from: "abc" })))).toHaveLength(0)
+  })
+
+  it("le message réel reçu par Meta le 14/11 (avec numéro et BSUID) crée toujours son lead", async () => {
+    const real = JSON.stringify({ object: "whatsapp_business_account", entry: [{ id: "1036944079418891", changes: [{ field: "messages", value: { messaging_product: "whatsapp", metadata: { display_phone_number: "15551943732", phone_number_id: NUM_E2B }, contacts: [{ profile: { name: "Easy2Book" }, wa_id: "21698140514", user_id: "TN.1539393327740961", country_code: "TN" }], messages: [{ from: "21698140514", from_user_id: "TN.1539393327740961", id: "wamid.REAL0001", timestamp: "1794691922", text: { body: "test crm2" }, type: "text" }] } }] }] })
+    expect((await post(real)).status).toBe(200)
+    expect(w.leads).toHaveLength(1)
+    expect(w.events).toEqual([expect.objectContaining({ external_id: "wamid.REAL0001", status: "created" })])
+  })
+})
