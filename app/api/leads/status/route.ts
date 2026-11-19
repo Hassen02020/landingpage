@@ -42,7 +42,7 @@ async function handlePOST(request: NextRequest) {
   try {
     const lead = id ? await getLead(id) : await getLeadByRef(ref!)
     if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 })
-    const result = await changeStatus(lead, status, { id: null, label: "API" }, { bookingValue, notes: str(body.notes, 2000) })
+    const result = await changeStatus(lead, status, { id: null, label: "API" }, { bookingValue, notes: str(body.notes, 2000), lostReason: typeof body.lost_reason === "string" && body.lost_reason ? body.lost_reason : undefined })
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 })
     return NextResponse.json({ ok: true, lead: { id: lead.id, ref: lead.ref, status }, conversion: result.conversion })
   } catch (e) {

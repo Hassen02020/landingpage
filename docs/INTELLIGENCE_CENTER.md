@@ -81,3 +81,9 @@ Une page, cinq réponses, chacune avec sa fiabilité (« Chiffre exact », « Pa
 5. **Quelle campagne financer ?** Reprend la gagnante du moteur de rentabilité (résultat positif, dépenses, au moins 5 réservations confirmées). Sinon : « Aucune pour l'instant » avec la raison.
 
 Droits : page « reports.view » ; les questions financières (1, 4, 5) exigent « ads.view », sinon elles s'affichent « non disponible ». Aucune donnée personnelle. Code : `lib/executive.ts` (pur, testé), `loadExecutive` dans `lib/server/intelligence.ts`. Aucune migration.
+
+## Import des dépenses Meta (CSV) et motif de perte obligatoire
+
+**Import des dépenses (`/admin/rentabilite`, section « Importer les dépenses Meta »).** Export CSV d'Ads Manager, colonnes « Jour », « Nom de la campagne », « Montant dépensé (USD) » (ou `montant_tnd`). Aperçu obligatoire avant toute écriture. Montant dans une autre devise que le TND : le propriétaire saisit le taux, jamais deviné. Nom de campagne hors convention : ligne refusée. Une ligne déjà importée (même jour, même campagne) n'est jamais doublée ; si le montant a changé, elle est signalée « conflit » (annuler l'ancienne dépense, puis ré-importer). Écritures au registre à ajout seul, réseau Meta, `source = manuel`, référence `import-meta:<date>:<campagne>`. Aucune migration. L'API Marketing de Meta (automatique) reste à décider (jeton à saisir par le propriétaire).
+
+**Motif de perte obligatoire.** Passer un lead à « perdu » depuis la fiche exige un motif ; depuis le pipeline, l'utilisateur est renvoyé vers la fiche ; les actions groupées « perdu » sont refusées. Le marquage « doublon » et l'API (motif facultatif `lost_reason`) restent possibles. Code : `lossReasonError` dans `lib/governance.ts`.

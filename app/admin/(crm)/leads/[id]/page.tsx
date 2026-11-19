@@ -232,9 +232,9 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
                 {Object.entries(PRODUCTS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
               </select>
             </label>
-            <label className="block text-xs text-gray-500">Motif de perte (si perdu, facultatif)
+            <label className="block text-xs text-gray-500">Motif de perte (obligatoire si perdu)
               <select name="lost_reason" defaultValue={lead.lost_reason ?? ""} className="mt-1 w-full px-3 py-2 rounded-lg border text-sm text-gray-900" data-testid="lost-reason">
-                <option value="">Non précisé</option>
+                <option value="">Choisir un motif…</option>
                 {LOSS_REASONS.map((r) => <option key={r} value={r}>{LOSS_REASON_LABELS[r]}</option>)}
               </select>
             </label>

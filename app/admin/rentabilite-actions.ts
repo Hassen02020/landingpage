@@ -1,5 +1,7 @@
 "use server"
 
+import { previewSpendImport, commitSpendImport, type SpendPreview, type SpendCommit } from "@/lib/server/spend-import"
+import { MAX_SPEND_BYTES } from "@/lib/spend-import"
 import { revalidatePath } from "next/cache"
 import { can } from "@/lib/permissions"
 import { currentStaff } from "@/lib/server/auth"
@@ -98,3 +100,23 @@ export async function voidCostAction(id: number): Promise<{ ok: boolean; message
   revalidatePath("/admin/rentabilite")
   return { ok: true }
 }
+
+export async function previewSpendImportAction(csv: string, rate: number | null): Promise<SpendPreview> {
+  const staff = await manager()
+  if (!staff) return { ...emptySpendPreview, fatal: "Réservé aux administrateurs." }
+  if (typeof csv !== "string" || csv.length > MAX_SPEND_BYTES) return { ...emptySpendPreview, fatal: "Fichier trop volumineux." }
+  if (rateLimited(`ads-spend-preview:${staff.userId}`, 30, 10 * 60 * 1000)) return { ...emptySpendPreview, fatal: "Trop de tentatives. Réessayez plus tard." }
+  return runWithOrg(staff.organizationId, () => previewSpendImport(csv, rate ?? undefined))
+}
+
+export async function commitSpendImportAction(csv: string, rate: number | null): Promise<SpendCommit & { fatal?: string }> {
+  const staff = await manager()
+  if (!staff) return { imported: 0, skipped: 0, failed: 0, fatal: "Réservé aux administrateurs." }
+  if (typeof csv !== "string" || csv.length > MAX_SPEND_BYTES) return { imported: 0, skipped: 0, failed: 0, fatal: "Fichier trop volumineux." }
+  if (rateLimited(`ads-spend-commit:${staff.userId}`, 10, 10 * 60 * 1000)) return { imported: 0, skipped: 0, failed: 0, fatal: "Trop d'imports. Réessayez plus tard." }
+  const res = await runWithOrg(staff.organizationId, () => commitSpendImport(csv, rate ?? undefined, staff.userId))
+  revalidatePath("/admin/rentabilite")
+  return res
+}
+
+const emptySpendPreview: SpendPreview = { currency: null, needsRate: false, rows: [], errors: [], counts: { nouvelle: 0, deja_importee: 0, conflit: 0 }, totalNewTnd: 0 }
