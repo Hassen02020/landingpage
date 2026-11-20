@@ -151,10 +151,13 @@ const EVISA_PRESET: ThemePreset = {
   offers: [],
   design: {
     colors: { preset: "famille", custom: "#003878" },
-    hero: "standard",
+    // même en-tête et même pied de page que la page Omra Ramadan complet (mise en page « split » : texte + vidéo verticale)
+    hero: "split",
     form: { email: true, region: false, age: false, destinations: EVISA_DESTINATIONS },
     cta: { label: "اطلب عرض سعر", whatsapp: true },
     blocks: [
+      // vidéo finale fournie par le propriétaire (20/11/2026) : fichier du site, chargé seulement au clic. Ses images sont à vérifier (mention « contenu généré par IA » pour les publicités).
+      { id: "vid0001", type: "video", title: "الفيديو التعريفي", text: "", items: [], images: ["/evisa-passeport-tunisien-poster.jpg"], cta: "form", ctaLabel: "", video: "/evisa-passeport-tunisien.mp4" },
       { id: "stp0001", type: "steps", title: "كيف نعمل؟", text: "", items: [
         { title: "اختر وجهتك", text: "املأ النموذج واختر الوجهة التي تحب السفر إليها." },
         { title: "نرسل لك عرض السعر والوثائق", text: "مستشار Easy2Book يتصل بك ويرسل لك عرض السعر وقائمة الوثائق المطلوبة لهذه الوجهة." },
@@ -162,7 +165,7 @@ const EVISA_PRESET: ThemePreset = {
       ], images: [], cta: "form", ctaLabel: "", video: "" },
       { id: "ntc0001", type: "notice", title: "ملاحظة رسمية", text: "تأشيرة E-Visa هي تأشيرة يتم التقديم عليها عن بُعد دون الحاجة إلى السفارة، وتبقى مطلوبة رسمياً. شروطها تختلف حسب البلد والجنسية ومدة الإقامة، والقبول النهائي يبقى دائماً من اختصاص سلطات البلد المعني.", items: [], images: [], cta: "form", ctaLabel: "", video: "" },
     ],
-    sections: [{ key: "intro", visible: true }, { key: "block:stp0001", visible: true }, { key: "block:ntc0001", visible: true }, { key: "offers", visible: false }, { key: "inclusions", visible: false }, { key: "testimonials", visible: false }, { key: "faq", visible: true }, { key: "form", visible: true }],
+    sections: [{ key: "intro", visible: true }, { key: "block:vid0001", visible: true }, { key: "block:stp0001", visible: true }, { key: "block:ntc0001", visible: true }, { key: "offers", visible: false }, { key: "inclusions", visible: false }, { key: "testimonials", visible: false }, { key: "faq", visible: true }, { key: "form", visible: true }],
   },
 }
 
