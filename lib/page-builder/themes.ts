@@ -130,6 +130,42 @@ const GROUP1_PRESET = groupPreset({ name: "الفوج الأول", slug: "omra-f
 const GROUP2_PRESET = groupPreset({ name: "الفوج الثاني", slug: "omra-foj-2", date: "2027-02-18", nights: "25", nightsDetail: "20 بمكة + 5 بالمدينة", price: "7800", tag: "⭐ الإقامة الأطول" })
 const CHAWWAL_PRESET = groupPreset({ name: "عمرة شوال", slug: "omra-chawwal", date: "2027-03-15", nights: "14", nightsDetail: "10 بمكة + 4 بالمدينة", price: "4800", tag: "🕌 السعر الأقل" })
 
+
+// E-VISA (module « sur devis ») : aucun prix, aucun délai, aucune offre. Le visiteur choisit sa destination dans le formulaire (obligatoire) ; un conseiller envoie
+// le devis et la liste des pièces. Textes issus de la brochure du propriétaire (20/11/2026). Liste de destinations : source indiquée par le propriétaire
+// (destinations « eVisa » pour le passeport tunisien) ; les destinations signalées « non vérifiées » par cette source ne sont PAS proposées dans la liste :
+// elles passent par « وجهة أخرى · Autre destination (حسب الطلب) ». Aucun document n'est collecté sur le site (uniquement par WhatsApp).
+export const EVISA_DESTINATIONS: string[] = [
+  "ألبانيا · Albanie", "أنغولا · Angola", "أنتيغوا وبربودا · Antigua-et-Barbuda", "أرمينيا · Arménie", "أستراليا · Australie", "جزر البهاما · Bahamas",
+  "البحرين · Bahreïn", "بوتان · Bhoutan", "بوروندي · Burundi", "كمبوديا · Cambodge", "تشاد · Tchad", "كوبا · Cuba", "جورجيا · Géorgie", "غيانا · Guyana",
+  "قيرغيزستان · Kirghizistan", "لاوس · Laos", "ملاوي · Malawi", "موزمبيق · Mozambique", "عُمان · Oman", "باكستان · Pakistan",
+  "بابوا غينيا الجديدة · Papouasie-Nouvelle-Guinée", "قطر · Qatar", "جزر سليمان · Îles Salomon", "سورينام · Suriname", "طاجيكستان · Tadjikistan",
+  "تايلاند · Thaïlande", "أوغندا · Ouganda", "الإمارات العربية المتحدة · Émirats arabes unis", "أوزبكستان · Ouzbékistan", "فيتنام · Vietnam",
+  "زامبيا · Zambie", "زيمبابوي · Zimbabwe", "وجهة أخرى · Autre destination (حسب الطلب)",
+]
+const EVISA_PRESET: ThemePreset = {
+  name: "تأشيرات إلكترونية E-Visa للجواز التونسي",
+  slug: "evisa",
+  headline: "وجهات متاحة بإجراءات تأشيرة إلكترونية (E-Visa) لحاملي الجواز التونسي",
+  description: "مع Easy2Book نعاونك تفهم إجراءات التأشيرة، تعرف الوثائق المطلوبة، وتحضّر مطلبك بطريقة أسهل. اختر وجهتك في النموذج وسنرسل لك عرض سعر مع قائمة الوثائق. ملاحظة رسمية: شروط التأشيرة تختلف حسب البلد والجنسية ومدة الإقامة، والقبول النهائي من اختصاص سلطات البلد المعني.",
+  offers: [],
+  design: {
+    colors: { preset: "famille", custom: "#003878" },
+    hero: "standard",
+    form: { email: true, region: false, age: false, destinations: EVISA_DESTINATIONS },
+    cta: { label: "اطلب عرض سعر", whatsapp: true },
+    blocks: [
+      { id: "stp0001", type: "steps", title: "كيف نعمل؟", text: "", items: [
+        { title: "اختر وجهتك", text: "املأ النموذج واختر الوجهة التي تحب السفر إليها." },
+        { title: "نرسل لك عرض السعر والوثائق", text: "مستشار Easy2Book يتصل بك ويرسل لك عرض السعر وقائمة الوثائق المطلوبة لهذه الوجهة." },
+        { title: "نحضّر مطلبك معك", text: "نرافقك في فهم الإجراءات وتحضير المطلب الإلكتروني. تُرسَل الوثائق عبر واتساب فقط، وليس عبر النموذج." },
+      ], images: [], cta: "form", ctaLabel: "", video: "" },
+      { id: "ntc0001", type: "notice", title: "ملاحظة رسمية", text: "تأشيرة E-Visa هي تأشيرة يتم التقديم عليها عن بُعد دون الحاجة إلى السفارة، وتبقى مطلوبة رسمياً. شروطها تختلف حسب البلد والجنسية ومدة الإقامة، والقبول النهائي يبقى دائماً من اختصاص سلطات البلد المعني.", items: [], images: [], cta: "form", ctaLabel: "", video: "" },
+    ],
+    sections: [{ key: "intro", visible: true }, { key: "block:stp0001", visible: true }, { key: "block:ntc0001", visible: true }, { key: "offers", visible: false }, { key: "inclusions", visible: false }, { key: "testimonials", visible: false }, { key: "faq", visible: true }, { key: "form", visible: true }],
+  },
+}
+
 const ALL_DATED: OfferField[] = ["name", "destination", "departure_date", "nights", "nights_detail", "price", "price_before", "seats_total", "tag", "features", "description", "image_url"]
 
 export const THEMES: Theme[] = [
@@ -159,6 +195,8 @@ export const THEMES: Theme[] = [
     hints: { name: "ex. Vacances — nom de l'offre", headline: "ex. Vos vacances d'été avec Easy2Book", destination: "ex. destination", features: "ex. Vol\nHôtel", description: "Détails réels de l'offre." } },
   { id: "promotion", label: "Promotion spéciale", tagline: "Offre promotionnelle avec prix barré", emoji: "🏷️", product: "autre", family: "autre", lang: "fr", offerRequired: ["price_before"], offerFields: ["name", "destination", "departure_date", "price", "price_before", "seats_total", "tag", "features", "description", "image_url"],
     hints: { name: "ex. Promotion — nom", headline: "ex. Une offre à saisir", features: "ex. Ce qui est inclus", description: "Conditions réelles de la promotion." } },
+  { id: "evisa", label: "E-Visa (sur devis)", tagline: "Visa électronique : le visiteur choisit sa destination, aucun prix affiché", emoji: "🛂", product: "autre", family: "autre", lang: "ar", offerRequired: [], offerFields: ["name", "price", "description"],
+    hints: { name: "ex. E-Visa", headline: "ex. Destinations disponibles en E-Visa", description: "Texte de la page (sans prix ni délai inventés)." }, preset: EVISA_PRESET },
   { id: "autre", label: "Autre produit", tagline: "Tout autre produit ou service", emoji: "✨", product: "autre", family: "autre", lang: "fr", offerRequired: [], offerFields: ["name", "destination", "departure_date", "price", "price_before", "seats_total", "tag", "features", "description", "image_url"],
     hints: { name: "ex. Nom du produit", headline: "ex. Pourquoi ce produit", features: "ex. Point fort 1\nPoint fort 2", description: "Description réelle du produit." } },
 ]

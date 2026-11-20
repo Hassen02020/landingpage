@@ -52,7 +52,7 @@ export interface PageDesign {
   background: "famille" | "blanc" | "teinte"
   cta: { label: string; whatsapp: boolean }
   price: { prefix: boolean; showBefore: boolean }
-  form: { email: boolean; region: boolean; /** tranche d'âge déclarée (facultative) : désactivée par défaut, texte de consentement à valider avant activation */ age: boolean }
+  form: { email: boolean; region: boolean; /** tranche d'âge déclarée (facultative) : désactivée par défaut, texte de consentement à valider avant activation */ age: boolean; /** liste de destinations à choisir dans le formulaire (page « sur devis », ex. E-Visa) : vide = pas de liste */ destinations: string[] }
   /** mise en page de l'en-tête : « standard » (bandeau) ou « split » (texte + carte vidéo verticale, fond clair) */
   hero: "standard" | "split"
   sections: { key: DesignSection; visible: boolean }[]
@@ -81,7 +81,7 @@ export const sectionLabel = (d: { blocks: { id: string; title: string }[] }, key
   key.startsWith("block:") ? `Bloc « ${d.blocks.find((b) => `block:${b.id}` === key)?.title ?? "?"} »` : SECTION_LABELS[key as Exclude<DesignSection, `block:${string}`>]
 
 export const defaultDesign = (family: Family): PageDesign => ({
-  v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true }, form: { email: false, region: false, age: false }, hero: "standard",
+  v: 1, colors: { preset: "famille", custom: "" }, background: "famille", cta: { label: "", whatsapp: false }, price: { prefix: true, showBefore: true }, form: { email: false, region: false, age: false, destinations: [] }, hero: "standard",
   sections: SECTION_DEFAULTS[family].map((key) => ({ key, visible: true })), faq: [], testimonials: [], program: [], services: [], conditions: [], deadline: "", blocks: [],
 })
 
@@ -140,6 +140,7 @@ export function pgJsonText(v: unknown): string {
 /** Taille acceptée SANS la migration 0022 : contrainte de 0018 (16 000 octets), 1 000 de marge. Au-delà, l'enregistrement exige 0022. */
 export const LEGACY_DESIGN_BYTES = 15000
 /** Taille maximale du design stocké, en OCTETS de sa forme PostgreSQL : contrainte de 0022 (64 000 octets), 4 000 de marge. */
+export const MAX_DESTINATIONS = 80
 export const MAX_DESIGN_BYTES = 60000
 export const designBytes = (d: PageDesign): number => new TextEncoder().encode(pgJsonText(d)).length
 
@@ -167,7 +168,14 @@ export function sanitizeDesign(raw: unknown, family: Family): { design: PageDesi
   const price = obj(r.price)
   d.price = { prefix: price.prefix !== false, showBefore: price.showBefore !== false }
 
-  d.form = { email: obj(r.form).email === true, region: obj(r.form).region === true, age: obj(r.form).age === true }
+  const rawDest = Array.isArray(obj(r.form).destinations) ? (obj(r.form).destinations as unknown[]) : []
+  if (rawDest.length > MAX_DESTINATIONS) errors.destinations = `${MAX_DESTINATIONS} destinations maximum.`
+  const destinations: string[] = []
+  for (const x of rawDest.slice(0, MAX_DESTINATIONS)) {
+    const v = clean(typeof x === "string" ? x : "", 64)
+    if (v && destinations.indexOf(v) < 0) destinations.push(v)
+  }
+  d.form = { email: obj(r.form).email === true, region: obj(r.form).region === true, age: obj(r.form).age === true, destinations }
   d.hero = r.hero === "split" ? "split" : "standard"
 
   const list = (v: unknown, max: number, label: string): unknown[] => {

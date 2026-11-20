@@ -10,7 +10,7 @@ import { isOfferExpired, pageStatus, type PageStatus } from "@/lib/page-status"
 import { readiness, type Readiness } from "@/lib/page-builder/readiness"
 import { themeById, type Theme } from "@/lib/page-builder/themes"
 import { rateLimited } from "@/lib/server/guard"
-import { saveDesign } from "@/lib/server/page-design"
+import { loadDesign, saveDesign } from "@/lib/server/page-design"
 import { recordVersion } from "@/lib/server/page-versions"
 import type { Product } from "@/lib/config"
 import type { SlugLock } from "@/lib/catalog-slug"
@@ -48,7 +48,10 @@ export async function loadBuilderPage(id: string, themeId?: string | null): Prom
   const today = tunisDay()
   const offers = await listOffers({ categoryId: id })
   const lock = (await categorySlugLock(id))?.lock ?? { locked: false as const }
-  return { category, offers, status: pageStatus({ visible: category.visible, offers, today }), lock, readiness: readiness(category, offers, today, themeId) }
+  // page « sur devis » (E-Visa) : pas d'offre, la destination se choisit dans le formulaire (liste de destinations de la personnalisation)
+  const { design } = await loadDesign(id, category.product).catch(() => ({ design: null }))
+  const quote = { destinations: design ? design.form.destinations.length : 0 }
+  return { category, offers, status: pageStatus({ visible: category.visible, offers, today }), lock, readiness: readiness(category, offers, today, themeId, quote) }
 }
 
 /** Offres telles que les verrait le public (jamais le coût) — sert à l'aperçu d'une page masquée. */

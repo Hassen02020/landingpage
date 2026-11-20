@@ -19,6 +19,7 @@ function Save() {
 /** Éditeur de personnalisation : l'aperçu (étape 5) montre exactement le résultat ; rien n'est publié tant que la page n'est pas publiée. */
 export function DesignEditor({ id, initial, available, theme, media = [] }: { id: string; initial: PageDesign; available: boolean; theme: string; media?: MediaEntry[] }) {
   const [d, setD] = useState<PageDesign>(initial)
+  const [destText, setDestText] = useState<string>(initial.form.destinations.join("\n"))
   const [state, action] = useFormState<DesignState | undefined, FormData>(saveDesignAction, undefined)
   const errs = state?.errors ?? {}
   const move = (i: number, dir: -1 | 1) => setD((x) => { const s = x.sections.slice(); const j = i + dir; if (j < 0 || j >= s.length) return x; [s[i], s[j]] = [s[j], s[i]]; return { ...x, sections: s } })
@@ -75,6 +76,18 @@ export function DesignEditor({ id, initial, available, theme, media = [] }: { id
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.form.email} onChange={(e) => upd("form", { ...d.form, email: e.target.checked })} aria-label="Demander l'e-mail dans le formulaire" /> Demander l&apos;e-mail dans le formulaire (facultatif pour le visiteur)</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.form.age === true} onChange={(e) => upd("form", { ...d.form, age: e.target.checked })} aria-label="Demander la tranche d'âge dans le formulaire" data-testid="age-checkbox" /> Demander la tranche d&apos;âge (facultatif, déclarée par le visiteur : n&apos;activez qu&apos;après validation du texte d&apos;information)</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.form.region} onChange={(e) => upd("form", { ...d.form, region: e.target.checked })} aria-label="Demander la région dans le formulaire" /> Demander la région dans le formulaire (liste de gouvernorats, facultatif pour le visiteur)</label>
+        <label className="block text-sm">
+          <span className="font-bold">Liste de destinations du formulaire (une par ligne)</span>
+          <span className="block text-xs text-gray-500">Page « sur devis » (ex. E-Visa) : le visiteur choisit une destination, obligatoire. Laissez vide pour ne pas afficher de liste. Chaque destination est enregistrée dans le lead.</span>
+          <textarea
+            rows={6}
+            value={destText}
+            onChange={(e) => { setDestText(e.target.value); upd("form", { ...d.form, destinations: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 80) }) }}
+            className={`${inp} font-mono text-xs`}
+            aria-label="Liste de destinations du formulaire"
+            data-testid="destinations-textarea"
+          />
+        </label>
         <p className="text-xs text-gray-500">Les prix et les dates viennent toujours de vos offres : ce réglage ne change que leur présentation.</p>
       </section>
 

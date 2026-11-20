@@ -49,7 +49,7 @@ check("accueil du créateur affiché", await p.getByRole("heading", { name: "Cr�
 await p.getByRole("link", { name: "+ Nouvelle page" }).click()
 await p.waitForURL(/\/admin\/createur\/modeles/)
 const cards = await p.locator("[data-theme]").count()
-check("écran 1 : quatorze modèles proposés (11 + les 3 départs Omra)", cards === 14, String(cards))
+check("écran 1 : quinze modèles proposés (12 + les 3 départs Omra, dont E-Visa)", cards === 15, String(cards))
 const themeIds = await p.locator("[data-theme]").evaluateAll((els) => els.map((e) => e.getAttribute("data-theme")))
 check("écran 1 : Omra, Omra Ramadan, Voyage organisé, Turquie, Hôtel, Séjour, Promotion, Circuit, Vacances, Autre", ["omra", "ramadan-omra", "ramadan-complet", "voyage-organise", "turquie", "hotel", "sejour", "promotion", "circuit", "vacances", "autre"].every((t) => themeIds.includes(t)))
 await shot(p, "01-choix-du-modele")

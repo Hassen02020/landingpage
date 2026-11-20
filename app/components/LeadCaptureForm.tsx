@@ -107,6 +107,8 @@ export interface LeadCaptureFormProps {
   offers?: string[]
   defaultOffer?: string
   destinations?: string[]
+  /** page « sur devis » : le choix de la destination est obligatoire */
+  requireDestination?: boolean
   periods?: string[]
   niche?: string
   lang?: Lang
@@ -145,6 +147,7 @@ export function LeadCaptureForm({
   offers,
   defaultOffer,
   destinations,
+  requireDestination = false,
   periods,
   niche,
   lang = "fr",
@@ -356,7 +359,7 @@ export function LeadCaptureForm({
       )}
 
       {destinations && destinations.length > 0 && (
-        <select name="destination" defaultValue="" disabled={submitting} className={inputCls} aria-label={t.destination}>
+        <select name="destination" defaultValue="" required={requireDestination} disabled={submitting} className={inputCls} aria-label={t.destination} data-testid="destination-select">
           <option value="">{t.destination}</option>
           {destinations.map((d) => (
             <option key={d} value={d}>
