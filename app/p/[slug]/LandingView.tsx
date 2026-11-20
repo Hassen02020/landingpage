@@ -53,6 +53,8 @@ export function LandingView({ category, offers, preview = false, design = null }
   const t = T[lang]
   const dir = lang === "ar" ? "rtl" : "ltr"
   const family = familyOf(category.product)
+  // page « sur devis » (ex. E-Visa) : aucune offre ni prix, le visiteur choisit sa destination dans le formulaire
+  const quote = offers.length === 0 && (design?.form.destinations?.length ?? 0) > 0
   const primary = design ? resolvePrimary(design) : null
   const base = STYLE[family]
   const st: FamilyStyle = primary ? { ...CUSTOM, accentColor: primary, page: design?.background === "blanc" ? "bg-white" : design?.background === "teinte" ? "bg-[var(--pl)]" : base.page } : { ...base, page: design?.background === "blanc" ? "bg-white" : base.page }
@@ -71,7 +73,7 @@ export function LandingView({ category, offers, preview = false, design = null }
   const heroVideo = split ? design?.blocks.find((b) => b.type === "video") ?? null : null
   const reviewed = REVIEW_PAGE_KEYS.includes(category.slug) && lang === "ar"
   const priceByOffer = Object.fromEntries(offers.map((o) => [label(o), Number(o.price)]))
-  const faq = design && design.faq.length ? design.faq : faqFor(family, lang)
+  const faq = design && design.faq.length ? design.faq : faqFor(family, lang, quote)
 
   const choose = (o: PublicOffer) => {
     setOffer(label(o))
@@ -262,6 +264,8 @@ export function LandingView({ category, offers, preview = false, design = null }
             askEmail={design?.form.email === true}
             askRegion={design?.form.region === true}
             askAge={design?.form.age === true}
+            destinations={design && (design.form.destinations?.length ?? 0) > 0 ? design.form.destinations : undefined}
+            requireDestination={quote}
             askTravelers={family === "voyage" || family === "hotel" || family === "omra"}
             priceByOffer={split ? priceByOffer : undefined}
           />
@@ -278,7 +282,7 @@ export function LandingView({ category, offers, preview = false, design = null }
           nav={[
             ...(heroVideo ? [{ href: "#video", label: N[lang].video }] : []),
             ...(design && design.services.length > 0 ? [{ href: "#services", label: N[lang].services }] : []),
-            { href: "#offres", label: N[lang].prices },
+            ...(offers.length > 0 ? [{ href: "#offres", label: N[lang].prices }] : []),
             ...(reviewed ? [{ href: "#avis", label: N[lang].reviews }] : []),
             { href: "#faq", label: N[lang].faq },
           ]}
@@ -292,7 +296,7 @@ export function LandingView({ category, offers, preview = false, design = null }
         <SiteHeader
           nav={[
             ...(design && design.services.length > 0 ? [{ href: "#services", label: N[lang].services }] : []),
-            { href: "#offres", label: N[lang].prices },
+            ...(offers.length > 0 ? [{ href: "#offres", label: N[lang].prices }] : []),
             ...(reviewed ? [{ href: "#avis", label: N[lang].reviews }] : []),
             { href: "#faq", label: N[lang].faq },
           ]}

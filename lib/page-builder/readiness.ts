@@ -45,19 +45,22 @@ const present = (o: OfferRow, f: OfferField): boolean => {
   return v !== null && v !== undefined && String(v).trim() !== ""
 }
 
-export function readiness(category: CategoryLike, offers: OfferRow[], today: string, themeId?: string | null): Readiness {
+export function readiness(category: CategoryLike, offers: OfferRow[], today: string, themeId?: string | null, quote?: { destinations: number }): Readiness {
   const family = familyOf(category.product)
   const theme = themeById(themeId)
   const required = Array.from(new Set<OfferField>([...FAMILY_MIN[family], ...(theme && familyOf(theme.product) === family ? theme.offerRequired : [])]))
   const checks: Check[] = []
   const add = (c: Check) => checks.push(c)
   const live = offers.filter((o) => o.visible && !o.archived_at)
+  // page « sur devis » : aucune offre, mais une liste de destinations dans le formulaire (jamais un prix inventé)
+  const quoteMode = live.length === 0 && (quote?.destinations ?? 0) > 0
 
   add({ id: "nom", level: "bloquant", ok: category.name.trim().length >= 2, label: "Nom de la page", detail: "Le nom est le titre principal de la page." })
   add({ id: "adresse", level: "bloquant", ok: SLUG.test(category.slug) && category.slug.length <= 60, label: "Adresse de la page", detail: "Minuscules, chiffres et tirets." })
   add({ id: "accroche", level: "bloquant", ok: Boolean(category.headline && category.headline.trim()), label: "Argument commercial (accroche)", detail: "Une phrase qui donne envie de réserver." })
   add({ id: "presentation", level: "bloquant", ok: Boolean(category.description && category.description.trim().length >= 20), label: "Présentation du produit", detail: "Au moins 20 caractères." })
-  add({ id: "offre", level: "bloquant", ok: live.length > 0, label: "Au moins une offre affichée", detail: "Une page sans offre n'est pas prête à recevoir de la publicité." })
+  if (quoteMode) add({ id: "offre", level: "bloquant", ok: true, label: "Page sur devis", detail: `Aucune offre ni prix : le visiteur choisit sa destination dans le formulaire (${quote?.destinations} destination(s)).` })
+  else add({ id: "offre", level: "bloquant", ok: live.length > 0, label: "Au moins une offre affichée", detail: "Une page sans offre n'est pas prête à recevoir de la publicité." })
   const status = pageStatus({ visible: true, offers: live.map((o) => ({ ...o, visible: true })), today })
   add({ id: "offre-valide", level: "bloquant", ok: live.length === 0 || status.validOffers > 0, label: "Au moins une offre non expirée", detail: "Toutes les offres affichées ont une date de départ passée." })
 
@@ -72,7 +75,7 @@ export function readiness(category: CategoryLike, offers: OfferRow[], today: str
   }
 
   add({ id: "banniere", level: "avertissement", ok: Boolean(category.banner_desktop || category.banner_mobile), label: "Bannière principale", detail: "Sans image, la page affiche un fond de couleur." })
-  add({ id: "prestations", level: "avertissement", ok: live.some((o) => (o.features ?? []).length > 0), label: "Prestations incluses", detail: "Listez ce qui est réellement inclus." })
+  if (!quoteMode) add({ id: "prestations", level: "avertissement", ok: live.some((o) => (o.features ?? []).length > 0), label: "Prestations incluses", detail: "Listez ce qui est réellement inclus." })
   if (family === "voyage" || family === "omra") add({ id: "programme", level: "avertissement", ok: live.some((o) => Boolean((o.description || "").trim())), label: "Programme ou détails", detail: "Le programme rassure les visiteurs." })
   add({ id: "photos", level: "avertissement", ok: live.length > 0 && live.every((o) => Boolean(o.image_url)), label: "Photo de chaque offre" })
   add({ id: "places", level: "avertissement", ok: live.some((o) => o.seats_total !== null && o.seats_total !== undefined), label: "Places disponibles renseignées", detail: "Facultatif : sans valeur, aucune rareté n'est affichée." })

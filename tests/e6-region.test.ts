@@ -82,7 +82,7 @@ describe("E6 : serveur", () => {
 
 describe("E6 : formulaire et réglage de page", () => {
   const theme = THEMES.find((t) => t.id === "ramadan-complet")!
-  const html = (form: { email: boolean; region: boolean; age?: boolean }, askAge = form.age === true) => renderToStaticMarkup(createElement(LandingView, { category: category({ slug: "omra-ramadan-complet", product: "omra", lang: "ar", name: "عمرة رمضان كامل" }), offers: [offer({ product: "omra" })], design: { ...sanitizeDesign(theme.preset!.design, "omra").design, form: { ...form, age: askAge } } }))
+  const html = (form: { email: boolean; region: boolean; age?: boolean }, askAge = form.age === true) => renderToStaticMarkup(createElement(LandingView, { category: category({ slug: "omra-ramadan-complet", product: "omra", lang: "ar", name: "عمرة رمضان كامل" }), offers: [offer({ product: "omra" })], design: { ...sanitizeDesign(theme.preset!.design, "omra").design, form: { ...form, age: askAge, destinations: [] } } }))
   it("réglage désactivé par défaut ; seul le modèle Ramadan l'active", () => {
     expect(defaultDesign("omra").form.region).toBe(false)
     expect(sanitizeDesign({ form: { region: "oui" } }, "omra").design.form.region).toBe(false)

@@ -27,7 +27,30 @@ const SPECIFIC: Record<Family, Record<"fr" | "ar" | "en", Faq | null>> = {
   autre: { fr: null, ar: null, en: null },
 }
 
-export function faqFor(family: Family, lang: "fr" | "ar" | "en"): Faq[] {
+// FAQ des pages « sur devis » (E-Visa) : sans prix ni délai ; reprend la mention de la brochure (acceptation finale par les autorités du pays).
+const QUOTE = {
+  fr: [
+    { q: "Comment obtenir un devis ?", a: "Choisissez votre destination dans le formulaire. Un conseiller Easy2Book vous recontacte avec le devis et la liste des documents à fournir pour cette destination." },
+    { q: "Une E-Visa signifie-t-elle voyager sans visa ?", a: "Non. L'E-Visa est une demande de visa faite en ligne, sans passer par l'ambassade. Elle reste obligatoire : les conditions varient selon le pays, la nationalité et la durée du séjour, et l'acceptation finale relève exclusivement des autorités du pays concerné." },
+    { q: "Ma destination n'est pas dans la liste ?", a: "Choisissez « Autre destination » et indiquez-la à notre conseiller : nous vérifions avec vous si une demande en ligne est possible." },
+    { q: "Où envoyer mes documents ?", a: "Ne les envoyez pas dans le formulaire. Votre conseiller vous indiquera comment les transmettre par WhatsApp." },
+  ],
+  en: [
+    { q: "How do I get a quote?", a: "Choose your destination in the form. An Easy2Book advisor will contact you with the quote and the list of documents required for that destination." },
+    { q: "Does an e-Visa mean travelling without a visa?", a: "No. An e-Visa is a visa application made online, without going to the embassy. It remains mandatory: requirements vary by country, nationality and length of stay, and final approval rests solely with the authorities of the country concerned." },
+    { q: "My destination is not in the list?", a: "Choose \"Other destination\" and tell our advisor: we check with you whether an online application is possible." },
+    { q: "Where do I send my documents?", a: "Do not send them in the form. Your advisor will tell you how to send them by WhatsApp." },
+  ],
+  ar: [
+    { q: "كيف أحصل على عرض سعر؟", a: "اختر وجهتك في النموذج. سيتصل بك مستشار Easy2Book ويرسل لك عرض السعر وقائمة الوثائق المطلوبة لهذه الوجهة." },
+    { q: "هل تعني تأشيرة E-Visa السفر «بدون فيزا»؟", a: "لا. الـ E-Visa هي تأشيرة يتم التقديم عليها عن بُعد دون الحاجة إلى السفارة، وتبقى مطلوبة رسمياً. شروطها تختلف حسب البلد والجنسية ومدة الإقامة، والقبول النهائي يبقى من اختصاص سلطات البلد المعني." },
+    { q: "وجهتي غير موجودة في القائمة؟", a: "اختر «وجهة أخرى» وأخبر مستشارنا: نتحقق معك إن كان التقديم الإلكتروني ممكناً." },
+    { q: "أين أرسل وثائقي؟", a: "لا ترسلها في النموذج. سيوضح لك المستشار كيفية إرسالها عبر واتساب." },
+  ],
+}
+
+export function faqFor(family: Family, lang: "fr" | "ar" | "en", quote = false): Faq[] {
+  if (quote) return QUOTE[lang]
   const extra = SPECIFIC[family][lang]
   return extra ? [...COMMON[lang], extra] : COMMON[lang]
 }
