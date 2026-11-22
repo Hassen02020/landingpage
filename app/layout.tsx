@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { AttributionTracker } from "./components/AttributionTracker"
 import { TrackingConsent } from "./components/TrackingConsent"
+import { VisitCounter } from "./components/VisitCounter"
 import { SITE_URL } from "@/lib/config"
 
 export const metadata: Metadata = {
@@ -39,6 +40,8 @@ export default function RootLayout({
         <TrackingConsent />
         <AttributionTracker />
         {children}
+        {/* Mesure d'audience anonyme, sans cookie ni identifiant : indépendante du consentement aux traceurs publicitaires */}
+        <VisitCounter />
       </body>
     </html>
   )

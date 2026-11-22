@@ -363,7 +363,7 @@ export function LandingView({ category, offers, preview = false, design = null }
       {!preview && split && <Easy2BookFooter name={category.name} phone={`+216${PHONE_NUMBER}`} phoneLabel={formatPhone(PHONE_NUMBER)} whatsappHref={wa()} onWhatsApp={onWa({ location: "footer" })} lang={lang} />}
       {!preview && !split && <SiteFooter whatsappHref={wa()} onWhatsApp={onWa({ location: "footer" })} lang={lang} />}
 
-      <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
+      <div style={{ bottom: "var(--consent-h, 0px)" }} className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
         <a href="#reservation" className={`text-white font-black rounded-xl py-3 text-center ${st.button}`}>{ctaLabel}</a>
         <a href={wa()} target="_blank" rel="noopener noreferrer" onClick={onWa({ location: "sticky" })} className="bg-e2b-wa hover:bg-e2b-wa-dark text-white font-black rounded-xl px-4 py-3" aria-label="WhatsApp">💬</a>
         <a href={`tel:+216${PHONE_NUMBER}`} aria-label={t.call} className="border rounded-xl px-4 py-3">📞</a>
