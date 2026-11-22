@@ -11,7 +11,9 @@ Le propriétaire demande de vérifier que le chantier concerne le CRM EasyV4 et 
 - Tout le CRM construit jusqu'ici (leads, ventes, entonnoir, journal de conversions, WhatsApp entrant, Centre d'intelligence) vit dans ce projet Landing / Growth OS. Cette spécification est écrite pour ce projet : `landing_conversations` s'ajoute à côté de `landing_leads`.
 - Les garde-fous des migrations Landing **refusent de s'exécuter** si des tables EasyV4 (`agencies`, `crm_conversations`, `reservations`) existent dans la base cible ; Landing n'écrit jamais dans EasyV4 (import contrôlé uniquement).
 
-**Conséquence :** la demande « concerne EasyV4, sans écriture dans Landing / Growth OS » ne peut être ni vérifiée ni appliquée telle quelle. Deux options, **à trancher par le propriétaire avant tout GO** :
+**Décision du propriétaire (22/11/2026) : « on est sur le bon projet Landing Page » → option A retenue.** Le chantier est hébergé dans Landing / Growth OS ; EasyV4 n'est ni lu ni modifié.
+
+**Conséquence (avant cette décision) :** la demande « concerne EasyV4, sans écriture dans Landing / Growth OS » ne peut être ni vérifiée ni appliquée telle quelle. Deux options, **à trancher par le propriétaire avant tout GO** :
 - **Option A (spécification actuelle)** : héberger les conversations dans Growth OS / Landing, là où vivent déjà les leads. Aucun contact avec EasyV4.
 - **Option B** : héberger dans le CRM EasyV4. Cela exige l'accès à son dépôt et à sa base (non fournis), sa propre spécification et ses propres garde-fous ; Landing / Growth OS ne serait alors ni modifié ni lu.
 Aucune requête ni écriture n'a été faite vers EasyV4. Les modèles de données et règles ci-dessous sont indépendants de l'hôte ; seul le SQL (§4) vise Landing.
@@ -158,4 +160,5 @@ GO migration → lecture avant, application, `postcheck-0029` → code → CI ve
 
 ## 11. Décisions
 Confirmées le 22/11/2026 : (1) saisie hybride OUI ; (2) nouvelle conversation après 30 jours sans échange OUI ; (3) saisie par tous les conseillers dans leurs droits, avec traçabilité ; (4) conservation proposée 24 mois, à vérifier juridiquement, téléphone **uniquement** dans la fiche ; (5) canaux : WhatsApp, Messenger, Instagram, commentaire Facebook, téléphone, autre ; (6) rapprochement Meta : saisie hebdomadaire, import CSV plus tard.
-**En attente :** option A ou B pour l'hébergement (§0) ; validation juridique de la durée (§7) ; GO migration ; GO de chaque lot.
+**Confirmé :** hébergement option A (projet Landing Page / Growth OS).
+**En attente :** validation juridique de la durée (§7) ; GO migration ; GO de chaque lot.
