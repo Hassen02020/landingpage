@@ -519,6 +519,17 @@ await page.getByText("Mot de passe modifié").waitFor({ timeout: 8000 }).catch((
 check("compte : mot de passe changé", fake.users.find((u) => u.email === ADMIN.email).password === "NouveauMdp-2027")
 fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
 
+// ---- Canaux (lot C) : état réel de chaque canal, lecture seule ----
+{
+  await page.goto(`${BASE}/admin/canaux`, { waitUntil: "networkidle" })
+  check("canaux : lien « Canaux » dans le menu", await side.getByRole("link", { name: "Canaux", exact: true }).isVisible())
+  check("canaux : 7 canaux listés", (await page.locator('[data-testid="channel-row"]').count()) === 7)
+  const st = async (label) => (await page.locator('[data-testid="channel-row"]', { hasText: label }).first().getAttribute("data-state"))
+  check("canaux : Messenger et Instagram « non connectés » (aucune intégration)", (await st("Facebook Messenger")) === "not_connected" && (await st("Instagram Direct")) === "not_connected")
+  check("canaux : le téléphone est présenté comme saisie manuelle", (await st("Téléphone")) === "manual")
+  check("canaux : les formulaires reçoivent des leads réels du jeu de données", (await st("Landing pages et formulaires")) === "receiving", String(await st("Landing pages et formulaires")))
+  check("canaux : la page n'a écrit aucune donnée", !fake.calls.some((c) => /^(POST|PATCH|DELETE)/.test(c) && c.includes("/canaux")))
+}
 // ---- À traiter (lot B) : liste de travail issue des règles de relance, lecture seule, sans téléphone ----
 {
   await page.goto(`${BASE}/admin/a-traiter`, { waitUntil: "networkidle" })

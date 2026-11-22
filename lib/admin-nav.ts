@@ -55,6 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Réglages",
     items: [
+      { href: "/admin/canaux", label: "Canaux", icon: "plug", permission: "reports.view" },
       { href: "/admin/integrations", label: "Intégrations", icon: "plug", permission: "social.connect" },
       { href: "/admin/formulaire", label: "Formulaire", icon: "chat", permission: "site.manage" },
       { href: "/admin/protection", label: "Protection", icon: "shield", permission: "protection.manage" },
