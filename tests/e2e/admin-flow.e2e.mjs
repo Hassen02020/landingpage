@@ -519,6 +519,18 @@ await page.getByText("Mot de passe modifié").waitFor({ timeout: 8000 }).catch((
 check("compte : mot de passe changé", fake.users.find((u) => u.email === ADMIN.email).password === "NouveauMdp-2027")
 fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
 
+// ---- À traiter (lot B) : liste de travail issue des règles de relance, lecture seule, sans téléphone ----
+{
+  await page.goto(`${BASE}/admin/a-traiter`, { waitUntil: "networkidle" })
+  check("à traiter : lien « À traiter » dans le menu", await side.getByRole("link", { name: "À traiter", exact: true }).isVisible())
+  const rows = await page.locator('[data-testid="todo-row"]').count()
+  check("à traiter : des alertes sont listées pour les dossiers ouverts du jeu de données", rows > 0, String(rows))
+  const todoText = await page.locator("main, body").first().innerText()
+  const phones = db.landing_leads.map((l) => String(l.phone ?? "")).filter((p) => p.length >= 8)
+  check("à traiter : aucun téléphone de client affiché", phones.every((p) => !todoText.includes(p)))
+  check("à traiter : la page n'a écrit aucune donnée", !fake.calls.some((c) => /^(POST|PATCH|DELETE)/.test(c) && c.includes("/a-traiter")))
+  check("à traiter : un dossier réservé ou perdu n'apparaît pas", !db.landing_leads.filter((l) => ["reserve", "gagne", "perdu"].includes(l.status)).some((l) => todoText.includes(l.ref)))
+}
 // ---------------------------------------------------------------- export
 // ---- Conversations (migration 0029) : saisie d'un lot, d'une conversation reliée, annulation ; aucun numéro affiché ----
 {
