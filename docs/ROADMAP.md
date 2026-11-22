@@ -125,6 +125,9 @@ Décision du propriétaire : les anciens témoignages sont **masqués** (non con
 
 Preuves : `tests/migration-0025.test.ts` (7, PostgreSQL), `reviews.test.ts` (14, dont 4 sabotages vérifiés), `reviews-api.test.ts` (9), `reviews-view.test.ts` (3), parcours navigateur `tests/e2e/reviews.e2e.mjs` (20 contrôles : dépôt → invisible → validation → visible → retrait). Voir l'état de déploiement dans le journal.
 
+## Growth & Marketing Intelligence (22/11/2026)
+Vision et feuille de route : voir `docs/VISION_GROWTH_INTELLIGENCE.md` (Audience, Produits, Retours clients, Pilotage). Étape 1 conversations : `docs/CHANTIER_CONVERSATIONS.md` (migration 0029 appliquée, lot 1a en production). Lot B (relances) : PR #85. **Aucun nouveau chantier n'est autorisé tant qu'il n'a pas son audit, sa proposition et son GO.**
+
 ## Journal
 
 - 02/11/2026 — Bloc 0 : état réel vérifié (main `04de912`, 3 branches, PR #1 ouverte hors sujet, 0 workflow CI).
