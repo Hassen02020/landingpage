@@ -15,7 +15,7 @@ const jwt = () => {
 }
 
 const E2B_ORG = "00000000-0000-4000-8000-0000000e2b01"
-const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs", "landing_page_versions", "landing_reviews"]
+const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs", "landing_page_versions", "landing_reviews", "landing_conversations"]
 
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
@@ -76,6 +76,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
   const db = {
     landing_page_versions: [],
     landing_reviews: [],
+    landing_conversations: [],
     landing_staff: [
       { user_id: ADMIN_ID, email: ADMIN.email, full_name: "Direction", role: "admin", active: true, created_at: day(40) },
       { user_id: AGENT_ID, email: AGENT.email, full_name: "Agent Sami", role: "agent", active: true, created_at: day(20) },
@@ -157,7 +158,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     ]
     for (const l of bobLeads) db.landing_leads.push({ ...l, organization_id: BOB_ORG, ref: `E2B-B${l.ref.slice(5)}`.slice(0, 10) })
   }
-  const seq = { landing_lead_activities: 100, landing_promo_codes: 100, landing_blocklist: 100, landing_integration_changes: 100, landing_admin_log: 100 }
+  const seq = { landing_lead_activities: 100, landing_promo_codes: 100, landing_blocklist: 100, landing_integration_changes: 100, landing_admin_log: 100, landing_conversations: 0 }
   // valeurs par défaut posées par la vraie base (DEFAULT des migrations)
   const DEFAULTS = {
     landing_promo_codes: { active: true, used_count: 0 },
@@ -166,6 +167,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     landing_offers: { visible: false, position: 0, seats_sold: 0, features: [], archived_at: null },
     landing_categories: { visible: false, position: 0, lang: "fr" },
     landing_reviews: { status: "pending", moderated_at: null },
+    landing_conversations: { status: "ouverte", is_test: false, source_kind: "saisie", anonymized_at: null },
   }
   const UNIQUE = { landing_leads: ["ref", "idempotency_key"], landing_promo_codes: ["code"], landing_staff: ["email"], landing_offers: ["sku"], landing_categories: ["slug"], landing_reviews: ["content_hash"] }
 
