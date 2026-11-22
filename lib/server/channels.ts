@@ -12,7 +12,7 @@ export async function loadChannelReports(orgId: string, now: Date = new Date()):
   const since = new Date(now.getTime() - 7 * 86_400_000).toISOString()
   const [journal, integrations, numbers, formLeads, convs, sent] = await Promise.all([
     loadInboundJournal(orgId, 1),
-    safe(select<{ provider: string; enabled: boolean; last_test_ok: boolean | null; last_test_at: string | null }>("landing_integrations", "select=provider,enabled,last_test_ok,last_test_at")),
+    safe(select<{ provider: string; enabled: boolean; last_test_ok: boolean | null; last_test_at: string | null; last_test_message: string | null }>("landing_integrations", "select=provider,enabled,last_test_ok,last_test_at,last_test_message")),
     safe(select<{ enabled: boolean }>("landing_whatsapp_numbers", "select=enabled&enabled=eq.true&limit=1")),
     safe(selectRealLeads<{ created_at: string }>(`select=created_at&source=eq.form&order=created_at.desc&limit=200`)),
     safe(select<{ channel: string; started_at: string; conversation_count: number }>("landing_conversations", `select=channel,started_at,conversation_count&status=neq.annulee&is_test=eq.false&started_at=gte.${encodeURIComponent(since)}&order=started_at.desc&limit=500`)),
@@ -29,7 +29,7 @@ export async function loadChannelReports(orgId: string, now: Date = new Date()):
     messenger: inboundFacts(fb, false),
     instagram: inboundFacts(ig, false),
     telephone: { ...none(), configured: true, manual: true, lastEventAt: convs.find((c) => c.channel === "telephone")?.started_at ?? null, events7d: convs.filter((c) => c.channel === "telephone").reduce((n, c) => n + c.conversation_count, 0) },
-    meta_conversions: { ...none(), configured: Boolean(meta?.enabled), lastEventAt: sent[0]?.sent_at ?? null, events7d: sent.filter((s) => s.sent_at && s.sent_at >= since).length, lastTestOk: meta?.last_test_ok ?? null, lastTestAt: meta?.last_test_at ?? null },
+    meta_conversions: { ...none(), configured: Boolean(meta?.enabled), lastEventAt: sent[0]?.sent_at ?? null, events7d: sent.filter((s) => s.sent_at && s.sent_at >= since).length, lastTestOk: meta?.last_test_ok ?? null, lastTestAt: meta?.last_test_at ?? null, lastTestMessage: meta?.last_test_message?.slice(0, 160) ?? null },
     tiktok: { ...inboundFacts(tt, Boolean(tik?.enabled)), lastTestOk: tik?.last_test_ok ?? null, lastTestAt: tik?.last_test_at ?? null },
   }
   return (Object.keys(facts) as ChannelId[]).map((id) => channelReport(id, facts[id], now))

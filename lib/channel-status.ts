@@ -11,6 +11,7 @@ export interface ChannelFacts {
   dropped7d: number // événements reçus mais perdus (échec de rattachement, rejet)
   lastTestOk: boolean | null // dernier test d'envoi (intégrations seulement)
   lastTestAt: string | null
+  lastTestMessage?: string | null // raison technique du dernier test (jamais de jeton)
 }
 export interface ChannelReport { id: ChannelId; label: string; state: ChannelState; headline: string; detail: string; alert: boolean }
 
@@ -34,11 +35,11 @@ export function channelReport(id: ChannelId, f: ChannelFacts, now: Date = new Da
   if (f.manual) return { ...base, state: "manual", alert: false, headline: "Saisie manuelle", detail: f.events7d > 0 ? `${f.events7d} saisie(s) sur 7 jours, dernière ${ago(f.lastEventAt, now)}.` : "Aucune saisie sur 7 jours : les appels ne sont pas comptés tant que l'équipe ne les saisit pas." }
   if (!f.configured) return { ...base, state: "not_connected", alert: false, headline: "Non connecté", detail: "Aucune intégration : ce canal n'envoie rien au CRM." }
   if (f.dropped7d > 0) return { ...base, state: "degraded", alert: true, headline: "Événements perdus", detail: `${f.dropped7d} événement(s) reçu(s) sur 7 jours n'ont pas pu être rattachés. Consultez le journal des intégrations.` }
+  // Un événement RÉEL récent l'emporte sur tout test : un test « non concluant » (ex. jeton d'envoi qui ne peut pas lire le pixel) n'est pas une panne.
   if (f.events7d === 0 && last === null) {
-    if (f.lastTestOk === false) return { ...base, state: "failing", alert: true, headline: "Dernier test en échec", detail: `Le test d'envoi du ${ago(f.lastTestAt, now)} a échoué, et aucun événement réel n'a jamais été reçu.` }
+    if (f.lastTestOk === false) return { ...base, state: "failing", alert: true, headline: "Dernier test non concluant", detail: `Le test du ${ago(f.lastTestAt, now)} n'a pas abouti${f.lastTestMessage ? ` : ${f.lastTestMessage}` : ""}. Aucun événement réel n'a jamais été reçu : fonctionnement non prouvé.` }
     return { ...base, state: "connected_unproven", alert: true, headline: "Connecté, fonctionnement non prouvé", detail: f.lastTestOk === true ? `Un test a réussi (${ago(f.lastTestAt, now)}) mais aucun événement réel n'a jamais été reçu : l'API accepte les requêtes, rien ne prouve que des clients passent par ce canal.` : "Aucun événement réel n'a jamais été reçu." }
   }
-  if (f.lastTestOk === false && f.events7d === 0) return { ...base, state: "failing", alert: true, headline: "Dernier test en échec", detail: `Le test du ${ago(f.lastTestAt, now)} a échoué et rien n'est arrivé sur 7 jours.` }
   if (last !== null && now.getTime() - last > SILENCE_DAYS * DAY) return { ...base, state: "silent", alert: true, headline: "Silencieux", detail: `Dernier événement ${ago(f.lastEventAt, now)} : plus rien depuis plus de ${SILENCE_DAYS} jours.` }
   return { ...base, state: "receiving", alert: false, headline: "Reçoit des événements", detail: `${f.events7d} événement(s) sur 7 jours, dernier ${ago(f.lastEventAt, now)}.` }
 }
