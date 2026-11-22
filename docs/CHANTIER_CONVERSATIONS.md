@@ -1,41 +1,65 @@
 # Chantier « Growth & Marketing Intelligence » — Étape 1 : les conversations
 
-Statut : **PRÉPARATION (rien n'est codé ni appliqué).** Découpage et règle de protection des données acceptés par le propriétaire le 22/11/2026. Chaque lot ci-dessous demande son propre GO ; la migration demande un GO distinct.
+**Version finale pour examen — 22/11/2026.**
+Statut : **DOCUMENTATION ET PRÉPARATION UNIQUEMENT.** Aucun code, aucune migration, aucune application en base, aucune modification de production. Le SQL ci-dessous est dans ce document et **pas** dans `supabase/migrations/`. Un GO distinct du propriétaire est requis après examen (d'abord la migration, puis chaque lot de code).
 
-## 0. Principe
-Easy2Book mesure des **conversations, prospects et ventes**, pas des visites. Une conversation n'est pas un prospect : « Bonjour, je voudrais des informations » est une conversation ; elle devient un prospect quand un conseiller crée ou relie un dossier, puis un prospect qualifié, puis une vente. **L'état d'une conversation n'est jamais dupliqué** : il se déduit du dossier (lead) auquel elle est reliée.
+## 0. Périmètre et système visé (point à confirmer)
+Le propriétaire demande de vérifier que le chantier concerne le CRM EasyV4 et sa base, sans dépendance ni écriture dans le projet Landing Page / Growth OS.
 
-## 1. Règle de protection des données (acceptée)
-1. **Aucune audience publicitaire ne se construit sur des données sensibles ou leur déduction** : convictions religieuses, santé, etc. « A demandé l'Omra » fonctionne comme un indicateur de religion : ce segment est utilisé **en interne uniquement** (analyse, relance par un conseiller). Pas d'export vers Meta, pas de lookalike, sauf validation écrite du propriétaire après lecture de la politique Meta en vigueur.
-2. **Consentement d'abord** : tout export de contacts vers une plateforme exige le consentement marketing du contact (case dédiée), jamais le simple consentement de contact.
-3. **Données minimales** : une conversation ne stocke **ni le texte des messages, ni le nom**, seulement canal, origine, dates, compteurs, identifiant de contact (téléphone ou identifiant technique de la plateforme) et rattachement au dossier.
-4. **Anonymisation** : quand un lead est anonymisé, ses conversations le sont aussi (téléphone et identifiant effacés, compteurs gardés).
-5. **Aucun envoi sans validation** : le CRM prépare, un humain active.
+**Constat vérifié le 22/11/2026 :**
+- Le seul projet de base accessible depuis cet environnement est `LandingpageEasy2Book` (`tdexdlukqciolslvjmhd`). Aucun projet, dépôt ou base EasyV4 n'est accessible ici.
+- Tout le CRM construit jusqu'ici (leads, ventes, entonnoir, journal de conversions, WhatsApp entrant, Centre d'intelligence) vit dans ce projet Landing / Growth OS. Cette spécification est écrite pour ce projet : `landing_conversations` s'ajoute à côté de `landing_leads`.
+- Les garde-fous des migrations Landing **refusent de s'exécuter** si des tables EasyV4 (`agencies`, `crm_conversations`, `reservations`) existent dans la base cible ; Landing n'écrit jamais dans EasyV4 (import contrôlé uniquement).
 
-## 2. Modèle de données (proposé)
-Table `landing_conversations` (une ligne = un fil de conversation, **ou** un lot du jour) :
+**Conséquence :** la demande « concerne EasyV4, sans écriture dans Landing / Growth OS » ne peut être ni vérifiée ni appliquée telle quelle. Deux options, **à trancher par le propriétaire avant tout GO** :
+- **Option A (spécification actuelle)** : héberger les conversations dans Growth OS / Landing, là où vivent déjà les leads. Aucun contact avec EasyV4.
+- **Option B** : héberger dans le CRM EasyV4. Cela exige l'accès à son dépôt et à sa base (non fournis), sa propre spécification et ses propres garde-fous ; Landing / Growth OS ne serait alors ni modifié ni lu.
+Aucune requête ni écriture n'a été faite vers EasyV4. Les modèles de données et règles ci-dessous sont indépendants de l'hôte ; seul le SQL (§4) vise Landing.
+
+## 1. Principe
+Easy2Book mesure des **conversations, prospects et ventes**, pas des visites. Trois objets distincts :
+- **Conversation** : un fil d'échange sur un canal (ou un lot anonyme du jour). **Une conversation n'est pas un prospect.**
+- **Prospect** : un dossier (fiche) d'une personne identifiée. **Un prospect n'est pas une vente.**
+- **Vente** : dossier réservé ou gagné, avec montant.
+- Plusieurs conversations peuvent être rattachées au même prospect (la fiche reste unique).
+- **Un lot quotidien anonyme ne crée aucun prospect et aucune vente fictive.**
+L'étape est déduite, jamais stockée : *conversation seule* → *prospect* → *qualifié* → *devis* → *vendu* / *perdu*.
+
+Idée directrice : Easy2Book garde le « cahier des ventes » du client (historique commercial) sans afficher son numéro privé sur chaque page.
+
+## 2. Protection des données (règles acceptées)
+1. **Aucune audience publicitaire sur données sensibles ou leur déduction** : « a demandé l'Omra » est un indicateur de religion → segment à usage interne seulement, aucun export vers Meta ou audience similaire sans validation écrite du propriétaire.
+2. **Consentement marketing** requis pour tout export ; jamais le simple consentement de contact.
+3. **Données minimales** : une conversation ne stocke ni texte de message ni nom.
+4. **Un seul numéro de téléphone par fiche client.** Le téléphone reste **uniquement** dans la fiche Prospect ; il n'est **jamais copié** dans la conversation. Une conversation individuelle est reliée à la fiche (`lead_id`) ; sans fiche, elle ne porte aucun numéro.
+5. **Accès au numéro limité aux employés autorisés** : le numéro n'est lisible que via la fiche, avec les droits existants (voir §5). La page Conversations et les exports d'indicateurs **n'affichent jamais de numéro**.
+6. **Conservation définie, vérifiée juridiquement, avec anonymisation à l'expiration** (§7).
+7. **Aucune activation sans validation humaine.**
+
+## 3. Modèle de données
+Table `landing_conversations` (une ligne = un fil de conversation individuel **ou** un lot du jour).
 
 | Colonne | Rôle |
 |---|---|
 | `id`, `organization_id` | cloisonnement par entreprise (comme `landing_conversion_log`) |
-| `kind` | `individuelle` ou `lot` (lot = « n conversations ce jour-là sur ce canal », sans identité) |
+| `kind` | `individuelle` ou `lot` |
 | `channel` | `whatsapp`, `messenger`, `instagram`, `facebook_commentaire`, `telephone`, `autre` |
 | `origin` | `annonce`, `organique`, `direct`, `inconnue` |
-| `campaign`, `ad_id`, `niche` | rattachement (convention de nommage des campagnes ; vides si inconnus) |
-| `conversation_count` | 1 pour `individuelle` ; n pour un `lot` |
-| `contact_phone`, `contact_ref` | téléphone normalisé et/ou identifiant technique (BSUID, PSID, IGSID) ; **nuls pour un lot** |
-| `lead_id` | dossier relié (nullable) |
-| `started_at`, `last_activity_at`, `first_reply_at` | dates ; `first_reply_at` mesure le délai de première réponse |
-| `messages_in`, `messages_out` | compteurs (sans texte) |
-| `status` | `ouverte` ou `sans_suite` |
-| `source_kind` | `saisie` (équipe) ou `webhook` (automatique, lots suivants) |
-| `is_test`, `anonymized_at`, `created_by`, `created_at` | gouvernance |
+| `campaign`, `ad_id`, `niche` | rattachement (vides si inconnus) |
+| `conversation_count` | 1 pour individuelle ; n pour un lot |
+| `lead_id` | fiche reliée (nullable ; **toujours nul pour un lot**) ; porte le numéro, pas la conversation |
+| `contact_ref` | identifiant technique de plateforme (BSUID/PSID/IGSID), **facultatif, réservé aux automatismes futurs**, jamais un téléphone ; effacé à l'anonymisation ; nul pour un lot |
+| `started_at`, `last_activity_at`, `first_reply_at` | dates (la nouvelle conversation naît après 30 jours sans échange) |
+| `messages_in`, `messages_out` | compteurs, sans texte |
+| `status` | `ouverte`, `sans_suite`, `annulee` |
+| `source_kind` | `saisie` ou `webhook` |
+| `is_test`, `anonymized_at` | gouvernance |
+| `created_by`, `created_at`, `updated_by`, `updated_at` | **traçabilité de l'auteur** |
 
-Contraintes : valeurs contrôlées ; `lot` ⇒ pas de contact ni de dossier ; `individuelle` ⇒ `conversation_count = 1` ; **jamais de DELETE** (service uniquement SELECT, INSERT, UPDATE) ; sécurité par ligne forcée ; organisation immuable.
-Étape déduite (jamais stockée) : *conversation seule* → *prospect* (dossier nouveau, à contacter, contacté) → *qualifié* → *devis* → *vendu* (réservé, gagné) / *perdu*.
+Règles : valeurs contrôlées ; lot ⇒ ni fiche, ni `contact_ref` ; individuelle ⇒ `conversation_count = 1` ; **jamais de DELETE** (service : SELECT, INSERT, UPDATE) ; une erreur de saisie se corrige par `annulee` (la ligne reste, exclue des indicateurs), pas par suppression ; sécurité par ligne forcée ; service seul ; `organization_id` immuable.
 
-## 3. Brouillon de migration 0029 (NON appliqué, à valider)
-Prérequis : 0001 à 0028 (notamment 0026 pour `is_test`). **Volontairement placé ici et non dans `supabase/migrations/`** pour qu'aucun outil ne l'applique avant le GO.
+## 4. SQL proposé — migration 0029 (NON appliquée)
+Prérequis : migrations 0001 à 0028 (dont `landing_org_immutable`, `is_test`).
 ```sql
 CREATE TABLE public.landing_conversations (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -47,55 +71,91 @@ CREATE TABLE public.landing_conversations (
   ad_id TEXT CHECK (char_length(ad_id) <= 64),
   niche TEXT CHECK (char_length(niche) <= 64),
   conversation_count INTEGER NOT NULL DEFAULT 1 CHECK (conversation_count BETWEEN 1 AND 1000),
-  contact_phone TEXT CHECK (char_length(contact_phone) <= 20),
-  contact_ref TEXT CHECK (char_length(contact_ref) <= 100),
   lead_id UUID REFERENCES public.landing_leads (id) ON DELETE SET NULL,
+  contact_ref TEXT CHECK (char_length(contact_ref) <= 100),
   started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_activity_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   first_reply_at TIMESTAMPTZ,
   messages_in INTEGER NOT NULL DEFAULT 0 CHECK (messages_in >= 0),
   messages_out INTEGER NOT NULL DEFAULT 0 CHECK (messages_out >= 0),
-  status TEXT NOT NULL DEFAULT 'ouverte' CHECK (status IN ('ouverte', 'sans_suite')),
+  status TEXT NOT NULL DEFAULT 'ouverte' CHECK (status IN ('ouverte', 'sans_suite', 'annulee')),
   source_kind TEXT NOT NULL DEFAULT 'saisie' CHECK (source_kind IN ('saisie', 'webhook')),
   is_test BOOLEAN NOT NULL DEFAULT false,
   anonymized_at TIMESTAMPTZ,
   created_by UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT landing_conversations_lot_ck CHECK (kind <> 'lot' OR (contact_phone IS NULL AND contact_ref IS NULL AND lead_id IS NULL)),
-  CONSTRAINT landing_conversations_indiv_ck CHECK (kind <> 'individuelle' OR conversation_count = 1)
+  updated_by UUID,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT landing_conversations_lot_ck
+    CHECK (kind <> 'lot' OR (lead_id IS NULL AND contact_ref IS NULL)),
+  CONSTRAINT landing_conversations_indiv_ck
+    CHECK (kind <> 'individuelle' OR conversation_count = 1),
+  CONSTRAINT landing_conversations_dates_ck
+    CHECK (last_activity_at >= started_at)
 );
+-- Aucune colonne de téléphone, de nom ni de texte : volontairement.
 CREATE INDEX landing_conversations_org_date_idx ON public.landing_conversations (organization_id, started_at);
 CREATE INDEX landing_conversations_lead_idx ON public.landing_conversations (lead_id);
--- + RLS activée et forcée, REVOKE ALL, GRANT SELECT, INSERT, UPDATE à service_role, déclencheur landing_org_immutable
+
+ALTER TABLE public.landing_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.landing_conversations FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON public.landing_conversations FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.landing_conversations TO service_role;  -- pas de DELETE
+
+CREATE TRIGGER landing_conversations_org_immutable
+  BEFORE UPDATE ON public.landing_conversations
+  FOR EACH ROW EXECUTE FUNCTION public.landing_org_immutable();
 ```
-Fichiers à livrer avec elle : retour arrière (refusé si des lignes existent), contrôle `postcheck-0029` (5 vérifications), test PGlite.
+À livrer avec la migration (au GO, pas avant) : fichier de retour arrière, contrôle `postcheck-0029` (table, RLS forcée, absence de DELETE, absence de colonne téléphone, contraintes lot/individuelle), test PGlite, garde « refuse sur base EasyV4 ».
 
-## 4. Lots de l'étape 1
-**1a. Saisie rapide et lecture (sans automatisme)** — priorité : l'équipe reçoit déjà beaucoup de messages.
-- Page `/admin/conversations` : liste filtrable (période, canal, origine, campagne, étape déduite), cloisonnée par entreprise.
-- **« Saisie du jour » (lot)** : canal, origine, campagne, nombre — 10 secondes, sans identité. Réponse au besoin actuel (« trop de messages »).
-- **« Nouvelle conversation » (individuelle)** : canal, origine, téléphone facultatif ; bouton « créer le prospect » (réutilise la saisie manuelle de lead existante) ou « relier à un dossier » (recherche par téléphone).
-- Depuis la fiche d'un lead : « ajouter une conversation ».
-- Droits inchangés : un employé voit et modifie ses dossiers ; responsable et administrateur ceux de l'entreprise ; le Super Admin ne voit aucun contenu de lead.
-**1b. Mesure** : indicateurs « conversations », « prospects issus de conversations », taux conversation → prospect → qualifié → vendu, coût par conversation (si dépenses saisies), délai de première réponse ; seuils de fiabilité déjà en place (jamais de taux sur un échantillon trop petit).
-**1c. Rapprochement avec Meta** : saisie hebdomadaire (ou import CSV) du nombre de conversations déclaré par Meta ; alerte qualité « écart de saisie » (ex. Meta 20, CRM 3).
-**1d. Automatismes (après l'étape 1, GO séparé)** : WhatsApp (webhook existant : crée ou met à jour la conversation, après publication de l'application), puis Messenger et Instagram (permissions Meta supplémentaires, examen d'application).
+**Retour arrière** (aucune donnée perdue ailleurs : rien d'autre ne dépend de cette table) :
+```sql
+-- Refusé s'il existe des lignes : les exporter ou les annuler d'abord.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM public.landing_conversations) THEN
+    RAISE EXCEPTION 'Retour arrière refusé : la table contient des conversations';
+  END IF;
+END $$;
+DROP TABLE public.landing_conversations;
+```
+Retour arrière du code : retirer la page et les actions ; la page « migration non appliquée » existe déjà ; aucun autre module ne lit cette table.
 
-## 5. Définitions des indicateurs
-- *Conversation* : un contact distinct ayant écrit ou appelé sur un canal, ou n conversations d'un lot ; une nouvelle conversation naît après 30 jours d'inactivité (à confirmer).
-- *Prospect* : conversation reliée à un dossier. *Qualifié* : dossier au statut « qualifié » ou au-delà. *Vente* : dossier réservé ou gagné (montant obligatoire).
-- Taux affichés seulement si l'échantillon atteint le seuil (5 réservations pour comparer, comme ailleurs).
+## 5. Permissions (inchangées, testées côté serveur)
+| Action | Qui | Règle serveur |
+|---|---|---|
+| Lire les conversations (sans numéro) | rôles ayant `leads.view_all` (employé, responsable, administrateur) | cloisonné par `organization_id` ; le numéro n'est jamais dans la réponse |
+| Voir le numéro | uniquement via la fiche, droits existants de la fiche | aucune copie ailleurs |
+| Créer/modifier une conversation individuelle reliée à une fiche | `canModifyLead` (employé : ses fiches ; responsable/administrateur : l'entreprise) | contrôlé côté serveur, pas seulement dans l'interface |
+| Saisie d'un lot du jour | tout conseiller actif de l'entreprise | donnée agrégée, sans donnée personnelle |
+| Super Admin | supervision sans contenu | ne voit aucun contenu de lead ni de conversation |
+Traçabilité : `created_by`/`updated_by` renseignés par le serveur (jamais par le client) ; chaque création, correction ou annulation écrit une entrée dans `landing_admin_log` (auteur, zone « conversations », résumé sans donnée personnelle).
 
-## 6. Tests prévus
-Migration (PGlite : contraintes lot/individuelle, valeurs contrôlées, jamais de DELETE, cloisonnement) ; fonctions pures de mesure (étape déduite, taux, fenêtre de 30 jours) ; actions serveur (droits par rôle, cloisonnement, anti-doublon d'une même conversation, anonymisation en cascade, tests exclus) ; e2e Playwright (saisie de lot, conversation puis prospect, mobile 390 px sans débordement) ; non-régression : leads, CRM, rentabilité, pages publiques inchangés.
+## 6. Anonymisation
+- Quand une fiche est anonymisée (mécanisme existant `anonymized_at`), ses conversations sont anonymisées en cascade : `contact_ref` effacé, `lead_id` conservé ou délié selon décision, compteurs et dates **gardés** (historique commercial sans donnée personnelle), `anonymized_at` renseigné.
+- Une conversation reliée à une fiche anonymisée devient non modifiable (comme les fiches).
+- Les lots n'ont aucune donnée personnelle : rien à anonymiser.
 
-## 7. Déploiement
-Ordre : GO migration → lecture avant, application, `postcheck-0029` → GO fusion → déploiement → contrôle en production. Le code fonctionne **avant** la migration (page « migration non appliquée », jamais d'erreur 500). Retour arrière : déploiement précédent ; table conservée si elle contient des données.
+## 7. Conservation
+- **Proposition : 24 mois maximum après la dernière activité, puis anonymisation** de la fiche (donc de ses numéros) et des conversations.
+- **À vérifier juridiquement avant tout GO de code** (durée applicable en Tunisie / selon les marchés servis, base légale, information des personnes, droit d'effacement). La durée finale sera inscrite dans la politique de confidentialité.
+- Étape 1 : **aucune purge automatique**. L'anonymisation se fait avec l'outil existant, à la demande. Un traitement planifié ne sera proposé qu'après validation juridique et GO séparé.
 
-## 8. Décisions à prendre par le propriétaire avant le code
-1. **Saisie hybride** (lot du jour + conversations individuelles) : recommandée ; sinon une ligne par conversation, plus lourde.
-2. **Fenêtre de nouvelle conversation** : 30 jours d'inactivité ?
-3. **Qui saisit** : tous les conseillers ?
-4. **Durée de conservation** des téléphones dans les conversations (proposé : 24 mois, puis anonymisation).
-5. **Canaux** de départ : WhatsApp, Messenger, Instagram, commentaire Facebook, téléphone, autre.
-6. **Rapprochement Meta** : saisie manuelle hebdomadaire ou import CSV.
+## 8. Lots de l'étape 1 (chacun avec son GO)
+**1a. Saisie et lecture** : page `/admin/conversations` (liste filtrable, sans numéro) ; « Saisie du jour » (lot) en 10 secondes ; « Nouvelle conversation » reliée à une fiche existante ou créée via la saisie manuelle de lead ; « ajouter une conversation » depuis la fiche ; annulation avec raison.
+**1b. Mesure** : conversations, prospects issus de conversations, taux conversation → prospect → qualifié → vendu, coût par conversation, délai de première réponse ; seuils d'échantillon comme ailleurs (5 réservations).
+**1c. Rapprochement Meta** : saisie manuelle hebdomadaire du nombre déclaré par Meta, alerte d'écart ; import CSV **ultérieur**.
+**1d. Automatismes** (hors étape 1, GO séparé) : WhatsApp via le webhook existant, puis Messenger / Instagram.
+
+## 9. Tests prévus
+- Migration (PGlite) : contraintes lot/individuelle, valeurs contrôlées, **aucune colonne téléphone**, jamais de DELETE, cloisonnement, `organization_id` immuable.
+- Fonctions pures : étape déduite, fenêtre de 30 jours, taux avec seuil.
+- Actions serveur : droits par rôle (employé sur fiche non assignée refusé, Super Admin sans contenu), cloisonnement entre entreprises, `created_by` imposé par le serveur, aucune réponse contenant un téléphone, annulation sans suppression.
+- Anonymisation en cascade ; fiche anonymisée non modifiable.
+- e2e (faux Supabase) : saisie d'un lot, conversation reliée, pages /c inchangées, aucun événement Meta artificiel.
+
+## 10. Déploiement (après GO)
+GO migration → lecture avant, application, `postcheck-0029` → code → CI verte → GO fusion → déploiement → contrôle en production. Le code fonctionne avant la migration (page « migration non appliquée »).
+
+## 11. Décisions
+Confirmées le 22/11/2026 : (1) saisie hybride OUI ; (2) nouvelle conversation après 30 jours sans échange OUI ; (3) saisie par tous les conseillers dans leurs droits, avec traçabilité ; (4) conservation proposée 24 mois, à vérifier juridiquement, téléphone **uniquement** dans la fiche ; (5) canaux : WhatsApp, Messenger, Instagram, commentaire Facebook, téléphone, autre ; (6) rapprochement Meta : saisie hebdomadaire, import CSV plus tard.
+**En attente :** option A ou B pour l'hébergement (§0) ; validation juridique de la durée (§7) ; GO migration ; GO de chaque lot.
