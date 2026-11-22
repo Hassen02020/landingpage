@@ -350,7 +350,9 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   const verdict = await page.locator('[data-testid="ad-verdict"]').innerText()
   check("segments : fiche d'un segment marketing — « à examiner » sous validation humaine, jamais une activation", verdict.includes("à examiner") && verdict.includes("validation humaine") && verdict.includes("Rien n'est activé"), verdict)
   check("segments : la fiche indique effectif, provenance et fiabilité", (await page.locator('[data-testid="segment-profile"]').innerText()).includes("Provenance") && (await page.locator('[data-testid="reliability"]').count()) === 1)
-  check("segments : aucun bouton d'export ni d'envoi sur la page des segments", (await page.locator('a[href*="export"], button:has-text("Exporter"), button:has-text("Envoyer")').count()) === 0)
+  // hors menu latéral et barre haute (le lien global « Export CSV » du menu existe sur toutes les pages et ne concerne pas les segments)
+  const exportControls = await page.evaluate(() => Array.from(document.querySelectorAll("a, button")).filter((el) => !el.closest("aside, header, nav") && /export|exporter|envoyer|audience/i.test(`${el.textContent ?? ""} ${el.getAttribute("href") ?? ""}`)).length)
+  check("segments : aucun bouton d'export, d'envoi ni d'audience dans le contenu de la page des segments", exportControls === 0, String(exportControls))
 }
 
 // ---------------------------------------------------------------- Analytics : entonnoir (Bloc 9)
