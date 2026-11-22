@@ -56,6 +56,32 @@ const leadBody = lead ? JSON.parse(lead.body) : {}
 check("formulaire : trackingConsent=true, marketingConsent=false par défaut", leadBody.trackingConsent === true && leadBody.marketingConsent === false)
 check("formulaire : redirection vers WhatsApp", page.url().startsWith("https://wa.me/"))
 
+
+// 4. Mobile (390 px) : le bandeau reste compact et ne cache jamais la barre d'appel à l'action fixée en bas de page
+{
+  const mctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  await mctx.route(/^https:\/\/(connect\.facebook\.net|www\.facebook\.com|analytics\.tiktok\.com|images\.unsplash\.com)\//, (r) => r.fulfill({ body: "" }))
+  const mp = await mctx.newPage()
+  await mp.goto(`${BASE}/omra`, { waitUntil: "networkidle" })
+  const m = await mp.evaluate(() => {
+    const banner = document.querySelector('[data-testid="consent-banner"]')
+    const bar = document.querySelector('aside[aria-label="حجز سريع"]')
+    if (!banner || !bar) return null
+    const b = banner.getBoundingClientRect(), a = bar.getBoundingClientRect()
+    const cx = a.left + a.width / 2, cy = a.top + a.height / 2
+    const hit = document.elementFromPoint(cx, cy)
+    return { bannerH: Math.round(b.height), bannerTop: Math.round(b.top), barBottom: Math.round(a.bottom), barVisible: Boolean(hit && bar.contains(hit)), cssVar: getComputedStyle(document.documentElement).getPropertyValue("--consent-h").trim() }
+  })
+  check("mobile : le bandeau de consentement est compact (moins de 110 px)", Boolean(m) && m.bannerH < 110)
+  check("mobile : la barre d'appel à l'action est AU-DESSUS du bandeau (jamais cachée)", Boolean(m) && m.barBottom <= m.bannerTop + 1 && m.barVisible)
+  check("mobile : la hauteur du bandeau est publiée dans --consent-h", Boolean(m) && m.cssVar === `${m.bannerH}px`)
+  await mp.getByRole("button", { name: "رفض" }).click()
+  await mp.waitForTimeout(300)
+  const after = await mp.evaluate(() => ({ cssVar: getComputedStyle(document.documentElement).getPropertyValue("--consent-h").trim(), bottom: Math.round(window.innerHeight - document.querySelector('aside[aria-label="حجز سريع"]').getBoundingClientRect().bottom) }))
+  check("mobile : après réponse, la variable est retirée et la barre revient en bas de l'écran", after.cssVar === "" && after.bottom === 0)
+  await mctx.close()
+}
+
 await browser.close()
 const failed = results.filter(([, ok]) => !ok).length
 console.log(`\n${results.length - failed} réussis, ${failed} échoués`)

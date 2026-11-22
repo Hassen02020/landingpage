@@ -44,6 +44,7 @@ export default function ConfidentialitePage() {
             <li>Suivre et traiter votre demande en interne (gestion commerciale).</li>
             <li>Vous envoyer nos offres, uniquement si vous l&apos;avez accepté.</li>
             <li>Mesurer l&apos;efficacité de nos publicités sur Meta (Facebook, Instagram) et TikTok, uniquement si vous l&apos;avez accepté. Sans votre accord, ces outils ne sont pas chargés.</li>
+            <li>Compter les visites de nos pages de manière anonyme, sans cookie ni identifiant publicitaire (statistiques d&apos;audience de notre hébergeur). Seuls l&apos;adresse de la page et le nom de la campagne sont pris en compte, jamais votre nom, votre téléphone ni votre identité.</li>
           </ul>
         </section>
 

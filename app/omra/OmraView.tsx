@@ -482,7 +482,7 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
       </footer>
 
       {/* BARRE D'ACTION MOBILE */}
-      <aside aria-label="حجز سريع" className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
+      <aside aria-label="حجز سريع" style={{ bottom: "var(--consent-h, 0px)" }} className="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-2">
         <button
           type="button"
           onClick={goToForm}

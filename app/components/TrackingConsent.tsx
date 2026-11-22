@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Script from "next/script"
 import { usePathname } from "next/navigation"
 import { CONSENT_EVENT, getConsent, setConsent, type ConsentState } from "@/lib/consent"
@@ -17,6 +17,7 @@ export function TrackingConsent() {
   // ID des pixels réglés dans /admin/integrations ; à défaut, valeurs de compilation
   const [pixels, setPixels] = useState<{ meta: string | null; tiktok: string | null } | null>(null)
   const pathname = usePathname()
+  const bannerRef = useRef<HTMLDivElement | null>(null)
   // langue de la page : annoncée par les pages du Créateur (data-page-lang) ; /omra est arabe ; sinon français
   const [pageLang, setPageLang] = useState<"fr" | "ar" | "en" | null>(null)
   useEffect(() => {
@@ -59,6 +60,20 @@ export function TrackingConsent() {
 
   const metaId = pixels?.meta && /^\d{5,20}$/.test(pixels.meta) ? pixels.meta : null
   const tiktokId = pixels?.tiktok && /^[A-Za-z0-9]{5,40}$/.test(pixels.tiktok) ? pixels.tiktok : null
+
+  // Le bandeau ne doit jamais cacher les boutons d'appel à l'action fixés en bas de page (mobile) : sa hauteur est publiée dans --consent-h,
+  // que ces barres utilisent pour se placer AU-DESSUS du bandeau. Retirée dès que le visiteur a répondu.
+  const bannerShown = ready && consent === null
+  useEffect(() => {
+    const root = document.documentElement
+    const el = bannerRef.current
+    if (!bannerShown || !el) { root.style.removeProperty("--consent-h"); return }
+    const set = () => root.style.setProperty("--consent-h", `${Math.ceil(el.getBoundingClientRect().height)}px`)
+    set()
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(set) : null
+    ro?.observe(el)
+    return () => { ro?.disconnect(); root.style.removeProperty("--consent-h") }
+  }, [bannerShown])
 
   const choose = (state: ConsentState) => {
     setConsent(state)
@@ -118,28 +133,30 @@ export function TrackingConsent() {
 
       {ready && consent === null && (
         <div
+          ref={bannerRef}
           role="dialog"
           aria-live="polite"
           aria-label={TXT.label}
           dir={isArabic ? "rtl" : "ltr"}
-          className="fixed inset-x-0 bottom-0 z-[60] bg-gray-950/95 text-white px-4 py-4 shadow-2xl"
+          data-testid="consent-banner"
+          className="fixed inset-x-0 bottom-0 z-[60] bg-gray-950/95 text-white px-3 py-2 sm:px-4 sm:py-4 shadow-2xl"
         >
-          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-3 sm:items-center">
-            <p className="text-sm leading-relaxed flex-1">
+          <div className="max-w-4xl mx-auto flex flex-row gap-3 items-center">
+            <p className="text-[11px] leading-snug sm:text-sm sm:leading-relaxed flex-1">
               {TXT.msg}
             </p>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-row gap-1.5 sm:gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => choose("denied")}
-                className="px-4 py-2 rounded-xl border border-white/40 text-sm font-bold hover:bg-white/10"
+                className="px-3 py-1 sm:px-4 sm:py-2 rounded-xl border border-white/40 text-xs sm:text-sm font-bold hover:bg-white/10"
               >
                 {TXT.no}
               </button>
               <button
                 type="button"
                 onClick={() => choose("granted")}
-                className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-sm font-bold"
+                className="px-3 py-1 sm:px-4 sm:py-2 rounded-xl bg-green-700 hover:bg-green-800 text-xs sm:text-sm font-bold"
               >
                 {TXT.yes}
               </button>
