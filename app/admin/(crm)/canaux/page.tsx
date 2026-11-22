@@ -13,8 +13,8 @@ const TONE: Record<ChannelState, string> = {
 
 export default async function ChannelsPage() {
   const staff = await currentStaff()
-  if (!staff || !staff.organizationId || !can(staff.orgRole, "reports.view")) return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux responsables et administrateurs.</p>
-  const reports = await loadChannelReports(staff.organizationId)
+  if (!staff || !can(staff.orgRole, "reports.view")) return <p className="bg-white rounded-2xl p-6">Cette page est réservée aux responsables et administrateurs.</p>
+  const reports = await loadChannelReports(staff.organizationId ?? "")
   const alerts = reports.filter((r) => r.alert)
   return (
     <div className="space-y-6">
