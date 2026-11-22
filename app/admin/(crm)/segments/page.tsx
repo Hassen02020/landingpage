@@ -2,6 +2,7 @@ import Link from "next/link"
 import { dbConfigured } from "@/lib/server/db"
 import { loadAllCustomers } from "@/lib/server/customer"
 import { SEGMENTS, evaluate, getSegment, idleDays } from "@/lib/segments"
+import { RELIABILITY_LABELS, profileSegment } from "@/lib/segment-profile"
 import { STATUS_LABELS } from "@/lib/status"
 import { formatDate } from "../../format"
 
@@ -26,6 +27,7 @@ export default async function SegmentsPage({ searchParams }: { searchParams: { s
             <div className="flex items-baseline justify-between"><span className="font-bold">{r.segment.label}</span><span className="text-xs px-2 py-0.5 rounded-full bg-gray-100">{r.segment.kind === "marketing" ? "marketing" : "suivi"}</span></div>
             <div className="text-3xl font-black mt-1"><span data-count>{r.eligible.length}</span></div>
             <p className="text-xs text-gray-500">{r.segment.description}</p>
+            {r.segment.sensitivity === "sensitive" && <p className="text-xs font-bold text-red-700 mt-1" data-testid="internal-only">Usage interne uniquement</p>}
             {r.excluded > 0 && <p className="text-xs text-amber-700 mt-1">{r.excluded} exclu(s) : pas de consentement marketing</p>}
           </Link>
         ))}
@@ -33,6 +35,17 @@ export default async function SegmentsPage({ searchParams }: { searchParams: { s
       {shown && (
         <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
           <h2 className="font-bold p-4 pb-0">{shown.segment.label} — {shown.eligible.length} contactable(s)</h2>
+          {(() => {
+            const p = profileSegment(shown)
+            return (
+              <div className="p-4 text-sm space-y-1" data-testid="segment-profile">
+                <p><b>Effectif dans le CRM :</b> {p.size} membre(s), dont {p.eligible} éligible(s) et {p.excluded} exclu(s) faute de consentement. <span className="text-gray-500">Effectif exact ; la taille réelle d&apos;une audience chez une plateforme dépend d&apos;un taux de correspondance inconnu.</span></p>
+                <p><b>Provenance :</b> {p.sources.length ? p.sources.map((x) => `${x.channel} (${x.count})`).join(", ") : "—"}</p>
+                <p><b>Fiabilité :</b> <span data-testid="reliability">{RELIABILITY_LABELS[p.reliability]}</span> — {p.reasons.join(" ")}</p>
+                <p className={p.adAudience.allowed ? "text-gray-700" : "text-red-700"} data-testid="ad-verdict"><b>Audience publicitaire :</b> {p.adAudience.allowed ? "à examiner" : "interdite"} — {p.adAudience.reason}</p>
+              </div>
+            )
+          })()}
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 border-b"><tr><th className="p-3">Client</th><th className="p-3">Statut</th><th className="p-3">Région</th><th className="p-3">Inactif depuis</th><th className="p-3">Dernière activité</th></tr></thead>
             <tbody data-testid="segment-members">

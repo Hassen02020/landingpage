@@ -340,6 +340,19 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
     check(`segments : « ${slug} » exclut tout client sans consentement marketing`, bad.length === 0, bad.join(","))
   }
   check("segments : la consultation n'écrit rien (aucune activité créée)", db.landing_lead_activities.length === sendsBefore)
+  // D1 / D2 : garde-fou de sensibilité et fiche de segment
+  await page.goto(`${BASE}/admin/segments`, { waitUntil: "networkidle" })
+  check("segments : « Omra sans réservation » porte la mention « Usage interne uniquement »", (await page.locator('[data-segment="omra-sans-reservation"] [data-testid="internal-only"]').count()) === 1)
+  check("segments : seul ce segment sensible porte la mention", (await page.locator('[data-testid="internal-only"]').count()) === 1)
+  await page.goto(`${BASE}/admin/segments?s=omra-sans-reservation`, { waitUntil: "networkidle" })
+  check("segments : fiche Omra — audience publicitaire « interdite »", (await page.locator('[data-testid="ad-verdict"]').innerText()).includes("interdite"))
+  await page.goto(`${BASE}/admin/segments?s=clients-reserves`, { waitUntil: "networkidle" })
+  const verdict = await page.locator('[data-testid="ad-verdict"]').innerText()
+  check("segments : fiche d'un segment marketing — « à examiner » sous validation humaine, jamais une activation", verdict.includes("à examiner") && verdict.includes("validation humaine") && verdict.includes("Rien n'est activé"), verdict)
+  check("segments : la fiche indique effectif, provenance et fiabilité", (await page.locator('[data-testid="segment-profile"]').innerText()).includes("Provenance") && (await page.locator('[data-testid="reliability"]').count()) === 1)
+  // hors menu latéral et barre haute (le lien global « Export CSV » du menu existe sur toutes les pages et ne concerne pas les segments)
+  const exportControls = await page.evaluate(() => Array.from(document.querySelectorAll("a, button")).filter((el) => !el.closest("aside, header, nav") && /export|exporter|envoyer|audience/i.test(`${el.textContent ?? ""} ${el.getAttribute("href") ?? ""}`)).length)
+  check("segments : aucun bouton d'export, d'envoi ni d'audience dans le contenu de la page des segments", exportControls === 0, String(exportControls))
 }
 
 // ---------------------------------------------------------------- Analytics : entonnoir (Bloc 9)
