@@ -23,6 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin", label: "Leads", icon: "leads", match: (p, q) => (p === "/admin" && q.get("followUp") !== "due") || (p.startsWith("/admin/leads/") && p !== "/admin/leads/new") },
       { href: "/admin/pipeline", label: "Pipeline", icon: "pipeline" },
+      { href: "/admin/a-traiter", label: "À traiter", icon: "clock", permission: "leads.view_all" },
       { href: "/admin/conversations", label: "Conversations", icon: "chat", permission: "leads.view_all" },
       { href: "/admin/clients", label: "Clients", icon: "team" },
       { href: "/admin?followUp=due", label: "Relances", icon: "clock", match: (p, q) => p === "/admin" && q.get("followUp") === "due" },
