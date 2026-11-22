@@ -138,9 +138,10 @@ Traçabilité : `created_by`/`updated_by` renseignés par le serveur (jamais par
 - Les lots n'ont aucune donnée personnelle : rien à anonymiser.
 
 ## 7. Conservation
-- **Proposition : 24 mois maximum après la dernière activité, puis anonymisation** de la fiche (donc de ses numéros) et des conversations.
-- **À vérifier juridiquement avant tout GO de code** (durée applicable en Tunisie / selon les marchés servis, base légale, information des personnes, droit d'effacement). La durée finale sera inscrite dans la politique de confidentialité.
-- Étape 1 : **aucune purge automatique**. L'anonymisation se fait avec l'outil existant, à la demande. Un traitement planifié ne sera proposé qu'après validation juridique et GO séparé.
+- **Décision du propriétaire (22/11/2026) :** les clients fidèles sont conservés ; le propriétaire indique que la loi permet jusqu'à 10 ans. **Règle retenue : 10 ans maximum après la dernière activité commerciale, puis anonymisation** de la fiche (numéros compris) et de ses conversations. « À vie » n'est pas retenu : il dépasse le plafond cité.
+- **Base légale à consigner par écrit** (non vérifiée par Claude) : le délai de 10 ans correspond en général aux pièces comptables et contractuelles (devis, factures, réservations), pas automatiquement aux données de contact et de conversation. À confirmer par votre comptable ou conseil juridique, et à inscrire dans la politique de confidentialité avec la finalité (suivi client, fidélité).
+- Garde-fous maintenus quelle que soit la durée : le retrait du consentement marketing arrête tout usage promotionnel ; une demande d'effacement d'un client est traitée par l'anonymisation existante ; aucun export publicitaire sur donnée sensible (§2).
+- Étape 1 : **aucune purge automatique**. Anonymisation à la demande avec l'outil existant ; un traitement planifié à l'expiration sera proposé séparément (GO distinct).
 
 ## 8. Lots de l'étape 1 (chacun avec son GO)
 **1a. Saisie et lecture** : page `/admin/conversations` (liste filtrable, sans numéro) ; « Saisie du jour » (lot) en 10 secondes ; « Nouvelle conversation » reliée à une fiche existante ou créée via la saisie manuelle de lead ; « ajouter une conversation » depuis la fiche ; annulation avec raison.
@@ -159,6 +160,6 @@ Traçabilité : `created_by`/`updated_by` renseignés par le serveur (jamais par
 GO migration → lecture avant, application, `postcheck-0029` → code → CI verte → GO fusion → déploiement → contrôle en production. Le code fonctionne avant la migration (page « migration non appliquée »).
 
 ## 11. Décisions
-Confirmées le 22/11/2026 : (1) saisie hybride OUI ; (2) nouvelle conversation après 30 jours sans échange OUI ; (3) saisie par tous les conseillers dans leurs droits, avec traçabilité ; (4) conservation proposée 24 mois, à vérifier juridiquement, téléphone **uniquement** dans la fiche ; (5) canaux : WhatsApp, Messenger, Instagram, commentaire Facebook, téléphone, autre ; (6) rapprochement Meta : saisie hebdomadaire, import CSV plus tard.
+Confirmées le 22/11/2026 : (1) saisie hybride OUI ; (2) nouvelle conversation après 30 jours sans échange OUI ; (3) saisie par tous les conseillers dans leurs droits, avec traçabilité ; (4) conservation 10 ans maximum après la dernière activité puis anonymisation (décision du propriétaire, base légale à consigner), téléphone **uniquement** dans la fiche ; (5) canaux : WhatsApp, Messenger, Instagram, commentaire Facebook, téléphone, autre ; (6) rapprochement Meta : saisie hebdomadaire, import CSV plus tard.
 **Confirmé :** hébergement option A (projet Landing Page / Growth OS).
-**En attente :** validation juridique de la durée (§7) ; GO migration ; GO de chaque lot.
+**En attente :** consignation écrite de la base légale des 10 ans (§7) ; GO migration ; GO de chaque lot.
