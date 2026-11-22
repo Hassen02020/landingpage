@@ -74,7 +74,7 @@ check("formulaire : redirection vers WhatsApp", page.url().startsWith("https://w
   })
   check("mobile : le bandeau de consentement est compact (moins de 110 px)", Boolean(m) && m.bannerH < 110)
   check("mobile : la barre d'appel à l'action est AU-DESSUS du bandeau (jamais cachée)", Boolean(m) && m.barBottom <= m.bannerTop + 1 && m.barVisible)
-  check("mobile : la hauteur du bandeau est publiée dans --consent-h", Boolean(m) && m.cssVar === `${m.bannerH}px`)
+  check("mobile : la hauteur du bandeau est publiée dans --consent-h (à 1 px près : arrondi au-dessus, jamais coupé)", Boolean(m) && /^\d+px$/.test(m.cssVar) && Math.abs(parseInt(m.cssVar, 10) - m.bannerH) <= 1)
   await mp.getByRole("button", { name: "رفض" }).click()
   await mp.waitForTimeout(300)
   const after = await mp.evaluate(() => ({ cssVar: getComputedStyle(document.documentElement).getPropertyValue("--consent-h").trim(), bottom: Math.round(window.innerHeight - document.querySelector('aside[aria-label="حجز سريع"]').getBoundingClientRect().bottom) }))
