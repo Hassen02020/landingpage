@@ -21,4 +21,10 @@ Source indiquée par le propriétaire : groupe « eVisa » du site myvisaport.co
 - Produit dédié « visa » (migration) : seulement si des statistiques séparées par produit sont voulues.
 
 ## Code
-`lib/page-builder/themes.ts` (modèle, `EVISA_DESTINATIONS`), `design.ts` (`form.destinations`), `readiness.ts` (page sur devis), `faq.ts`, `LandingView.tsx`, `LeadCaptureForm.tsx` (`requireDestination`), `DesignEditor.tsx`. Tests : `tests/evisa-module.test.ts` (14).
+`lib/page-builder/themes.ts` (modèle, `EVISA_DESTINATIONS`), `design.ts` (`form.destinations`), `readiness.ts` (page sur devis), `faq.ts`, `LandingView.tsx`, `LeadCaptureForm.tsx` (`requireDestination`), `DesignEditor.tsx`. Tests : `tests/evisa-module.test.ts` (15).
+
+## Mise en page et vidéo (20/11/2026)
+- Mise en page « split » : **même en-tête et même pied de page que la page Omra Ramadan complet** (en-tête Easy2Book avec menu, téléphone et WhatsApp ; vidéo verticale en tête de page).
+- Vidéo finale du propriétaire : `public/evisa-passeport-tunisien.mp4` (45,6 s, 9:16, 2,8 Mo, relue pour le démarrage rapide) et affiche `public/evisa-passeport-tunisien-poster.jpg`.
+- **Choix du propriétaire :** vidéo gardée telle quelle. Elle montre Rwanda, Tanzanie, Colombie et Cameroun, absents de la liste du formulaire : « Autre destination » les absorbe, la faisabilité est confirmée par un conseiller.
+- À vérifier avant toute publicité : images probablement générées par IA (mention Meta / TikTok), nom « TUNISAIR » visible sur un avion, armoiries sur le passeport.

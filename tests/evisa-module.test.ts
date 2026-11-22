@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import * as ReactNs from "react"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
+import { readFileSync } from "node:fs"
 import { POST as leadsPOST } from "@/app/api/leads/route"
 import { resetProtectionCache } from "@/lib/server/protection"
 import { defaultDesign, MAX_DESTINATIONS, sanitizeDesign } from "@/lib/page-builder/design"
@@ -21,6 +22,7 @@ beforeAll(async () => {
 beforeEach(() => resetProtectionCache())
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
+const ROOT = new URL("..", import.meta.url).pathname
 const theme = THEMES.find((t) => t.id === "evisa")!
 const designOf = () => sanitizeDesign(theme.preset!.design, "autre")
 const category = (): Category => ({ id: "c-evisa", slug: "evisa", name: theme.preset!.name, product: "autre", lang: "ar", headline: theme.preset!.headline, description: theme.preset!.description, banner_desktop: null, banner_mobile: null, seo_title: null, seo_description: null, visible: true, position: 0, created_at: "2026-11-20T00:00:00Z", updated_at: "2026-11-20T00:00:00Z" } as unknown as Category)
@@ -37,6 +39,16 @@ describe("E-Visa : modèle et liste de destinations", () => {
     expect(r.errors).toEqual({})
     expect(r.design.form.destinations).toEqual(EVISA_DESTINATIONS)
     expect(r.design.form.destinations.length).toBe(33)
+  })
+  it("même en-tête et pied de page que l'Omra Ramadan (mise en page « split ») avec la vidéo finale du site", () => {
+    const d = designOf().design
+    expect(d.hero).toBe("split")
+    expect(d.blocks.find((b) => b.type === "video")).toMatchObject({ video: "/evisa-passeport-tunisien.mp4", images: ["/evisa-passeport-tunisien-poster.jpg"] })
+    const h = html()
+    expect(h).toContain("/evisa-passeport-tunisien.mp4")
+    expect(h).toContain('href="#video"')
+    expect(readFileSync(ROOT + "public/evisa-passeport-tunisien.mp4").length).toBeGreaterThan(1_000_000)
+    expect(readFileSync(ROOT + "public/evisa-passeport-tunisien-poster.jpg").length).toBeGreaterThan(10_000)
   })
   it("la dernière destination est « Autre destination (selon demande) » ; aucune destination signalée « non vérifiée » n'est proposée", () => {
     expect(EVISA_DESTINATIONS[EVISA_DESTINATIONS.length - 1]).toMatch(/Autre destination/)
