@@ -167,7 +167,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     landing_offers: { visible: false, position: 0, seats_sold: 0, features: [], archived_at: null },
     landing_categories: { visible: false, position: 0, lang: "fr" },
     landing_reviews: { status: "pending", moderated_at: null },
-    landing_conversations: { status: "ouverte", is_test: false, source_kind: "saisie", anonymized_at: null },
+    landing_conversations: { status: "ouverte", is_test: false, source_kind: "saisie", anonymized_at: null, started_at: new Date().toISOString(), last_activity_at: new Date().toISOString() },
   }
   const UNIQUE = { landing_leads: ["ref", "idempotency_key"], landing_promo_codes: ["code"], landing_staff: ["email"], landing_offers: ["sku"], landing_categories: ["slug"], landing_reviews: ["content_hash"] }
 
