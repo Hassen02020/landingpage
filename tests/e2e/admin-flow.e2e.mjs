@@ -529,6 +529,7 @@ fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
   check("canaux : le téléphone est présenté comme saisie manuelle", (await st("Téléphone")) === "manual")
   check("canaux : les formulaires reçoivent des leads réels du jeu de données", (await st("Landing pages et formulaires")) === "receiving", String(await st("Landing pages et formulaires")))
   check("canaux : la page n'a écrit aucune donnée", !fake.calls.some((c) => /^(POST|PATCH|DELETE)/.test(c) && c.includes("/canaux")))
+}
 // ---- À traiter (lot B) : liste de travail issue des règles de relance, lecture seule, sans téléphone ----
 {
   await page.goto(`${BASE}/admin/a-traiter`, { waitUntil: "networkidle" })
