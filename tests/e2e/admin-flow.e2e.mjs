@@ -532,6 +532,7 @@ fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
   await page.waitForURL(/ok=/, { timeout: 15000 })
   const lotRow = db.landing_conversations.find((c) => c.kind === "lot")
   check("conversations : lot enregistré (12, WhatsApp) avec son auteur, sans fiche", lotRow?.conversation_count === 12 && lotRow.channel === "whatsapp" && Boolean(lotRow.created_by) && !lotRow.lead_id)
+  await page.goto(`${BASE}/admin/conversations`, { waitUntil: "networkidle" }) // URL propre : sinon « ok= » déjà présent dans l'adresse validerait l'attente trop tôt
   const lead1 = db.landing_leads.find((l) => l.id === LEAD(1))
   await page.locator('form[aria-labelledby="indiv-title"] select[name="channel"]').selectOption("messenger")
   await page.locator('form[aria-labelledby="indiv-title"] input[name="ref"]').fill(lead1.ref)
@@ -542,14 +543,16 @@ fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
   check("conversations : aucune colonne de téléphone, de nom ni de texte écrite en base", db.landing_conversations.every((c) => !Object.keys(c).some((k) => /phone|name|email|text|body/i.test(k))))
   const text = await page.locator("main, body").first().innerText()
   check("conversations : aucun numéro de téléphone affiché dans la page", !/\+?\d{8,}/.test(text.replace(/\d{4}-\d{2}-\d{2}/g, "")) && !text.includes(String(lead1.phone ?? "§§")))
+  await page.goto(`${BASE}/admin/conversations`, { waitUntil: "networkidle" }) // URL propre : sinon « ok= » déjà présent dans l'adresse validerait l'attente trop tôt
   check("conversations : 2 lignes (lot + conversation) et indicateur « 13 » conversations", (await page.locator('[data-testid="conv-row"]').count()) === 2 && (await page.locator('[data-testid="conv-stat"]').first().innerText()).trim() === "13")
   check("conversations : le lot ne crée aucun prospect (1 seul prospect : la fiche reliée)", (await page.locator('[data-testid="conv-stat"]').nth(1).innerText()).trim() === "1")
   check("conversations : journal d'audit écrit sans numéro", db.landing_admin_log.some((l) => l.area === "conversations") && !JSON.stringify(db.landing_admin_log.filter((l) => l.area === "conversations")).includes(String(lead1.phone ?? "§§")))
+  await page.goto(`${BASE}/admin/conversations`, { waitUntil: "networkidle" }) // URL propre : sinon « ok= » déjà présent dans l'adresse validerait l'attente trop tôt
   await page.locator('[data-testid="conv-row"]').first().getByRole("button", { name: "Annuler" }).click()
   await page.waitForURL(/ok=/, { timeout: 15000 })
   check("conversations : annulation = statut « annulee », la ligne reste (jamais supprimée)", db.landing_conversations.length === 2 && db.landing_conversations.some((c) => c.status === "annulee"))
   check("conversations : aucune requête DELETE vers la table", !fake.calls.some((c) => c.startsWith("DELETE") && c.includes("landing_conversations")))
-  await page.goto(`${BASE}/admin/conversations?erreur=x`, { waitUntil: "networkidle" })
+  await page.goto(`${BASE}/admin/conversations`, { waitUntil: "networkidle" })
   await page.locator('form[aria-labelledby="indiv-title"] input[name="ref"]').fill("E2B-ZZZZZZ")
   await page.locator('form[aria-labelledby="indiv-title"] button').click()
   await page.waitForURL(/erreur=/, { timeout: 15000 })
