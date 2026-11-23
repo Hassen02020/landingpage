@@ -133,8 +133,9 @@ await page.getByText("Montant de la réservation obligatoire").waitFor({ timeout
 check("fiche : « réservé » sans montant refusé", await page.getByText("Montant de la réservation obligatoire").isVisible())
 
 await page.goto(`${BASE}/admin/leads/${LEAD(7)}`, { waitUntil: "networkidle" })
-await Promise.all([page.waitForURL(/ok=/), page.getByRole("button", { name: /Marquer cette fiche comme doublon/ }).first().click()])
-check("fiche : « marquer comme doublon » → statut perdu + note", db.landing_leads.find((l) => l.id === LEAD(7)).status === "perdu" && db.landing_lead_activities.some((a) => a.body?.startsWith("Doublon de E2B-")))
+const status7 = db.landing_leads.find((l) => l.id === LEAD(7)).status
+await Promise.all([page.waitForURL(/ok=/), page.getByRole("button", { name: /Signaler comme doublon potentiel de/ }).first().click()])
+check("fiche : « signaler comme doublon potentiel » → un SIGNALEMENT est créé, le statut du dossier ne change PAS (plus de passage à « perdu »)", db.landing_leads.find((l) => l.id === LEAD(7)).status === status7 && db.landing_duplicate_reviews.some((r) => r.lead_id === LEAD(7) && r.status === "signale") && db.landing_lead_activities.some((a) => a.lead_id === LEAD(7) && a.type === "duplicate_flagged"))
 
 // nouveau lead manuel
 await page.goto(`${BASE}/admin/leads/new`, { waitUntil: "networkidle" })
