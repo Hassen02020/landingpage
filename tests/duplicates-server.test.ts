@@ -24,11 +24,11 @@ let t: Record<string, Row[]>, calls: { method: string; table: string; url: strin
 const metaPurchases = () => metaEvents.filter((e) => e === "Purchase").length // « Lead qualifié » part aussi au passage à « réservé » : seul Purchase compte ici
 
 const matchRow = (row: Row, params: URLSearchParams): boolean => {
-  for (const [k, raw] of params) {
+  for (const [k, raw] of Array.from(params.entries())) {
     if (["select", "limit", "order", "offset"].includes(k)) continue
     if (k === "or") {
-      const alts = raw.replace(/^\(|\)$/g, "").split(",").map((a) => a.split("."))
-      if (!alts.some(([col, op, ...v]) => op === "eq" && String(row[col]) === v.join("."))) return false
+      const alts = raw.replace(/^\(|\)$/g, "").split(",").map((a: string) => a.split("."))
+      if (!alts.some(([col, op, ...v]: string[]) => op === "eq" && String(row[col]) === v.join("."))) return false
       continue
     }
     const m = /^(not\.)?(eq|neq|is|in|like)\.(.*)$/.exec(raw)
