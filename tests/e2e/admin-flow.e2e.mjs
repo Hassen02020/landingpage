@@ -560,7 +560,7 @@ fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
 {
   const ADMIN_UID = db.landing_staff.find((u) => u.email === ADMIN.email).user_id, AGENT_UID = db.landing_staff.find((u) => u.email === AGENT.email).user_id
   const proto = { ...db.landing_leads[0] }
-  const mk = (n, o) => { const row = { ...proto, id: `99999999-9999-4999-8999-${String(n).padStart(12, "0")}`, ref: `E2B-DUP${n}0`.slice(0, 10), status: "contacte", product: "omra", offer: "الفوج الأول — 27 جانفي 2027", offer_id: null, booking_value: null, booked_at: null, notes: "note commerciale à conserver", assigned_to: null, is_test: false, duplicate_of: null, duplicate_confirmed_at: null, ...o }; db.landing_leads.push(row); return row }
+  const mk = (n, o) => { const row = { ...proto, id: `99999999-9999-4999-8999-${String(n).padStart(12, "0")}`, ref: `E2B-DUP${String(n).padStart(3, "0")}`, status: "contacte", product: "omra", offer: "الفوج الأول — 27 جانفي 2027", offer_id: null, booking_value: null, booked_at: null, notes: "note commerciale à conserver", assigned_to: null, is_test: false, duplicate_of: null, duplicate_confirmed_at: null, ...o }; db.landing_leads.push(row); return row }
   const t0 = Date.now() - 3600_000
   const L1 = mk(1, { phone: "21699000001", created_at: new Date(t0).toISOString(), lead_day: new Date(t0).toISOString().slice(0, 10) })
   const L2 = mk(2, { phone: "21699000001", created_at: new Date(t0 + 300_000).toISOString(), lead_day: new Date(t0).toISOString().slice(0, 10) })
