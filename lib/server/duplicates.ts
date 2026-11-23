@@ -57,7 +57,14 @@ export async function candidatesFor(lead: LeadRow): Promise<CandidateView[]> {
 /** Signalements qui concernent un dossier (comme candidat ou comme principal). Table absente : liste vide. */
 export async function reviewsForLead(leadId: string): Promise<DuplicateReview[]> {
   try {
-    return await select<DuplicateReview>("landing_duplicate_reviews", `select=${REVIEW_COLS}&or=(lead_id.eq.${leadId},primary_lead_id.eq.${leadId})&order=id.desc&limit=20`)
+    // deux lectures simples (comme candidat, comme principal) plutôt qu'un filtre « or » : plus robuste et testable
+    const [asCandidate, asPrimary] = await Promise.all([
+      select<DuplicateReview>("landing_duplicate_reviews", `select=${REVIEW_COLS}&lead_id=eq.${leadId}&order=id.desc&limit=20`),
+      select<DuplicateReview>("landing_duplicate_reviews", `select=${REVIEW_COLS}&primary_lead_id=eq.${leadId}&order=id.desc&limit=20`),
+    ])
+    const byId = new Map<number, DuplicateReview>()
+    for (const r of [...asCandidate, ...asPrimary]) byId.set(r.id, r)
+    return Array.from(byId.values()).sort((a, b) => b.id - a.id)
   } catch (e) {
     if (missingTable(e)) return []
     throw e
