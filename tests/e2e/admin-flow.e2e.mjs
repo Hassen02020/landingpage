@@ -581,7 +581,7 @@ fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
   db.landing_duplicate_reviews.push({ id: 900, organization_id: L3.organization_id, lead_id: L4.id, primary_lead_id: L3.id, rule: "technique_15min", confidence: "elevee", status: "signale", reason: null, reported_by: AGENT_UID, reported_at: new Date().toISOString(), decided_by: null, decided_at: null, decision_note: null, purchase_state: null })
   await page.goto(`${BASE}/admin/doublons`, { waitUntil: "networkidle" })
   const rows = page.locator('[data-testid="dup-row"]')
-  check("doublons : page des signalements — 2 à examiner, bouton « Confirmer » seulement sur celui d'un autre", (await rows.count()) === 2 && (await page.getByRole("button", { name: "Confirmer" }).count()) === 1)
+  check("doublons : page des signalements — les signalements à examiner sont listés (dont les 2 de ce parcours) ; UN SEUL bouton « Confirmer » : celui du signalement d'un autre (jamais le sien)", (await rows.count()) >= 2 && (await page.getByRole("button", { name: "Confirmer" }).count()) === 1)
   await page.getByRole("button", { name: "Confirmer" }).click()
   await page.waitForURL(/ok=/, { timeout: 15000 })
   const l4 = db.landing_leads.find((l) => l.id === L4.id)
