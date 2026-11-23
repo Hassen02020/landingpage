@@ -5,7 +5,9 @@ import { CONTACT_CHANNELS, isRegion, type ContactChannel } from "@/lib/regions"
 import { cleanEmail } from "@/lib/validation"
 import { describeAttachment, lookupConversation, parseWaRef } from "./whatsapp"
 import { normalizePhone, randomRef } from "./hash"
-import { buildConversionEvent, sendMetaLogged } from "./conversions"
+import { buildConversionEvent, holdPurchase, sendMetaLogged } from "./conversions"
+import { reservationConflicts } from "./reservation-guard"
+import type { ReservationConflict } from "@/lib/duplicates"
 import { sendTikTokEvent } from "./tiktok"
 import { isProduct, type Product } from "../config"
 import { isLossReason } from "@/lib/governance"
@@ -77,6 +79,9 @@ export interface LeadRow {
   /** gouvernance des données (migration 0026) : absentes tant qu'elle n'est pas appliquée */
   is_test?: boolean | null
   age_range?: string | null // migration 0027 (tranche d'âge déclarée)
+  offer_id?: string | null // migration 0004 : identifiant de l'offre du catalogue, quand le formulaire le transmet
+  duplicate_of?: string | null // migration 0030 : dossier principal, renseigné seulement quand le doublon est CONFIRMÉ
+  duplicate_confirmed_at?: string | null
   lost_reason?: string | null
   purchased_product?: string | null
   ad_id: string | null
@@ -103,7 +108,7 @@ export interface Activity {
 export async function logActivity(
   leadId: string,
   actor: Actor,
-  type: "created" | "status_change" | "note" | "assignment" | "follow_up" | "marketing_withdrawn" | "wa_in" | "wa_out",
+  type: "created" | "status_change" | "note" | "assignment" | "follow_up" | "marketing_withdrawn" | "wa_in" | "wa_out" | "duplicate_flagged" | "duplicate_confirmed" | "duplicate_rejected" | "duplicate_reopened",
   extra: { from_status?: Status; to_status?: Status; body?: string } = {}
 ): Promise<void> {
   await insertQuiet("landing_lead_activities", {
@@ -182,8 +187,8 @@ export async function listStaff(): Promise<{ user_id: string; email: string; ful
 }
 
 export type StatusResult =
-  | { ok: true; conversion: "envoyée" | "sans consentement" | null; /** évènement « lead qualifié » (première qualification seulement) */ qualified?: "envoyé" | "sans consentement" }
-  | { ok: false; error: string }
+  | { ok: true; conversion: "envoyée" | "sans consentement" | "retenue" | null; /** évènement « lead qualifié » (première qualification seulement) */ qualified?: "envoyé" | "sans consentement" }
+  | { ok: false; error: string; /** réservation possible en double : décision humaine requise */ code?: "duplicate_reservation"; conflicts?: ReservationConflict[] }
 
 /** « Lead qualifié » : a atteint « qualifié » ou plus loin (même définition que l'entonnoir et la rentabilité). */
 export const QUALIFIED_OR_BEYOND: readonly Status[] = ["qualifie", "devis", "negociation", "reserve", "gagne"]
@@ -193,7 +198,7 @@ const isQualifiedStage = (s: Status): boolean => QUALIFIED_OR_BEYOND.includes(s)
  * Change le statut d'un lead, trace l'action et, au passage à « réservé », envoie la
  * conversion Purchase / CompletePayment UNE seule fois (si le prospect a accepté les traceurs).
  */
-export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, opts: { bookingValue?: number; notes?: string; lostReason?: string; purchasedProduct?: string } = {}): Promise<StatusResult> {
+export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, opts: { bookingValue?: number; notes?: string; lostReason?: string; purchasedProduct?: string; /** motif : « oui, c'est une réservation DISTINCTE d'un autre dossier » (décision humaine, tracée) */ distinctReservation?: string } = {}): Promise<StatusResult> {
   if (lead.anonymized_at) return { ok: false, error: "Lead anonymisé : modification impossible" }
   if (opts.bookingValue !== undefined && (!Number.isFinite(opts.bookingValue) || opts.bookingValue < 0 || opts.bookingValue > 1e9)) {
     return { ok: false, error: "Montant invalide" }
@@ -208,9 +213,31 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   // La date de réservation n'est posée qu'UNE fois : réservé → gagné, ou un retour en arrière suivi
   // d'une nouvelle réservation, n'envoie jamais une seconde conversion Purchase.
   const firstBooking = isBooking(status) && !lead.booked_at
+
+  // « Une réservation = une vente = un Purchase » : avant d'enregistrer la PREMIÈRE réservation d'un dossier, chercher un autre dossier du même client,
+  // même produit, même offre/départ, déjà réservé ou portant un Purchase. S'il existe : l'enregistrement s'ARRÊTE tant qu'un humain n'a pas tranché
+  // (« doublon » → signalement, ou « réservation distincte » avec motif). Si le contrôle ne peut pas s'exécuter : la réservation est enregistrée
+  // mais le Purchase est RETENU (jamais d'envoi dans le doute).
+  let holdReason: string | null = null
+  let distinctOf: ReservationConflict[] = []
+  if (firstBooking && lead.is_test !== true) {
+    try {
+      const conflicts = await reservationConflicts(lead)
+      if (conflicts.length) {
+        if (!opts.distinctReservation?.trim()) {
+          const refs = conflicts.map((c) => c.ref ?? c.id.slice(0, 8)).join(", ")
+          return { ok: false, code: "duplicate_reservation", conflicts, error: `Réservation possible en double : un autre dossier de ce client (${refs}) est déjà réservé pour la même offre. Signalez un doublon, ou confirmez « réservation distincte » avec un motif.` }
+        }
+        distinctOf = conflicts
+      }
+    } catch {
+      holdReason = "controle_doublon_indisponible"
+    }
+  }
   const patch: Record<string, unknown> = { status, status_updated_at: new Date().toISOString() }
   if (opts.bookingValue !== undefined) patch.booking_value = opts.bookingValue
-  if (opts.notes) patch.notes = opts.notes.slice(0, 2000)
+  // Les notes commerciales sont PRÉSERVÉES : on ajoute à la note du dossier (jamais d'écrasement) ; l'historique garde de toute façon le texte complet.
+  if (opts.notes) { const merged = [lead.notes, opts.notes].filter(Boolean).join("\n"); if (merged.length <= 2000) patch.notes = merged }
   if (firstBooking) patch.booked_at = new Date().toISOString()
 
   // « lead qualifié » : UNE seule fois par lead, à la première fois qu'il atteint « qualifié » (ou plus loin). Décidé AVANT d'écrire l'historique
@@ -240,6 +267,11 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
     })
   }
 
+  if (distinctOf.length) {
+    await logActivity(lead.id, actor, "note", { body: `Réservation distincte confirmée (autre(s) dossier(s) : ${distinctOf.map((c) => c.ref ?? c.id.slice(0, 8)).join(", ")}) — motif : ${String(opts.distinctReservation).trim().slice(0, 300)}` }).catch(() => undefined)
+  }
+  if (holdReason) await logActivity(lead.id, actor, "note", { body: "Purchase retenu : le contrôle de doublon de réservation était indisponible. À examiner par un responsable." }).catch(() => undefined)
+
   let qualified: "envoyé" | "sans consentement" | undefined
   if (firstQualification) {
     if (!lead.tracking_consent) qualified = "sans consentement"
@@ -256,6 +288,11 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
   if (!lead.tracking_consent) return withQualified({ ok: true as const, conversion: "sans consentement" as const })
 
   const value = opts.bookingValue ?? lead.booking_value ?? 0
+  if (holdReason) {
+    // Purchase RETENU (journalisé, jamais envoyé) : libéré seulement après une décision humaine (rejet du signalement), jamais automatiquement.
+    await holdPurchase(lead.id, Number(value) || 0, holdReason)
+    return withQualified({ ok: true as const, conversion: "retenue" as const })
+  }
   const event = {
     eventName: "Purchase",
     eventId: `purchase-${lead.id}`,

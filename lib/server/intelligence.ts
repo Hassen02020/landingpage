@@ -1,6 +1,7 @@
 // Intelligence Center — chargement (lecture seule) pour la vue d'ensemble et la qualité des données.
 // Cloisonné par entreprise (contexte de la requête, comme les autres chargements). Aucun contenu de lead n'est renvoyé :
 // seulement des champs techniques servant à des comptages.
+import { selectLeadsExcludingDuplicates } from "@/lib/server/lead-scope"
 import { select } from "@/lib/server/db"
 import { loadAnalytics } from "@/lib/server/analytics"
 import { loadProfitability } from "@/lib/server/profitability"
@@ -22,7 +23,7 @@ const COL_SETS: { cols: string; governance: boolean }[] = [
 export async function loadQualityLeads(p: Period): Promise<{ leads: QualityLead[]; governanceColumns: boolean; truncated: boolean }> {
   for (let i = 0; i < COL_SETS.length; i++) {
     try {
-      const leads = await select<QualityLead>("landing_leads", `select=${COL_SETS[i].cols}&${periodFilter("created_at", p)}&limit=${LIMIT}`)
+      const leads = await selectLeadsExcludingDuplicates<QualityLead>(`select=${COL_SETS[i].cols}&${periodFilter("created_at", p)}&limit=${LIMIT}`)
       return { leads, governanceColumns: COL_SETS[i].governance, truncated: leads.length >= LIMIT }
     } catch (e) {
       if (i === COL_SETS.length - 1) throw e
