@@ -7,6 +7,7 @@ import { candidatesFor, decideDuplicate, flagDuplicate, listReviews, reopenDupli
 import { changeStatus, type LeadRow } from "@/lib/server/crm"
 import { loadAllCustomers } from "@/lib/server/customer"
 import { retryConversions } from "@/lib/server/conversions"
+import { exportLeads } from "@/lib/server/export"
 import { __resetLeadScope, selectRealLeads } from "@/lib/server/lead-scope"
 import { resetPublicOrgCache, resetTenantModeCache } from "@/lib/server/db"
 import { configureAll } from "./helpers"
@@ -331,5 +332,53 @@ describe("NOTES commerciales préservées", () => {
     const l = lead({ notes: long })
     await changeStatus(l, "qualifie", { id: EMP, label: "e@exemple.test" }, { notes: "y".repeat(300) })
     expect(get(l.id).notes).toBe(long); expect(t.landing_lead_activities.find((a) => a.type === "status_change")!.body).toContain("y".repeat(300))
+  })
+})
+
+describe("ANCIENNES ACTIVITÉS conservées (signaler, confirmer, rouvrir)", () => {
+  it("les activités déjà présentes ne sont ni modifiées, ni supprimées, ni réordonnées ; seules 3 nouvelles lignes s'ajoutent ; aucune requête PATCH ni DELETE sur l'historique", async () => {
+    const prim = lead({ created_at: iso(0), assigned_to: EMP }), cand = lead({ created_at: iso(60_000), assigned_to: EMP })
+    const old = [
+      { id: 1, lead_id: cand.id, type: "created", body: null, actor_label: "système", created_at: iso(0) },
+      { id: 2, lead_id: cand.id, type: "status_change", body: "Contacté — appel du 12/11", actor_label: "agent@exemple.test", created_at: iso(1000) },
+      { id: 3, lead_id: cand.id, type: "note", body: "Veut 4 personnes, budget confirmé", actor_label: "agent@exemple.test", created_at: iso(2000) },
+    ]
+    t.landing_lead_activities.push(...old.map((a) => ({ ...a })))
+    const snapshot = JSON.stringify(old)
+    await flagDuplicate(actor("manager", MGR), { leadId: cand.id, primaryLeadId: prim.id })
+    await decideDuplicate(actor("manager", MGR2), t.landing_duplicate_reviews[0].id, "confirme")
+    await reopenDuplicate(actor("admin", ADM), t.landing_duplicate_reviews[0].id)
+    expect(JSON.stringify(t.landing_lead_activities.slice(0, 3))).toBe(snapshot) // les 3 anciennes : identiques, même ordre
+    expect(t.landing_lead_activities).toHaveLength(6)
+    expect(t.landing_lead_activities.slice(3).map((a) => a.type)).toEqual(["duplicate_flagged", "duplicate_confirmed", "duplicate_reopened"])
+    expect(writes("landing_lead_activities").every((c) => c.method === "POST")).toBe(true) // jamais de PATCH ni de DELETE
+  })
+  it("la note du dossier et son statut restent identiques de bout en bout (signalé → confirmé → rouvert)", async () => {
+    const prim = lead({ created_at: iso(0) }), cand = lead({ created_at: iso(60_000), notes: "note commerciale à conserver", status: "qualifie" })
+    await flagDuplicate(actor("manager", MGR), { leadId: cand.id, primaryLeadId: prim.id })
+    await decideDuplicate(actor("manager", MGR2), t.landing_duplicate_reviews[0].id, "confirme")
+    await reopenDuplicate(actor("admin", ADM), t.landing_duplicate_reviews[0].id)
+    expect(get(cand.id)).toMatchObject({ notes: "note commerciale à conserver", status: "qualifie", duplicate_of: null })
+  })
+})
+
+describe("D5 — export CSV : les doublons CONFIRMÉS sortent de l'export, les signalés restent", () => {
+  const csvRefs = async () => {
+    const res = await exportLeads(new URLSearchParams({ format: "csv" }))
+    const text = await res.text()
+    return { status: res.status, text }
+  }
+  it("un doublon confirmé n'est PAS exporté ; signalé, rejeté ou rouvert : exporté ; le principal reste exporté ; aucune colonne de marquage n'est ajoutée", async () => {
+    const prim = lead({ created_at: iso(0), ref: "E2B-PRIM01" }), cand = lead({ created_at: iso(60_000), ref: "E2B-CAND01" })
+    await flagDuplicate(actor("manager", MGR), { leadId: cand.id, primaryLeadId: prim.id })
+    let out = await csvRefs()
+    expect(out.status).toBe(200); expect(out.text).toContain("E2B-PRIM01"); expect(out.text).toContain("E2B-CAND01") // signalé : toujours exporté
+    await decideDuplicate(actor("manager", MGR2), t.landing_duplicate_reviews[0].id, "confirme")
+    out = await csvRefs()
+    expect(out.text).toContain("E2B-PRIM01"); expect(out.text).not.toContain("E2B-CAND01") // confirmé : exclu
+    expect(out.text.split("\n")[0]).not.toMatch(/duplicate/i) // aucune colonne de marquage (décision D5 en attente)
+    await reopenDuplicate(actor("admin", ADM), t.landing_duplicate_reviews[0].id)
+    out = await csvRefs()
+    expect(out.text).toContain("E2B-CAND01") // rouvert : de nouveau exporté
   })
 })
