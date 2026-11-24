@@ -19,6 +19,7 @@ import { isPlatformAdmin } from "@/lib/server/tenant"
 import { rateLimited } from "@/lib/server/guard"
 import { can, canAssignLead, canModifyLead } from "@/lib/permissions"
 import { retryConversions } from "@/lib/server/conversions"
+import { decideDuplicate, flagDuplicate, reopenDuplicate } from "@/lib/server/duplicates"
 import { STATUSES, isBooking } from "@/lib/status"
 import { lossReasonError } from "@/lib/governance"
 import {
@@ -28,6 +29,7 @@ import {
   setTestFlag,
   createManualLead,
   getLead,
+  getLeadByRef,
   isStatus,
   logWhatsApp,
   qualifyLead,
@@ -110,6 +112,7 @@ export async function changeStatusAction(fd: FormData): Promise<void> {
     notes: field(fd, "notes") || undefined,
     lostReason: field(fd, "lost_reason") || undefined,
     purchasedProduct: field(fd, "purchased_product") || undefined,
+    distinctReservation: field(fd, "distinct_reason") || undefined,
   })
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
@@ -281,14 +284,40 @@ export async function moveLeadAction(fd: FormData): Promise<void> {
   redirect(safeBack(field(fd, "back") || "/admin/pipeline"))
 }
 
-/** Fiche : marquer comme doublon d'un autre lead (statut « perdu » + note traçable). */
-export async function markDuplicateAction(fd: FormData): Promise<void> {
+/** Doublons de dossiers : signaler → confirmer / rejeter → rouvrir. Les droits sont revérifiés dans lib/server/duplicates.ts (jamais seulement dans l'interface). */
+const dupActor = (s: Staff) => ({ id: s.userId, label: s.email, role: s.orgRole })
+const dupBack = (fd: FormData, fallback: string): string => safeBack(field(fd, "back") || fallback)
+const dupRedirect = (back: string, r: { ok: boolean; message?: string; error?: string }): never =>
+  redirect(`${back}${back.includes("?") ? "&" : "?"}${r.ok ? `ok=${encodeURIComponent(r.message ?? "")}` : `erreur=${encodeURIComponent(r.error ?? "Opération impossible.")}`}`)
+
+export async function flagDuplicateAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
-  const lead = await leadForEdit(fd, staff)
+  const id = field(fd, "id")
+  const back = dupBack(fd, `/admin/leads/${id}`)
+  if (rateLimited(`dup:${staff.userId}`, 60, 10 * 60 * 1000)) dupRedirect(back, { ok: false, error: "Trop d'actions : réessayez dans quelques minutes." })
   const of = field(fd, "of").toUpperCase()
-  if (!/^E2B-[A-Z0-9]{6}$/.test(of)) redirect(`/admin/leads/${lead.id}?erreur=R%C3%A9f%C3%A9rence+invalide`)
-  const res = await changeStatus(lead, "perdu", actorOf(staff), { notes: `Doublon de ${of}` })
-  if (res.ok) await addNote(lead, `Doublon de ${of}`, actorOf(staff)).catch(() => undefined)
-  revalidatePath(`/admin/leads/${lead.id}`)
-  redirect(`/admin/leads/${lead.id}?${res.ok ? `ok=${encodeURIComponent(`Marqué comme doublon de ${of}`)}` : `erreur=${encodeURIComponent(res.error)}`}`)
+  const primary = /^E2B-[A-Z0-9]{6}$/.test(of) ? await getLeadByRef(of) : null // cloisonné par entreprise
+  if (!primary) dupRedirect(back, { ok: false, error: "Référence du dossier principal invalide ou introuvable." })
+  const res = await flagDuplicate(dupActor(staff), { leadId: id, primaryLeadId: primary!.id, reason: field(fd, "reason") })
+  revalidatePath(`/admin/leads/${id}`); revalidatePath("/admin/doublons")
+  dupRedirect(back, res.ok ? { ok: true, message: res.message } : { ok: false, error: res.error })
+}
+
+export async function decideDuplicateAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const back = dupBack(fd, "/admin/doublons")
+  if (rateLimited(`dup:${staff.userId}`, 60, 10 * 60 * 1000)) dupRedirect(back, { ok: false, error: "Trop d'actions : réessayez dans quelques minutes." })
+  const decision = field(fd, "decision")
+  if (decision !== "confirme" && decision !== "rejete") dupRedirect(back, { ok: false, error: "Décision invalide." })
+  const res = await decideDuplicate(dupActor(staff), Number(field(fd, "review_id")), decision as "confirme" | "rejete", field(fd, "note"))
+  revalidatePath("/admin/doublons"); revalidatePath("/admin")
+  dupRedirect(back, res.ok ? { ok: true, message: res.message } : { ok: false, error: res.error })
+}
+
+export async function reopenDuplicateAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const back = dupBack(fd, "/admin/doublons")
+  const res = await reopenDuplicate(dupActor(staff), Number(field(fd, "review_id")), field(fd, "note"))
+  revalidatePath("/admin/doublons"); revalidatePath("/admin")
+  dupRedirect(back, res.ok ? { ok: true, message: res.message } : { ok: false, error: res.error })
 }

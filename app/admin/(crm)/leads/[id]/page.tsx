@@ -1,9 +1,11 @@
-import { can } from "@/lib/permissions"
+import { can, canDecideDuplicate, canFlagDuplicate, canReopenDuplicate } from "@/lib/permissions"
+import { candidatesFor, reviewsForLead } from "@/lib/server/duplicates"
+import { DUP_RULE_LABELS, DUP_STATUS_LABELS } from "@/lib/duplicates"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
 import { SOURCE_LABELS, STATUSES, STATUS_LABELS, findDuplicates, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
-import { addNoteAction, assignAction, changeStatusAction, followUpAction, markDuplicateAction, markTestAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
+import { addNoteAction, assignAction, changeStatusAction, decideDuplicateAction, flagDuplicateAction, followUpAction, markTestAction, reopenDuplicateAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
 import { CONTACT_CHANNEL_LABELS, CONTACT_CHANNELS, REGIONS } from "@/lib/regions"
 import { listTemplates, renderTemplate } from "@/lib/server/templates"
 import { STATUS_COLORS, formatDate } from "../../../format"
@@ -19,7 +21,10 @@ const ACTIVITY_LABELS: Record<string, string> = {
   created: "Création", status_change: "Statut", note: "Note", assignment: "Assignation",
   follow_up: "Relance", marketing_withdrawn: "Consentement", anonymized: "Anonymisation",
   wa_in: "💬 WhatsApp reçu", wa_out: "💬 WhatsApp envoyé",
+  duplicate_flagged: "Doublon signalé", duplicate_confirmed: "Doublon confirmé", duplicate_rejected: "Doublon rejeté", duplicate_reopened: "Doublon rouvert",
 }
+
+const locked_ = (l: { anonymized_at?: string | null }) => Boolean(l.anonymized_at)
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -34,13 +39,18 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
   const lead = await getLead(params.id)
   const formConfig = await loadFormConfig()
   if (!lead) notFound()
-  const [activities, staff, me, templates, duplicates] = await Promise.all([
+  const [activities, staff, me, templates, duplicates, candidates, dupReviews] = await Promise.all([
     getActivities(lead.id),
     listStaff().catch(() => []),
     currentStaff(),
     listTemplates({ activeOnly: true, product: lead.product }).catch(() => []),
     findDuplicates(lead).catch(() => []),
+    candidatesFor(lead).catch(() => []),
+    reviewsForLead(lead.id).catch(() => []),
   ])
+  const refOfId = new Map<string, string>([[lead.id, lead.ref], ...duplicates.map((d): [string, string] => [d.id, d.ref])])
+  const reviewedOthers = new Set(dupReviews.filter((r) => r.status !== "rejete").map((r) => (r.lead_id === lead.id ? r.primary_lead_id : r.lead_id)))
+  const mayFlag = Boolean(me) && !locked_(lead) && canFlagDuplicate(me?.orgRole, me?.userId ?? "", lead)
   const locked = Boolean(lead.anonymized_at)
   const wa = lead.phone ? `https://wa.me/${lead.phone}?text=${encodeURIComponent(`Bonjour ${lead.first_name}, Easy2Book au sujet de votre demande ${lead.ref}.`)}` : null
 
@@ -104,25 +114,66 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
         </section>
       )}
 
+      {lead.duplicate_of && (
+        <section className="bg-gray-100 border border-gray-300 rounded-2xl p-4 text-sm" data-testid="duplicate-confirmed">
+          <h2 className="font-bold">Doublon confirmé de <Link href={`/admin/leads/${lead.duplicate_of}`} className="underline font-mono">{refOfId.get(lead.duplicate_of) ?? "dossier principal"}</Link></h2>
+          <p className="text-gray-700">Ce dossier n&apos;est plus compté dans les ventes, le chiffre d&apos;affaires, la conversion ni les envois publicitaires. Il reste consultable ; son statut et ses notes sont conservés.</p>
+        </section>
+      )}
+
       {duplicates.length > 0 && (
-        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm">
+        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm" data-testid="duplicates">
           <h2 className="font-bold mb-2">⚠️ Même numéro : {duplicates.length} autre(s) demande(s)</h2>
+          <p className="text-xs text-gray-600 mb-2">Un rapprochement est un signalement à examiner, jamais une preuve : une demande à plusieurs jours d&apos;écart est un intérêt renouvelé. Rien n&apos;est fusionné ni supprimé.</p>
           <ul className="space-y-1">
-            {duplicates.map((d) => (
-              <li key={d.id} className="flex flex-wrap items-center gap-2">
-                <Link href={`/admin/leads/${d.id}`} className="font-mono underline">{d.ref}</Link>
-                <span>{PRODUCTS[d.product]}{d.offer ? ` — ${d.offer}` : ""}</span>
-                <span className="text-gray-600">{STATUS_LABELS[d.status]} · {formatDate(d.created_at)}</span>
-                {!locked && lead.status !== "perdu" && (
-                  <form action={markDuplicateAction}>
-                    <input type="hidden" name="id" value={lead.id} />
-                    <input type="hidden" name="of" value={d.ref} />
-                    <button className="text-xs underline text-amber-800">Marquer cette fiche comme doublon de {d.ref}</button>
-                  </form>
-                )}
-              </li>
-            ))}
+            {duplicates.map((d) => {
+              const cand = candidates.find((c) => c.otherId === d.id)
+              return (
+                <li key={d.id} className="flex flex-wrap items-center gap-2">
+                  <Link href={`/admin/leads/${d.id}`} className="font-mono underline">{d.ref}</Link>
+                  <span>{PRODUCTS[d.product]}{d.offer ? ` — ${d.offer}` : ""}</span>
+                  <span className="text-gray-600">{STATUS_LABELS[d.status]} · {formatDate(d.created_at)}</span>
+                  {cand && <span className="text-xs rounded-full bg-amber-200 px-2 py-0.5" data-testid="dup-candidate">{DUP_RULE_LABELS[cand.rule]} · confiance {cand.confidence === "elevee" ? "élevée" : "faible"}</span>}
+                  {mayFlag && !reviewedOthers.has(d.id) && !lead.duplicate_of && (
+                    <form action={flagDuplicateAction} className="flex flex-wrap items-center gap-1">
+                      <input type="hidden" name="id" value={lead.id} />
+                      <input type="hidden" name="of" value={d.ref} />
+                      <input name="reason" maxLength={200} placeholder="Motif (facultatif)" className="px-2 py-1 rounded border text-xs" />
+                      <button className="text-xs underline text-amber-800">Signaler comme doublon potentiel de {d.ref}</button>
+                    </form>
+                  )}
+                </li>
+              )
+            })}
           </ul>
+        </section>
+      )}
+
+      {dupReviews.length > 0 && (
+        <section className="bg-white border rounded-2xl p-4 text-sm space-y-2" data-testid="dup-reviews">
+          <h2 className="font-bold">Signalements de doublon</h2>
+          {dupReviews.map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center gap-2 border-b last:border-0 pb-2 last:pb-0" data-testid="dup-review" data-status={r.status}>
+              <span className="font-mono">{refOfId.get(r.lead_id) ?? "?"} → {refOfId.get(r.primary_lead_id) ?? "?"}</span>
+              <span className="text-xs rounded-full bg-gray-100 px-2 py-0.5">{DUP_STATUS_LABELS[r.status]}</span>
+              <span className="text-xs text-gray-500">{DUP_RULE_LABELS[r.rule]} · confiance {r.confidence === "elevee" ? "élevée" : "faible"} · {formatDate(r.reported_at)}</span>
+              {r.status === "signale" && canDecideDuplicate(me?.orgRole, me?.userId ?? "", r) && (
+                <form action={decideDuplicateAction} className="flex flex-wrap items-center gap-1">
+                  <input type="hidden" name="review_id" value={r.id} /><input type="hidden" name="back" value={`/admin/leads/${lead.id}`} />
+                  <input name="note" maxLength={300} placeholder="Note de décision (facultatif)" className="px-2 py-1 rounded border text-xs" />
+                  <button name="decision" value="confirme" className="text-xs rounded bg-gray-800 text-white px-2 py-1">Confirmer</button>
+                  <button name="decision" value="rejete" className="text-xs rounded border px-2 py-1">Rejeter</button>
+                </form>
+              )}
+              {r.status === "signale" && me && !canDecideDuplicate(me.orgRole, me.userId, r) && <span className="text-xs text-gray-500">{r.reported_by === me.userId ? "En attente d'un autre responsable (double regard)." : "En attente d'un responsable."}</span>}
+              {r.status !== "signale" && canReopenDuplicate(me?.orgRole) && (
+                <form action={reopenDuplicateAction} className="flex items-center gap-1">
+                  <input type="hidden" name="review_id" value={r.id} /><input type="hidden" name="back" value={`/admin/leads/${lead.id}`} />
+                  <button className="text-xs underline">Rouvrir (administrateur)</button>
+                </form>
+              )}
+            </div>
+          ))}
         </section>
       )}
 
@@ -239,6 +290,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
               </select>
             </label>
             <input name="notes" placeholder="Commentaire (facultatif)" className="w-full px-3 py-2 rounded-lg border" />
+            <input name="distinct_reason" maxLength={300} placeholder="Réservation distincte d'un autre dossier du client : motif (seulement si demandé)" className="w-full px-3 py-2 rounded-lg border" data-testid="distinct-reason" />
             <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Enregistrer</button>
           </form>
           <form action={followUpAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">

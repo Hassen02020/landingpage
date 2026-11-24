@@ -1,3 +1,4 @@
+import { selectLeadsExcludingDuplicates } from "@/lib/server/lead-scope"
 import Link from "next/link"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { currentStaff } from "@/lib/server/auth"
@@ -40,7 +41,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: { p
   // dossiers conclus : 30 derniers jours seulement (le tableau reste lisible)
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
   const [cards, staff] = await Promise.all([
-    select<Card>("landing_leads", `${filters.join("&")}&or=(status.${inFilter(OPEN_STATUSES)},updated_at.gte.${since})`).catch(() => null),
+    selectLeadsExcludingDuplicates<Card>(`${filters.join("&")}&or=(status.${inFilter(OPEN_STATUSES)},updated_at.gte.${since})`).catch(() => null),
     listStaff().catch(() => []),
   ])
   const name = new Map(staff.map((s) => [s.user_id, s.full_name || s.email.split("@")[0]]))

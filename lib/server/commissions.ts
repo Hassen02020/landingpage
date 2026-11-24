@@ -4,6 +4,7 @@
 //  • Rapprochement : par la référence du dossier (E2B-XXXXXX) ; à défaut par le téléphone, jamais importé sans VALIDATION manuelle.
 //  • Idempotence : réimporter un fichier ne crée aucun doublon (clé unique par entreprise).
 //  • Cohérence : une réservation EasyV4 ne peut pas être rattachée à deux dossiers différents.
+import { selectLeadsExcludingDuplicates } from "@/lib/server/lead-scope"
 import { DbError, insertOne, select, update } from "@/lib/server/db"
 import { normalizePhone } from "@/lib/server/hash"
 import { parseCommissionCsv, type CommissionKind, type ParsedCommissionRow } from "@/lib/commission-import"
@@ -54,8 +55,8 @@ export async function previewCommissionImport(csv: string): Promise<PreviewResul
   let byPhone: LeadHit[] = []
   try {
     existing = await select<ExistingLine>("landing_commissions", `select=line_key,external_ref,lead_id&or=(line_key.${inList(keys)},external_ref.${inList(reservations)})&limit=2000`)
-    if (refs.length) byRef = await select<LeadHit>("landing_leads", `select=id,ref,first_name,phone&ref=${inList(refs)}&limit=1000`)
-    if (phones.length) byPhone = await select<LeadHit>("landing_leads", `select=id,ref,first_name,phone&phone=${inList(phones)}&limit=2000`)
+    if (refs.length) byRef = await selectLeadsExcludingDuplicates<LeadHit>(`select=id,ref,first_name,phone&ref=${inList(refs)}&limit=1000`)
+    if (phones.length) byPhone = await selectLeadsExcludingDuplicates<LeadHit>(`select=id,ref,first_name,phone&phone=${inList(phones)}&limit=2000`)
   } catch (e) {
     if (isMissingTable(e)) return { migrationApplied: false, rows: [], errors, counts }
     throw e

@@ -1,6 +1,7 @@
 // Coûts variables hors publicité (table landing_variable_costs, migration 0017). Ajout seul ; annulation par écriture opposée.
 // Anti double comptage : un coût se rattache à UNE réservation (référence dossier E2B-XXXXXX) OU à UNE campagne OU à rien.
 // La publicité (table landing_ad_spend) et le remboursement client (ligne négative du registre des commissions) ne sont PAS des catégories.
+import { selectLeadsExcludingDuplicates } from "@/lib/server/lead-scope"
 import { insertOne, select } from "@/lib/server/db"
 import { parseAmount, parseDate, LEAD_REF } from "@/lib/commission-import"
 import { tunisDay } from "@/lib/server/crm"
@@ -57,7 +58,7 @@ export async function addVariableCost(input: CostInput, actorId: string | null):
   try {
     let leadId: string | null = null
     if (leadRef) {
-      const hit = await select<{ id: string }>("landing_leads", `select=id&ref=eq.${encodeURIComponent(leadRef)}&limit=1`)
+      const hit = await selectLeadsExcludingDuplicates<{ id: string }>(`select=id&ref=eq.${encodeURIComponent(leadRef)}&limit=1`) // jamais rattaché à un doublon confirmé
       if (!hit[0]) return { ok: false, errors: { leadRef: "Dossier introuvable dans cette entreprise." } }
       leadId = hit[0].id
     }

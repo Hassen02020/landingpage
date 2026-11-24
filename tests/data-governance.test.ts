@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { readdirSync, readFileSync } from "node:fs"
 import { changeStatus, setTestFlag, type LeadRow } from "@/lib/server/crm"
 import { LOSS_REASONS, LOSS_REASON_LABELS, isLossReason } from "@/lib/governance"
-import { __resetLeadScope, selectRealLeads } from "@/lib/server/lead-scope"
+import { __resetLeadScope, selectLeadsExcludingDuplicates, selectRealLeads } from "@/lib/server/lead-scope"
 import { DbError, resetPublicOrgCache, resetTenantModeCache } from "@/lib/server/db"
 import { configureAll, installFetchMock } from "./helpers"
 
@@ -114,7 +114,7 @@ describe("selectRealLeads : les tests sont exclus des analyses", () => {
   it("ajoute le filtre is_test=eq.false", async () => {
     stub(() => new Response(JSON.stringify([{ id: "a" }]), { status: 200 }))
     expect(await selectRealLeads("select=id&limit=5")).toEqual([{ id: "a" }])
-    expect(urls()[0]).toMatch(/landing_leads\?select=id&limit=5&is_test=eq\.false$/)
+    expect(urls()[0]).toMatch(/landing_leads\?select=id&limit=5&duplicate_of=is\.null&is_test=eq\.false$/) // tests ET doublons confirmés exclus
   })
   it("base non migrée (42703) : relit sans filtre, puis ne retente le filtre qu'après 1 minute", async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date("2026-11-20T10:00:00Z"))
@@ -132,6 +132,25 @@ describe("selectRealLeads : les tests sont exclus des analyses", () => {
     await selectRealLeads("select=id")
     expect(urls().at(-1)).toMatch(/is_test=eq\.false$/)
   })
+  it("base sans la migration 0030 (42703 duplicate_of) : relit sans ce filtre mais GARDE l'exclusion des tests ; reprend le filtre après 1 minute", async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-11-24T10:00:00Z"))
+    let migrated = false
+    stub((u) => (u.includes("duplicate_of") && !migrated ? new Response(JSON.stringify({ code: "42703", message: "column landing_leads.duplicate_of does not exist" }), { status: 400 }) : new Response(JSON.stringify([{ id: "a" }]), { status: 200 })))
+    await selectRealLeads("select=id")
+    expect(urls()).toHaveLength(2)
+    expect(urls()[1]).toMatch(/is_test=eq\.false$/); expect(urls()[1]).not.toContain("duplicate_of")
+    await selectRealLeads("select=id")
+    expect(urls()).toHaveLength(3) // pas de nouvel essai pendant la minute
+    migrated = true
+    vi.setSystemTime(new Date("2026-11-24T10:01:30Z"))
+    await selectRealLeads("select=id")
+    expect(urls().at(-1)).toMatch(/duplicate_of=is\.null&is_test=eq\.false$/)
+  })
+  it("selectLeadsExcludingDuplicates : exclut seulement les doublons confirmés (les tests restent visibles)", async () => {
+    stub(() => new Response(JSON.stringify([{ id: "a" }]), { status: 200 }))
+    await selectLeadsExcludingDuplicates("select=id")
+    expect(urls()[0]).toMatch(/duplicate_of=is\.null$/); expect(urls()[0]).not.toContain("is_test")
+  })
   it("une AUTRE colonne manquante (42703 sans is_test) est propagée et ne désactive PAS l'exclusion des tests", async () => {
     stub((u) => (u.includes("age_range") ? new Response(JSON.stringify({ code: "42703", message: "column landing_leads.age_range does not exist" }), { status: 400 }) : new Response(JSON.stringify([{ id: "a" }]), { status: 200 })))
     await expect(selectRealLeads("select=id,age_range")).rejects.toBeInstanceOf(DbError)
@@ -148,8 +167,9 @@ describe("garde-fou : aucune analyse ne lit les leads sans exclure les tests", (
   const dir = new URL("../lib/server/", import.meta.url)
   // fichiers autorisés à lire landing_leads directement : recherches opérationnelles (par référence, téléphone, identifiant),
   // fiche et liste de travail des conseillers (les tests y restent visibles et marqués), relance des conversions (lit aussi les leads de test pour les ÉCARTER), recherche de doublon à la réception d'un lead
-  // (un test et un vrai lead du même numéro restent des doublons), et le chargeur de qualité (gère is_test lui-même).
-  const ALLOWED = new Set(["ad-spend.ts", "catalog.ts", "commissions.ts", "conversions.ts", "crm.ts", "customer.ts", "inbound-leads.ts", "intelligence.ts", "lead-intake.ts", "lead-scope.ts", "variable-costs.ts"])
+  // (un test et un vrai lead du même numéro restent des doublons), le chargeur de qualité (gère is_test lui-même) et les doublons de dossiers (duplicates.ts :
+  // lit seulement la référence des dossiers déjà liés à un signalement, pour l'afficher ; aucun chiffre, aucune analyse).
+  const ALLOWED = new Set(["ad-spend.ts", "catalog.ts", "commissions.ts", "conversions.ts", "crm.ts", "customer.ts", "duplicates.ts", "inbound-leads.ts", "intelligence.ts", "lead-intake.ts", "lead-scope.ts", "variable-costs.ts"])
   it("un fichier serveur qui lit directement landing_leads doit être déclaré ici (décision explicite : test visible ou exclu)", () => {
     const offenders = readdirSync(dir)
       .filter((f) => f.endsWith(".ts") && !ALLOWED.has(f))

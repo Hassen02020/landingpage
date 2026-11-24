@@ -133,8 +133,9 @@ await page.getByText("Montant de la réservation obligatoire").waitFor({ timeout
 check("fiche : « réservé » sans montant refusé", await page.getByText("Montant de la réservation obligatoire").isVisible())
 
 await page.goto(`${BASE}/admin/leads/${LEAD(7)}`, { waitUntil: "networkidle" })
-await Promise.all([page.waitForURL(/ok=/), page.getByRole("button", { name: /Marquer cette fiche comme doublon/ }).first().click()])
-check("fiche : « marquer comme doublon » → statut perdu + note", db.landing_leads.find((l) => l.id === LEAD(7)).status === "perdu" && db.landing_lead_activities.some((a) => a.body?.startsWith("Doublon de E2B-")))
+const status7 = db.landing_leads.find((l) => l.id === LEAD(7)).status
+await Promise.all([page.waitForURL(/ok=/), page.getByRole("button", { name: /Signaler comme doublon potentiel de/ }).first().click()])
+check("fiche : « signaler comme doublon potentiel » → un SIGNALEMENT est créé, le statut du dossier ne change PAS (plus de passage à « perdu »)", db.landing_leads.find((l) => l.id === LEAD(7)).status === status7 && db.landing_duplicate_reviews.some((r) => r.lead_id === LEAD(7) && r.status === "signale") && db.landing_lead_activities.some((a) => a.lead_id === LEAD(7) && a.type === "duplicate_flagged"))
 
 // nouveau lead manuel
 await page.goto(`${BASE}/admin/leads/new`, { waitUntil: "networkidle" })
@@ -555,6 +556,64 @@ fake.users.find((u) => u.email === ADMIN.email).password = ADMIN.password
   check("à traiter : la page n'a écrit aucune donnée", !fake.calls.some((c) => /^(POST|PATCH|DELETE)/.test(c) && c.includes("/a-traiter")))
   check("à traiter : un dossier réservé ou perdu n'apparaît pas", !db.landing_leads.filter((l) => ["reserve", "gagne", "perdu"].includes(l.status)).some((l) => todoText.includes(l.ref)))
 }
+// ---- Doublons de dossiers (G3) : signaler, double regard, confirmer, rouvrir, contrôle de réservation, aucune suppression ----
+{
+  const ADMIN_UID = db.landing_staff.find((u) => u.email === ADMIN.email).user_id, AGENT_UID = db.landing_staff.find((u) => u.email === AGENT.email).user_id
+  const proto = { ...db.landing_leads[0] }
+  const mk = (n, o) => { const row = { ...proto, id: `99999999-9999-4999-8999-${String(n).padStart(12, "0")}`, ref: `E2B-DUP${String(n).padStart(3, "0")}`, status: "contacte", product: "omra", offer: "الفوج الأول — 27 جانفي 2027", offer_id: null, booking_value: null, booked_at: null, notes: "note commerciale à conserver", assigned_to: null, is_test: false, duplicate_of: null, duplicate_confirmed_at: null, ...o }; db.landing_leads.push(row); return row }
+  const t0 = Date.now() - 3600_000
+  const L1 = mk(1, { phone: "21699000001", created_at: new Date(t0).toISOString(), lead_day: new Date(t0).toISOString().slice(0, 10) })
+  const L2 = mk(2, { phone: "21699000001", created_at: new Date(t0 + 300_000).toISOString(), lead_day: new Date(t0).toISOString().slice(0, 10) })
+  const L3 = mk(3, { phone: "21699000002", created_at: new Date(t0).toISOString() })
+  const L4 = mk(4, { phone: "21699000002", created_at: new Date(t0 + 300_000).toISOString() })
+  const L5 = mk(5, { phone: "21699000003", created_at: new Date(t0).toISOString(), status: "reserve", booking_value: 500, booked_at: new Date(t0).toISOString() })
+  const L6 = mk(6, { phone: "21699000003", created_at: new Date(t0 + 86_400_000 / 2).toISOString() })
+  const sessionSum = async (p) => (await p.locator("main, body").first().innerText())
+  // 1. candidat détecté, signalement par l'administrateur
+  await page.goto(`${BASE}/admin/leads/${L2.id}`, { waitUntil: "networkidle" })
+  check("doublons : le candidat est détecté (règle technique 15 min, confiance élevée), sans affirmation", (await page.locator('[data-testid="dup-candidate"]').innerText()).includes("Technique") && (await page.locator('[data-testid="duplicates"]').innerText()).includes("jamais une preuve"))
+  await page.getByRole("button", { name: /Signaler comme doublon potentiel de/ }).click()
+  await page.waitForURL(/ok=/, { timeout: 15000 })
+  const r1 = db.landing_duplicate_reviews.find((r) => r.lead_id === L2.id)
+  check("doublons : signalement créé (signalé, règle technique, par l'administrateur) ; le statut du dossier ne change PAS", r1?.status === "signale" && r1.rule === "technique_15min" && r1.reported_by === ADMIN_UID && db.landing_leads.find((l) => l.id === L2.id).status === "contacte")
+  check("doublons : D1 — l'auteur du signalement n'a PAS de bouton « Confirmer » et voit « un autre responsable »", (await page.locator('[data-testid="dup-review"]').getByRole("button", { name: "Confirmer" }).count()) === 0 && (await page.locator('[data-testid="dup-review"]').innerText()).includes("double regard"))
+  // 2. signalement d'un conseiller : l'administrateur confirme depuis la page des doublons
+  db.landing_duplicate_reviews.push({ id: 900, organization_id: L3.organization_id, lead_id: L4.id, primary_lead_id: L3.id, rule: "technique_15min", confidence: "elevee", status: "signale", reason: null, reported_by: AGENT_UID, reported_at: new Date().toISOString(), decided_by: null, decided_at: null, decision_note: null, purchase_state: null })
+  await page.goto(`${BASE}/admin/doublons`, { waitUntil: "networkidle" })
+  const rows = page.locator('[data-testid="dup-row"]')
+  check("doublons : page des signalements — les signalements à examiner sont listés (dont les 2 de ce parcours) ; UN SEUL bouton « Confirmer » : celui du signalement d'un autre (jamais le sien)", (await rows.count()) >= 2 && (await page.getByRole("button", { name: "Confirmer" }).count()) === 1)
+  await page.getByRole("button", { name: "Confirmer" }).click()
+  await page.waitForURL(/ok=/, { timeout: 15000 })
+  const l4 = db.landing_leads.find((l) => l.id === L4.id)
+  check("doublons : confirmé → le dossier porte duplicate_of ; son STATUT et sa NOTE sont intacts ; rien n'est supprimé", l4.duplicate_of === L3.id && l4.status === "contacte" && l4.notes === "note commerciale à conserver" && db.landing_leads.some((l) => l.id === L4.id))
+  await page.goto(`${BASE}/admin/leads/${L4.id}`, { waitUntil: "networkidle" })
+  check("doublons : la fiche reste consultable avec la mention « Doublon confirmé » et l'explication des chiffres", (await page.locator('[data-testid="duplicate-confirmed"]').innerText()).includes("n'est plus compté dans les ventes"))
+  await page.goto(`${BASE}/admin/pipeline`, { waitUntil: "networkidle" })
+  check("doublons : le doublon confirmé n'apparaît plus dans le pipeline", !(await page.content()).includes(L4.ref))
+  // 3. l'administrateur rouvre la décision
+  await page.goto(`${BASE}/admin/doublons?statut=confirme`, { waitUntil: "networkidle" })
+  await page.getByRole("button", { name: /Rouvrir/ }).click()
+  await page.waitForURL(/ok=/, { timeout: 15000 })
+  check("doublons : D2 — l'administrateur rouvre : le dossier redevient comptable, le signalement repasse à « signalé »", db.landing_leads.find((l) => l.id === L4.id).duplicate_of === null && db.landing_duplicate_reviews.find((r) => r.id === 900).status === "signale")
+  // 4. contrôle de réservation : un autre dossier du même client est déjà réservé pour la même offre
+  await page.goto(`${BASE}/admin/leads/${L6.id}`, { waitUntil: "networkidle" })
+  const statusForm = page.locator("form").filter({ hasText: "Changer le statut" })
+  await statusForm.locator('select[name="status"]').selectOption("reserve")
+  await statusForm.locator('input[name="booking_value"]').fill("500")
+  await statusForm.getByRole("button", { name: "Enregistrer" }).click()
+  await page.waitForURL(/erreur=/, { timeout: 15000 })
+  check("doublons : réservation en double — l'enregistrement S'ARRÊTE avec le message et rien n'est écrit", (await page.content()).includes("Réservation possible en double") && db.landing_leads.find((l) => l.id === L6.id).status === "contacte" && db.landing_leads.find((l) => l.id === L6.id).booked_at === null)
+  await page.goto(`${BASE}/admin/leads/${L6.id}`, { waitUntil: "networkidle" })
+  const statusForm2 = page.locator("form").filter({ hasText: "Changer le statut" })
+  await statusForm2.locator('select[name="status"]').selectOption("reserve")
+  await statusForm2.locator('input[name="booking_value"]').fill("500")
+  await statusForm2.locator('input[name="distinct_reason"]').fill("deuxième départ pour la même famille")
+  await statusForm2.getByRole("button", { name: "Enregistrer" }).click()
+  await page.waitForURL(/ok=/, { timeout: 15000 })
+  check("doublons : « réservation distincte » avec motif — la réservation est enregistrée et la décision tracée", db.landing_leads.find((l) => l.id === L6.id).status === "reserve" && db.landing_lead_activities.some((a) => a.lead_id === L6.id && String(a.body ?? "").includes("Réservation distincte confirmée")))
+  check("doublons : aucun dossier supprimé, aucune requête DELETE vers les dossiers ou les signalements", !fake.calls.some((c) => c.startsWith("DELETE") && /landing_leads|landing_duplicate_reviews/.test(c)) && [L1, L2, L3, L4, L5, L6].every((x) => db.landing_leads.some((l) => l.id === x.id)))
+  check("doublons : traces sans numéro de téléphone (journal d'audit)", !JSON.stringify(db.landing_admin_log.filter((l) => l.area === "doublons")).match(/2169900000/))
+}
 // ---------------------------------------------------------------- export
 // ---- Conversations (migration 0029) : saisie d'un lot, d'une conversation reliée, annulation ; aucun numéro affiché ----
 {
@@ -615,6 +674,7 @@ await ctx.close()
     await ap.goto(`${BASE}${path}`, { waitUntil: "networkidle" })
     if (!(await ap.getByText("réservée aux administrateurs").isVisible())) check(`agent : ${path} refusé`, false)
   }
+  check("agent : pas de menu « Doublons » ; la page des signalements lui est refusée (il signale, il ne décide pas)", (await aside.getByRole("link", { name: "Doublons", exact: true }).count()) === 0 && (await (async () => { await ap.goto(`${BASE}/admin/doublons`, { waitUntil: "networkidle" }); return (await ap.locator("body").innerText()).includes("réservée aux responsables") })()))
   const aexp = await ap.request.get(`${BASE}/admin/export`)
   check("agent : export CSV refusé (403)", aexp.status() === 403, String(aexp.status()))
   const before = db.landing_integrations.length

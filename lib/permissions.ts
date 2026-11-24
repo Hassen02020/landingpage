@@ -25,22 +25,25 @@ export type Permission =
   | "templates.manage" // modèles de messages WhatsApp
   | "data.export" // export CSV, blocage d'un numéro depuis une fiche
   | "ads.manage" // dépenses publicitaires, import et confirmation des commissions (données financières)
+  | "duplicates.flag" // signaler un doublon potentiel (sur les dossiers qu'on peut modifier)
+  | "duplicates.review" // confirmer ou rejeter un signalement de doublon (jamais le sien : double regard)
+  | "duplicates.reopen" // rouvrir une décision de doublon (confirmée ou rejetée)
   | "ads.view" // lecture de la rentabilité publicitaire
 
 const ALL_ADMIN: Permission[] = [
   "org.profile.edit", "social.connect", "employees.manage", "employees.view", "site.manage", "campaigns.manage",
   "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned",
   "sales.record", "sales.record_assigned", "catalog.manage", "promos.manage", "protection.manage", "templates.manage", "data.export",
-  "ads.manage", "ads.view",
+  "ads.manage", "ads.view", "duplicates.flag", "duplicates.review", "duplicates.reopen",
 ]
 
 export const ROLE_PERMISSIONS: Record<OrgRole, ReadonlySet<Permission>> = {
   admin: new Set(ALL_ADMIN),
   // manager : équipes autorisées, affectation, suivi commercial, rapports ; ni profil, ni réseaux, ni site, ni gestion des comptes
-  manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned", "ads.view"]),
+  manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned", "ads.view", "duplicates.flag", "duplicates.review"]),
   // employé : VOIT tous les leads de son entreprise (décision du propriétaire, 08/11/2026) ; ne modifie que les siens ;
   // jamais d'affectation, de rapports, de gestion d'équipe ni de réglages. Aucun accès aux leads d'une AUTRE entreprise.
-  employee: new Set<Permission>(["leads.view_all", "leads.view_assigned", "leads.update_assigned", "sales.record_assigned"]),
+  employee: new Set<Permission>(["leads.view_all", "leads.view_assigned", "leads.update_assigned", "sales.record_assigned", "duplicates.flag"]),
 }
 
 export const can = (role: OrgRole | null | undefined, permission: Permission): boolean =>
@@ -77,4 +80,19 @@ export function canAssignLead(role: OrgRole | null | undefined, userId: string, 
   if (!can(role, "leads.update_assigned")) return false
   if (target === userId) return !lead.assigned_to || lead.assigned_to === userId // prendre un lead libre
   return target === null && lead.assigned_to === userId // rendre SON lead
+}
+
+/** Signaler un doublon : le droit de signaler ET celui de modifier le dossier (un employé : ses dossiers et les dossiers non affectés). */
+export function canFlagDuplicate(role: OrgRole | null | undefined, userId: string, lead: { assigned_to?: string | null }): boolean {
+  return can(role, "duplicates.flag") && canModifyLead(role, userId, lead)
+}
+
+/** Confirmer ou rejeter un signalement : permission dédiée ET double regard (décision D1) : on ne décide JAMAIS son propre signalement, sans exception. */
+export function canDecideDuplicate(role: OrgRole | null | undefined, userId: string, review: { reported_by: string }): boolean {
+  return can(role, "duplicates.review") && review.reported_by !== userId
+}
+
+/** Rouvrir une décision (décision D2) : administrateur seulement. */
+export function canReopenDuplicate(role: OrgRole | null | undefined): boolean {
+  return can(role, "duplicates.reopen")
 }

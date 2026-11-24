@@ -106,6 +106,27 @@ async function finishLog(eventId: string, patch: Record<string, unknown>): Promi
   }
 }
 
+/** Purchase RETENU : journalisé à l'état « skipped » avec la raison « doublon:… », JAMAIS envoyé. Se libère seulement par une décision humaine (voir releaseHeldPurchase). */
+export async function holdPurchase(leadId: string, valueTnd: number, reason: string): Promise<void> {
+  try {
+    await insertQuiet("landing_conversion_log", { lead_id: leadId, network: "meta", event_name: "Purchase", event_id: `purchase-${leadId}`, event_time: Math.floor(Date.now() / 1000), value_tnd: valueTnd, status: "skipped", attempts: 0, last_error: `doublon:${reason}`.slice(0, 200), next_retry_at: null })
+  } catch {
+    console.error("[conversions] Purchase retenu non journalisé") // déjà journalisé (unicité) ou table absente : rien n'est envoyé dans tous les cas
+  }
+}
+
+/** Libère un Purchase retenu après REJET du signalement (réservation distincte) : il repart par la relance habituelle. Un Purchase déjà envoyé n'est jamais renvoyé. */
+export async function releaseHeldPurchase(leadId: string): Promise<boolean> {
+  try {
+    const rows = await select<{ event_id: string }>("landing_conversion_log", `select=event_id&network=eq.meta&event_name=eq.Purchase&event_id=eq.purchase-${leadId}&status=eq.skipped&last_error=like.doublon:*&limit=1`)
+    if (!rows[0]) return false
+    await update("landing_conversion_log", `network=eq.meta&event_id=eq.${encodeURIComponent(rows[0].event_id)}`, { status: "failed", attempts: 0, last_error: "libéré après décision humaine", next_retry_at: new Date().toISOString() })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Envoie une conversion à Meta en la journalisant. Ne lève jamais d'erreur. */
 export async function sendMetaLogged(event: ServerEvent, ctx: { leadId: string | null; valueTnd?: number }): Promise<Outcome> {
   const eventTime = event.eventTime ?? Math.floor(Date.now() / 1000)
@@ -151,10 +172,24 @@ export async function retryConversions(now = Date.now()): Promise<RetryResult> {
     }
   }
   const byId = new Map(leads.map((l) => [l.id, l]))
+  // Doublons CONFIRMÉS : jamais de conversion pour eux (colonne absente avant la migration 0030 : aucun doublon confirmé)
+  let confirmedDuplicates = new Set<string>()
+  if (ids.length) {
+    try {
+      confirmedDuplicates = new Set((await select<{ id: string; duplicate_of?: string | null }>("landing_leads", `select=id,duplicate_of&id=in.(${ids.join(",")})`)).filter((d) => d.duplicate_of).map((d) => d.id))
+    } catch {
+      confirmedDuplicates = new Set()
+    }
+  }
   for (const row of due) {
     out.examined++
     const lead = row.lead_id ? byId.get(row.lead_id) : undefined
     const attempts = row.attempts + 1
+    if (lead && confirmedDuplicates.has(lead.id)) {
+      await finishLog(row.event_id, { status: "skipped", attempts: row.attempts, last_error: "doublon confirmé : jamais envoyé", next_retry_at: null })
+      out.skipped++
+      continue
+    }
     if (!lead || lead.is_test === true || !lead.tracking_consent || lead.anonymized_at) {
       await finishLog(row.event_id, { status: "skipped", attempts: row.attempts, last_error: !lead ? "lead introuvable" : lead.is_test ? "lead de test" : lead.anonymized_at ? "lead anonymisé" : "sans consentement de suivi", next_retry_at: null })
       out.skipped++
