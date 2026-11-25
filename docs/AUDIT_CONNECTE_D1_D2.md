@@ -61,7 +61,7 @@ Observateur : le propriétaire. Aucune écriture pendant l'audit, sauf l'opérat
 | 6 | OK : « Clients ayant réservé » 0 membre, verdict « à examiner », « Rien n'est activé » |
 | 7 | OK : aucun bouton Exporter / Envoyer / Audience / Meta dans le contenu (seul « Export CSV » du menu latéral) |
 | 8 | OK : aucun numéro dans les blocs des fiches (la liste des membres en affiche, comportement existant) |
-| 11 | OK sur « Segments » (aucune erreur rouge). « Doublons » : à confirmer |
+| 11 | OK sur « Segments » et sur « Doublons » : aucune erreur rouge en console (seuls des conseils bleus de l'onglet Issues de Chrome) |
 | 12 | OK : page « Doublons » chargée, « Aucun signalement dans cette liste », aucun message de migration |
 | 14 | OK **avec correction** : le pipeline affiche **11 dossiers** (Nouveau 3, Perdu 8), car il garde volontairement les dossiers de test ; les analyses et segments en excluent |
 | 9, 10, 16, 17 | **NON FAITES** : aucun compte Super Admin de test, Manager ou employé en production (P2) |

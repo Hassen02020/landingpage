@@ -43,8 +43,8 @@ Production : `main` = `49676fd`, déployé. Migrations appliquées jusqu'à `003
 Statut global : **VALIDÉ PAR TESTS, DÉPLOYÉ — certification de production NON prononcée** tant que P2/P3 ne sont pas faits.
 
 ## 6. Mise à jour du 25/11/2026 — audit connecté de l'Administrateur
-- Étapes 1 à 8, 12 et 14 vérifiées dans l'interface réelle : conformes (voir `docs/AUDIT_CONNECTE_D1_D2.md` §4). Console sans erreur sur « Segments ».
+- Étapes 1 à 8, 12 et 14 vérifiées dans l'interface réelle : conformes (voir `docs/AUDIT_CONNECTE_D1_D2.md` §4). Console sans erreur rouge sur « Segments » et « Doublons ».
 - Constat : le pipeline affiche les dossiers de test (11 au total) ; décision éventuelle de les masquer = développement, GO requis.
 - Écriture W1 autorisée : dossier de test `9c9f5f5b` marqué `is_test`. Réel : 9 dossiers.
-- **D1/D2 : certifiés pour le rôle Administrateur** (sous réserve de la console de « Doublons »). Rôles Super Admin, Manager, employé : non vérifiés en réel (P2).
+- **D1/D2 : certifiés pour le rôle Administrateur.** Page « Doublons » : chargement et console OK. Rôles Super Admin, Manager, employé : non vérifiés en réel (P2).
 - Doublons : parcours d'écriture (signaler, confirmer, rouvrir) non testé en réel (P2 puis P4).
