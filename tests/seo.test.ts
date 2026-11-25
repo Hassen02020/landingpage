@@ -62,7 +62,8 @@ describe("page de suppression des données (exigée par Meta)", () => {
   const page = readFileSync("app/suppression-donnees/page.tsx", "utf8")
   it("explique la demande par WhatsApp ou téléphone, renvoie à la politique et à l'INPDP", () => {
     expect(page).toContain("Suppression de vos données")
-    expect(page).toContain("wa.me/216")
+    expect(page).toContain("wa.me/${WHATSAPP_NUMBER}")
+    expect(page).toContain("waText(")
     expect(page).toContain("/confidentialite")
     expect(page).toContain("INPDP")
   })

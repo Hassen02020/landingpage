@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { PHONE_NUMBER, SITE_URL } from "@/lib/config"
+import { PHONE_NUMBER, SITE_URL, WHATSAPP_NUMBER } from "@/lib/config"
 import { LEGAL } from "@/lib/legal"
+import { waText } from "@/lib/wa-text"
 
 // Page d'instructions de suppression des données, demandée par Meta pour l'application (Facebook, Instagram, WhatsApp).
 // Elle ne promet que ce que la politique de confidentialité dit déjà : demande par WhatsApp ou par téléphone, recours INPDP.
@@ -42,7 +43,7 @@ export default function SuppressionDonneesPage() {
           </ol>
           <p className="mt-4">
             <a
-              href={`https://wa.me/216${PHONE_NUMBER}?text=${encodeURIComponent("Bonjour Easy2Book, je souhaite supprimer mes données personnelles.")}`}
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText("Bonjour Easy2Book, je souhaite supprimer mes données personnelles."))}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-3"
