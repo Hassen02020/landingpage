@@ -49,3 +49,23 @@ Calculées en lecture seule sur les mêmes règles que la page (leads réels, ho
 | 17 | Manager (si un compte est créé avec GO) | Menu | Menu « Doublons » présent ; ne peut pas confirmer un signalement qu'il a lui-même fait ; ne peut pas rouvrir | |
 
 Les étapes 16 et 17 sont **impossibles aujourd'hui** : la production ne compte que 2 comptes administrateur, aucun Manager ni employé. Créer ces comptes est une écriture en production : GO distinct du propriétaire.
+
+## 4. Résultats observés — Administrateur (25/11/2026, interface réelle, lecture seule)
+Observateur : le propriétaire. Aucune écriture pendant l'audit, sauf l'opération n° W1 ci-dessous, faite avant les relectures.
+
+| Étape | Résultat |
+|---|---|
+| 1 à 3 | OK : 8 cartes, chiffres conformes ; « Usage interne uniquement » sur la seule carte « Omra sans réservation » |
+| 4 | OK : fiche « Omra sans réservation », fiabilité Insuffisante, audience publicitaire interdite (donnée sensible) |
+| 5 | OK : « À traiter » 3 membres, audience interdite (segment de suivi) |
+| 6 | OK : « Clients ayant réservé » 0 membre, verdict « à examiner », « Rien n'est activé » |
+| 7 | OK : aucun bouton Exporter / Envoyer / Audience / Meta dans le contenu (seul « Export CSV » du menu latéral) |
+| 8 | OK : aucun numéro dans les blocs des fiches (la liste des membres en affiche, comportement existant) |
+| 11 | OK sur « Segments » (aucune erreur rouge). « Doublons » : à confirmer |
+| 12 | OK : page « Doublons » chargée, « Aucun signalement dans cette liste », aucun message de migration |
+| 14 | OK **avec correction** : le pipeline affiche **11 dossiers** (Nouveau 3, Perdu 8), car il garde volontairement les dossiers de test ; les analyses et segments en excluent |
+| 9, 10, 16, 17 | **NON FAITES** : aucun compte Super Admin de test, Manager ou employé en production (P2) |
+
+**W1 — écriture unique, autorisée par le propriétaire (« go test claude »)** : le dossier `9c9f5f5b` (« TEST Claude ») n'était pas marqué test et comptait comme client réel. Marqué `is_test = true` le 25/11/2026 (une ligne, réversible, sans trace dans l'historique car écriture directe). Effets constatés : « Omra sans réservation » passe de 3 membres / 2 éligibles à **2 membres / 1 éligible** ; dossiers réels **9** ; dossiers de test 2.
+
+Valeurs de référence après W1 : 5 clients réels distincts, « À traiter » 3, « Omra sans réservation » 2 membres / 1 éligible / 1 exclu, autres cartes 0. Le total de 6 clients du §1 incluait « TEST Claude ».
