@@ -48,3 +48,12 @@ Statut global : **VALIDÉ PAR TESTS, DÉPLOYÉ — certification de production N
 - Écriture W1 autorisée : dossier de test `9c9f5f5b` marqué `is_test`. Réel : 9 dossiers.
 - **D1/D2 : certifiés pour le rôle Administrateur.** Page « Doublons » : chargement et console OK. Rôles Super Admin, Manager, employé : non vérifiés en réel (P2).
 - Doublons : parcours d'écriture (signaler, confirmer, rouvrir) non testé en réel (P2 puis P4).
+
+## 7. Décision du propriétaire du 25/11/2026 — étapes restantes écartées
+Le propriétaire décide de **ne pas exécuter** P2 (comptes de test Manager et employé), P4 (signalement réel d'un doublon) ni les étapes 9, 10, 16 et 17 : « le CRM est bon ; s'il y a une erreur, je la signale pour correction ».
+
+Conséquences consignées (aucune n'est cachée) :
+- Aucun compte de test n'a été créé ; aucune écriture de doublon n'a été faite en production.
+- Les droits Super Admin, Manager et employé, ainsi que le parcours signaler / confirmer / rouvrir, restent **prouvés par tests unitaires et e2e uniquement**, **non vérifiés en interface réelle**.
+- Statut retenu : **CRM accepté par le propriétaire en exploitation, sans certification complète du réel**. Toute anomalie signalée suit le processus habituel (observer, auditer, proposer, GO, corriger, tester).
+- Décisions ouvertes, sans urgence : masquer ou non les dossiers de test dans le pipeline (développement, GO requis) ; marquage de test du dossier `9c9f5f5b` déjà fait (W1).
