@@ -6,7 +6,7 @@ import robots from "../app/robots"
 describe("SEO technique", () => {
   it("le sitemap liste les pages publiques et pas l'admin, l'API ni les pages d'entreprise", () => {
     const urls = sitemap().map((e) => e.url)
-    for (const p of ["/voyages-organises", "/omra", "/summer-vibes", "/confidentialite"]) expect(urls.some((u) => u.endsWith(p))).toBe(true)
+    for (const p of ["/voyages-organises", "/omra", "/summer-vibes", "/confidentialite", "/suppression-donnees"]) expect(urls.some((u) => u.endsWith(p))).toBe(true)
     expect(urls.some((u) => /\/(admin|api|o|c)(\/|$)/.test(u))).toBe(false)
   })
   it("robots.txt interdit l'admin et l'API et déclare le sitemap", () => {
@@ -55,5 +55,19 @@ describe("Mentions légales", () => {
   })
   it("la politique de confidentialité cite l'éditeur légal", () => {
     expect(readFileSync("app/confidentialite/page.tsx", "utf8")).toContain("LEGAL.companyName")
+  })
+})
+
+describe("page de suppression des données (exigée par Meta)", () => {
+  const page = readFileSync("app/suppression-donnees/page.tsx", "utf8")
+  it("explique la demande par WhatsApp ou téléphone, renvoie à la politique et à l'INPDP", () => {
+    expect(page).toContain("Suppression de vos données")
+    expect(page).toContain("wa.me/${WHATSAPP_NUMBER}")
+    expect(page).toContain("waText(")
+    expect(page).toContain("/confidentialite")
+    expect(page).toContain("INPDP")
+  })
+  it("ne promet aucun délai ni aucune donnée inventés", () => {
+    expect(page).not.toMatch(/\b\d+\s*(jours|heures)\b/i)
   })
 })
