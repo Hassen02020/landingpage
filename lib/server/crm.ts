@@ -3,6 +3,7 @@
 import { DbError, insertOne, insertQuiet, select, update } from "./db"
 import { CONTACT_CHANNELS, isRegion, type ContactChannel } from "@/lib/regions"
 import { cleanEmail } from "@/lib/validation"
+import { buildConversationBody, checkNote } from "@/lib/conversation-themes"
 import { describeAttachment, lookupConversation, parseWaRef } from "./whatsapp"
 import { normalizePhone, randomRef } from "./hash"
 import { buildConversionEvent, holdPurchase, sendMetaLogged } from "./conversions"
@@ -350,9 +351,10 @@ const LOCKED: EditResult = { ok: false, error: "Lead anonymisé : modification i
 
 export async function addNote(lead: LeadRow, body: string, actor: Actor): Promise<EditResult> {
   if (lead.anonymized_at) return LOCKED
-  const text = body.trim().slice(0, 2000)
-  if (!text) return { ok: false, error: "Note vide" }
-  await logActivity(lead.id, actor, "note", { body: text })
+  // note courte contrôlée (L2) : pas de message collé, ni numéro, ni e-mail, ni lien
+  const n = checkNote(body, true)
+  if (!n.ok) return { ok: false, error: n.error.replace("Pour le thème « Autre », une note", "Note vide : une note") }
+  await logActivity(lead.id, actor, "note", { body: n.note })
   return { ok: true }
 }
 
@@ -424,10 +426,22 @@ export async function qualifyLead(lead: LeadRow, input: QualificationInput, acto
   return { ok: true }
 }
 
-/** Échange WhatsApp saisi par le conseiller (message reçu / envoyé) : aucune API ne le prouve, c'est une déclaration tracée. */
-export async function logWhatsApp(lead: LeadRow, direction: "in" | "out", text: string, actor: Actor): Promise<EditResult> {
+/** Échange WhatsApp saisi par le conseiller (message reçu / envoyé) : aucune API ne le prouve, c'est une déclaration tracée.
+ *  Thème obligatoire + note courte contrôlée (L2) : le texte du message n'est jamais conservé. */
+export async function logWhatsApp(lead: LeadRow, direction: "in" | "out", input: { theme: string; note?: string }, actor: Actor): Promise<EditResult> {
   if (lead.anonymized_at) return LOCKED
-  await logActivity(lead.id, actor, direction === "in" ? "wa_in" : "wa_out", { body: text.trim().slice(0, 500) || undefined })
+  const entry = buildConversationBody(input.theme, input.note ?? "")
+  if (!entry.ok) return entry
+  await logActivity(lead.id, actor, direction === "in" ? "wa_in" : "wa_out", { body: entry.body })
+  return { ok: true }
+}
+
+/** Appel téléphonique saisi par le conseiller : même règle que WhatsApp, enregistré comme note « [Appel · Thème] … » (aucun nouveau type, aucune migration). */
+export async function logCall(lead: LeadRow, input: { theme: string; note?: string }, actor: Actor): Promise<EditResult> {
+  if (lead.anonymized_at) return LOCKED
+  const entry = buildConversationBody(input.theme, input.note ?? "", "Appel")
+  if (!entry.ok) return entry
+  await logActivity(lead.id, actor, "note", { body: entry.body })
   return { ok: true }
 }
 
@@ -453,8 +467,7 @@ export interface ManualLeadInput {
   source: string
   offer?: string
   destination?: string
-  message?: string
-  /** Message WhatsApp reçu collé tel quel (ou seulement « E2B-XXXXXX ») : sert à retrouver le clic d'origine. */
+  /** Message WhatsApp reçu collé tel quel (ou seulement « E2B-XXXXXX ») : sert UNIQUEMENT à retrouver la référence puis le clic d'origine ; le texte n'est jamais conservé (L2). */
   waRef?: string
 }
 
@@ -481,7 +494,7 @@ export async function createManualLead(input: ManualLeadInput, actor: Actor): Pr
   const conv = waRef ? await lookupConversation(waRef).catch(() => null) : null
   if (conv?.lead && !conv.lead.anonymized_at) {
     // le visiteur a déjà un lead : on ajoute le message à son historique au lieu de créer un doublon
-    await logActivity(conv.lead.id, actor, "wa_in", { body: `Message reçu rattaché à ce lead (réf. ${waRef})${input.message?.trim() ? ` : ${input.message.trim().slice(0, 400)}` : ""}` })
+    await logActivity(conv.lead.id, actor, "wa_in", { body: `Message reçu rattaché à ce lead (réf. ${waRef})` })
     return { ok: true, id: conv.lead.id, ref: conv.lead.ref, existing: true }
   }
   const click = conv?.clicks[0]
@@ -500,7 +513,6 @@ export async function createManualLead(input: ManualLeadInput, actor: Actor): Pr
         source: input.source,
         offer: input.offer?.trim().slice(0, 255) || null,
         destination: input.destination?.trim().slice(0, 128) || null,
-        message: input.message?.trim().slice(0, 1000) || null,
         // le prospect nous a lui-même contactés au sujet de sa demande
         contact_consent: true,
         marketing_consent: false,

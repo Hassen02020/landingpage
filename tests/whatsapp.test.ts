@@ -78,10 +78,23 @@ describe("rattachement d'une conversation à son clic d'origine", () => {
     configureAll()
     const f = installFetchMock()
     f.db.landing_leads = [{ id: "L1", ref: "E2B-AAA222", visitor_ref: "E2B-VIS222", first_name: "Ahmed", status: "nouveau", anonymized_at: null }]
-    const res = await createManualLead({ name: "Ahmed Ben Ali", phone: "98140514", product: "omra", source: "whatsapp", waRef: "Réf: E2B-VIS222", message: "Demande les dates" }, actor)
+    const res = await createManualLead({ name: "Ahmed Ben Ali", phone: "98140514", product: "omra", source: "whatsapp", waRef: "Bonjour, je veux les dates\n\nRéf: E2B-VIS222" }, actor)
     expect(res).toMatchObject({ ok: true, existing: true, id: "L1", ref: "E2B-AAA222" })
     expect(f.db.landing_leads).toHaveLength(1)
     expect(f.db.landing_lead_activities.at(-1)).toMatchObject({ lead_id: "L1", type: "wa_in" })
+    // L2 : le texte collé n'est conservé nulle part (ni historique, ni lead)
+    expect(JSON.stringify(f.db)).not.toContain("je veux les dates")
+  })
+
+  it("L2 : message collé avec référence → référence retrouvée, texte JAMAIS conservé (ni message, ni historique)", async () => {
+    configureAll()
+    const f = installFetchMock()
+    f.db.landing_events = [{ id: 1, event_name: "Contact", visitor_ref: "E2B-VIS222", ...click }]
+    const res = await createManualLead({ name: "Rim Test", phone: "97123459", product: "omra", source: "whatsapp", waRef: "Bonjour, mon secret SECRET123\n\nRéf: E2B-VIS222" }, actor)
+    expect(res).toMatchObject({ ok: true, attached: "click" })
+    expect(f.db.landing_leads[0].visitor_ref).toBe("E2B-VIS222")
+    expect(f.db.landing_leads[0].message).toBeUndefined()
+    expect(JSON.stringify(f.db)).not.toContain("SECRET123")
   })
 
   it("texte sans référence valide : refusé ; saisie sans référence : inchangée (rétrocompatible)", async () => {
@@ -95,10 +108,11 @@ describe("rattachement d'une conversation à son clic d'origine", () => {
     configureAll()
     const f = installFetchMock()
     const lead = { id: "L1", anonymized_at: null } as LeadRow
-    expect(await logWhatsApp(lead, "in", "Veut le prix pour 4 personnes", actor)).toEqual({ ok: true })
-    expect(await logWhatsApp(lead, "out", "", actor)).toEqual({ ok: true })
+    expect(await logWhatsApp(lead, "in", { theme: "prix", note: "4 personnes" }, actor)).toEqual({ ok: true })
+    expect(await logWhatsApp(lead, "out", { theme: "devis" }, actor)).toEqual({ ok: true })
     expect(f.db.landing_lead_activities.map((a) => a.type)).toEqual(["wa_in", "wa_out"])
-    expect((await logWhatsApp({ id: "L2", anonymized_at: "2026-01-01" } as LeadRow, "in", "x", actor)).ok).toBe(false)
+    expect(f.db.landing_lead_activities.map((a) => a.body)).toEqual(["[Prix demandé] 4 personnes", "[Devis demandé]"])
+    expect((await logWhatsApp({ id: "L2", anonymized_at: "2026-01-01" } as LeadRow, "in", { theme: "prix" }, actor)).ok).toBe(false)
   })
 })
 

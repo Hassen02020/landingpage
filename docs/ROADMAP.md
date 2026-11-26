@@ -263,3 +263,4 @@ Audit mesuré (axe-core, captures mobile 390 px et ordinateur 1366 px, poids, d�
 | Lot | État | Notes |
 |---|---|---|
 | L0 — Règles de calcul et définitions | **PR PRÉPARÉE** (documentation seule) | `docs/REGLES_CALCUL_GROWTH_OS.md` ; aucun code, aucune migration ; Q2, Q3, Q9 documentées « à définir / en attente » ; contrôle : références de code relues, aucun test exécuté (documentation) |
+| L2 — Thèmes de conversation et protection des messages | **PR PRÉPARÉE** (sans migration) | `lib/conversation-themes.ts` ; 8 thèmes, note ≤ 140 car. (téléphone, e-mail, lien refusés), appel enregistré, message collé non conservé, vert `--e2b-wa` ; tsc OK, Vitest 1340/1340, lint 0 erreur, build OK, e2e admin 179/179, WhatsApp OK, multi-entreprises OK ; **non vérifié en interface réelle** |
