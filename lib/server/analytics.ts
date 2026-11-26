@@ -27,7 +27,7 @@ export function maxRank(lead: FunnelLead, acts: FunnelActivity[]): number {
   return r
 }
 
-export interface FunnelStep { key: string; label: string; count: number; fromPrevious: number; fromStart: number }
+export interface FunnelStep { key: string; label: string; count: number; fromPrevious: number | null; fromStart: number | null }
 
 export function funnel(leads: FunnelLead[], activities: FunnelActivity[]): FunnelStep[] {
   const by = new Map<string, FunnelActivity[]>()
@@ -36,8 +36,8 @@ export function funnel(leads: FunnelLead[], activities: FunnelActivity[]): Funne
   const counts = FUNNEL_STEPS.map((s) => ranks.filter((r) => r >= (RANK[s.min] ?? 0)).length)
   return FUNNEL_STEPS.map((s, i) => ({
     key: s.key, label: s.label, count: counts[i],
-    fromPrevious: i === 0 ? 1 : counts[i - 1] ? counts[i] / counts[i - 1] : 0,
-    fromStart: counts[0] ? counts[i] / counts[0] : 0,
+    fromPrevious: i === 0 ? (counts[0] ? 1 : null) : counts[i - 1] ? counts[i] / counts[i - 1] : null,
+    fromStart: counts[0] ? counts[i] / counts[0] : null,
   }))
 }
 

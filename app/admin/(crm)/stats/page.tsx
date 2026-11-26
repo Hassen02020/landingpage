@@ -286,7 +286,7 @@ async function Funnel({ p }: { p: Period }) {
           {a.funnel.map((s) => (
             <div key={s.key} data-step={s.key}>
               <div className="flex justify-between text-sm"><span className="font-semibold">{s.label}</span><span><b data-count>{s.count}</b> <span className="text-gray-500">· {pct(s.fromStart)} du total · {pct(s.fromPrevious)} de l&apos;étape précédente</span></span></div>
-              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-violet-600 rounded" style={{ width: `${Math.round(s.fromStart * 100)}%` }} /></div>
+              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-violet-600 rounded" style={{ width: `${Math.round((s.fromStart ?? 0) * 100)}%` }} /></div>
             </div>
           ))}
         </div>

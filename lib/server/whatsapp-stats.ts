@@ -26,7 +26,7 @@ export interface WaFunnel {
   formLeads: number // observé : demandes par formulaire
   whatsappLeads: number // saisi : leads créés par l'équipe depuis un message WhatsApp reçu
   attachedLeads: number // calculé : leads dont la référence correspond à un clic
-  whatsappAttachedRate: number // part des leads WhatsApp saisis dont le clic d'origine est retrouvé
+  whatsappAttachedRate: number | null // part des leads WhatsApp saisis dont le clic d'origine est retrouvé
   messagesIn: number // saisi par l'équipe
   messagesOut: number // saisi par l'équipe
   conversations: number // calculé : leads ayant au moins un échange saisi
@@ -48,7 +48,7 @@ export function whatsappFunnel(clicks: WaClick[], leads: WaLead[], activities: W
     formLeads: leads.filter((l) => l.source === "form").length,
     whatsappLeads: whatsappLeads.length,
     attachedLeads: attached.length,
-    whatsappAttachedRate: whatsappLeads.length ? whatsappLeads.filter((l) => l.visitor_ref && clickRefs.has(l.visitor_ref)).length / whatsappLeads.length : 0,
+    whatsappAttachedRate: whatsappLeads.length ? whatsappLeads.filter((l) => l.visitor_ref && clickRefs.has(l.visitor_ref)).length / whatsappLeads.length : null,
     messagesIn: wa.filter((a) => a.type === "wa_in").length,
     messagesOut: wa.filter((a) => a.type === "wa_out").length,
     conversations: convIds.size,
