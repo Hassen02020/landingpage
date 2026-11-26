@@ -100,16 +100,16 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50">
             <tr>
-              <th className={th}>Canal</th>
-              <th className={th}>Source</th>
-              <th className={th}>Campagne</th>
-              {level !== "campaign" && <th className={th}>Groupe d&apos;annonces</th>}
-              {level === "ad" && <th className={th}>Annonce</th>}
-              <th className={th}>Leads</th>
-              <th className={th}>Traités</th>
-              <th className={th}>Vendus</th>
-              <th className={th}>Taux de vente</th>
-              <th className={th}>CA</th>
+              <th scope="col" className={th}>Canal</th>
+              <th scope="col" className={th}>Source</th>
+              <th scope="col" className={th}>Campagne</th>
+              {level !== "campaign" && <th scope="col" className={th}>Groupe d&apos;annonces</th>}
+              {level === "ad" && <th scope="col" className={th}>Annonce</th>}
+              <th scope="col" className={th}>Leads</th>
+              <th scope="col" className={th}>Traités</th>
+              <th scope="col" className={th}>Vendus</th>
+              <th scope="col" className={th}>Taux de vente</th>
+              <th scope="col" className={th}>CA</th>
             </tr>
           </thead>
           <tbody>

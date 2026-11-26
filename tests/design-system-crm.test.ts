@@ -7,6 +7,7 @@ import * as ReactNs from "react"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { STATUSES, STATUS_LABELS } from "@/lib/status"
+import { NAV_GROUPS } from "@/lib/admin-nav"
 import { PHASE_LABELS, STATUS_COLORS, formatTnd, statusPhase } from "@/app/admin/format"
 import { EmptyState, Notice, Skeleton, StatusBadge } from "@/app/admin/(crm)/_components/ui"
 
@@ -83,5 +84,31 @@ describe("LOT 1 : composants partagés", () => {
   })
   it("aucun loading.tsx au niveau des routes de l'espace équipe : il ferait passer les 404 neutres (dossier d'un collègue) en 200", () => {
     expect(walk("app/admin").filter((f) => f.endsWith("loading.tsx"))).toEqual([])
+  })
+})
+
+describe("LOTS 2-3 : navigation, tableau de bord, pipeline, fiche dossier (présentation seule)", () => {
+  it("menu : une icône par concept pour les entrées qui se confondaient (aucune page, route ni droit modifiés)", () => {
+    const icon = (label: string) => NAV_GROUPS.flatMap((g) => g.items).find((i) => i.label === label)!.icon
+    const distinct = ["À traiter", "Relances", "Doublons", "Segments", "Rentabilité", "Clients", "Conversations", "Avis des visiteurs", "Formulaire"].map(icon)
+    expect(new Set(distinct).size).toBe(distinct.length)
+    expect(NAV_GROUPS.flatMap((g) => g.items).length).toBe(27) // aucune entrée supprimée (27 au 26/11/2026)
+  })
+  it("fiche dossier : les actions (statut, relance, responsable) viennent avant les blocs d'information", () => {
+    const src = read("app/admin/(crm)/leads/[id]/page.tsx")
+    const actions = src.indexOf('data-testid="lead-actions"')
+    expect(actions).toBeGreaterThan(0)
+    for (const marker of ['data-testid="duplicates"', "Messages WhatsApp prêts", ">Demande</h2>", "Attribution et consentements"]) expect(actions, marker).toBeLessThan(src.indexOf(marker))
+  })
+  it("pipeline : colonnes empilées sur mobile, boutons d'action ≥ 44 px, plafond de 100 cartes annoncé", () => {
+    const src = read("app/admin/(crm)/pipeline/page.tsx")
+    expect(src).toMatch(/flex-col[^"]*sm:flex-row/); expect(src).toMatch(/min-h-\[44px\]/); expect(src).toMatch(/100 sur \$\{list\.length\}/)
+  })
+  it("tableaux de l'espace équipe : en-têtes de colonne déclarés (scope) dans les listes principales", () => {
+    for (const f of ["app/admin/(crm)/page.tsx", "app/admin/(crm)/clients/page.tsx"]) expect(read(f)).toMatch(/<th scope="col"/)
+  })
+  it("tableau de bord : valeur, libellé et sous-texte séparés (le montant n'est plus collé au libellé)", () => {
+    const src = read("app/admin/(crm)/page.tsx")
+    expect(src).not.toMatch(/label=\{`[^`]*·[^`]*tnd/); expect(src).toMatch(/hint=\{`\$\{tnd\(dash\.revenueMonth\)\}/)
   })
 })

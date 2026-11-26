@@ -81,7 +81,7 @@ export function Calculator({ real }: { real: Real }) {
                 className="w-full outline-none"
                 aria-label={f.label}
               />
-              <span className="text-gray-400 ml-2">{f.unit}</span>
+              <span className="text-gray-600 ml-2">{f.unit}</span>
             </span>
             {f.help && <span className="block text-xs text-gray-500 mt-1">{f.help}</span>}
           </label>

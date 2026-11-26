@@ -183,7 +183,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
                     {stats.cards.filter((c) => c.group === g).map((c) => (
                       <div key={c.id} data-testid={`stat-${c.id}`} data-available={c.value === null ? "no" : "yes"} className={`bg-white rounded-2xl border p-4 ${c.tone === "warn" ? "border-amber-300" : ""}`}>
                         <div className="text-sm text-gray-600">{c.label}</div>
-                        <div className={`text-2xl font-black ${c.value === null ? "text-gray-400 text-lg" : ""}`}>{formatStat(c)}</div>
+                        <div className={`text-2xl font-black ${c.value === null ? "text-gray-600 text-lg" : ""}`}>{formatStat(c)}</div>
                         <p className="text-xs text-gray-500 mt-1">{c.note}</p>
                       </div>
                     ))}

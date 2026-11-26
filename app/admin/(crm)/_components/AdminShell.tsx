@@ -27,6 +27,13 @@ const ICONS: Record<IconName, React.ReactNode> = {
   team: (<><circle cx="8" cy="8" r="3" /><circle cx="17" cy="9" r="2.4" /><path d="M2.5 20c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2M15 14.9c3 0 6.5 1.2 6.5 4.6" /></>),
   chat: (<><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" /><path d="M8 10h8M8 13h5" /></>),
   download: (<><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" /></>),
+  inbox: (<><path d="M3.5 13 6 5h12l2.5 8" /><path d="M3.5 13v6a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1v-6h-5l-1.5 2.5h-4L8.5 13z" /></>),
+  repeat: (<><path d="M4 11V9a3 3 0 0 1 3-3h11m0 0-3-3m3 3-3 3" /><path d="M20 13v2a3 3 0 0 1-3 3H6m0 0 3 3m-3-3 3-3" /></>),
+  copy: (<><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></>),
+  target: (<><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" /></>),
+  trend: (<><path d="m3 17 6-6 4 4 8-8" /><path d="M15 7h6v6" /></>),
+  star: (<><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" /></>),
+  form: (<><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h3" /></>),
   user: (<><circle cx="12" cy="8" r="3.5" /><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7" /></>),
 }
 
@@ -68,6 +75,13 @@ function Nav({ role, onNavigate }: { role: OrgRole; onNavigate: () => void }) {
   )
 }
 
+/** Titre de la page courante pour la barre mobile : l'entrée de menu dont l'adresse est la plus longue correspondance. */
+function currentTitle(path: string, role: OrgRole): string | null {
+  const items = visibleGroups(role).flatMap((g) => g.items).filter((it) => !it.plain && !it.href.includes("?"))
+  const hit = items.filter((it) => path === it.href || (it.href !== "/admin" && path.startsWith(`${it.href}/`))).sort((a, b) => b.href.length - a.href.length)[0]
+  return hit ? hit.label : null
+}
+
 export function AdminShell({ email, name, role, orgName, orgSlug, children }: { email: string; name: string | null; role: OrgRole; orgName: string | null; orgSlug: string | null; children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const path = usePathname()
@@ -78,6 +92,7 @@ export function AdminShell({ email, name, role, orgName, orgSlug, children }: { 
       document.body.style.overflow = ""
     }
   }, [open])
+  const pageTitle = currentTitle(path || "/admin", role)
   const shown = name || email.split("@")[0]
   // image de marque : le nom de L'ENTREPRISE connectée ; le logo d'Easy2Book n'est montré qu'à l'organisation de la plateforme
   const brand = orgName || "Easy2Book"
@@ -132,6 +147,7 @@ export function AdminShell({ email, name, role, orgName, orgSlug, children }: { 
           )}
           <span className="truncate">{brand}</span>
         </Link>
+        {pageTitle && <span className="min-w-0 truncate border-l border-gray-300 pl-3 text-sm font-bold text-gray-700" data-testid="mobile-page-title">{pageTitle}</span>}
         <Link href="/admin/compte" aria-label={`Mon compte (${shown})`} className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-700 text-xs font-black uppercase text-white">{shown.charAt(0)}</Link>
       </header>
       {open && (

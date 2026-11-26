@@ -51,7 +51,7 @@ export default async function ClientPage({ params }: { params: { phone: string }
       <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <h2 className="font-bold p-4 pb-0">Demandes</h2>
         <table className="w-full text-sm">
-          <thead className="text-left text-gray-500 border-b"><tr><th className="p-3">Réf.</th><th className="p-3">Produit / offre</th><th className="p-3">Statut</th><th className="p-3">Montant</th><th className="p-3">Canal</th><th className="p-3">Origine</th><th className="p-3">Date</th></tr></thead>
+          <thead className="text-left text-gray-500 border-b"><tr><th scope="col" className="p-3">Réf.</th><th scope="col" className="p-3">Produit / offre</th><th scope="col" className="p-3">Statut</th><th scope="col" className="p-3">Montant</th><th scope="col" className="p-3">Canal</th><th scope="col" className="p-3">Origine</th><th scope="col" className="p-3">Date</th></tr></thead>
           <tbody>
             {c.leads.map((l) => (
               <tr key={l.id} className="border-b last:border-0">

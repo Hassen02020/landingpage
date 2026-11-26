@@ -106,7 +106,7 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
                         : life === "brouillon" ? <span className="px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-800">Brouillon</span>
                         : <span title={status.detail} className={`px-2 py-0.5 rounded-full font-bold ${TONE[status.tone]}`}>Publiée · {status.label}</span>}
                       <span className="text-gray-500">{offers} offre{offers > 1 ? "s" : ""}</span>
-                      <span className="text-gray-400">· modifiée le {c.updated_at.slice(0, 10)}</span>
+                      <span className="text-gray-600">· modifiée le {c.updated_at.slice(0, 10)}</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {life !== "archivee" && <Link href={`/admin/createur/${c.id}?etape=infos`} className={`${btn} bg-brand-700 text-white border-brand-700`}>Modifier</Link>}

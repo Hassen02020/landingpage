@@ -113,7 +113,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: { di
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 overflow-x-auto">
         <table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 text-xs"><th className="py-1 pr-3">{DIMS.find((d) => d.key === dim)?.label}</th><th className="pr-3 text-right">Leads</th><th className="pr-3 text-right">Réservations</th><th className="pr-3 text-right">Publicité</th><th className="pr-3 text-right">Coûts variables</th><th className="pr-3 text-right">Commission</th><th className="pr-3 text-right">Marge confirmée</th><th className="pr-3 text-right">Marge avec provisoire</th><th className="text-right">Coût / réservation</th></tr></thead>
+          <thead><tr className="text-left text-gray-500 text-xs"><th scope="col" className="py-1 pr-3">{DIMS.find((d) => d.key === dim)?.label}</th><th scope="col" className="pr-3 text-right">Leads</th><th scope="col" className="pr-3 text-right">Réservations</th><th scope="col" className="pr-3 text-right">Publicité</th><th scope="col" className="pr-3 text-right">Coûts variables</th><th scope="col" className="pr-3 text-right">Commission</th><th scope="col" className="pr-3 text-right">Marge confirmée</th><th scope="col" className="pr-3 text-right">Marge avec provisoire</th><th scope="col" className="text-right">Coût / réservation</th></tr></thead>
           <tbody>
             {result.rows.length === 0 && <tr><td colSpan={9} className="py-4 text-gray-500">Aucune donnée sur la période.</td></tr>}
             {result.rows.map((r) => <Row key={r.key} r={r} winner={r.key === result.winnerKey} dim={dim} />)}

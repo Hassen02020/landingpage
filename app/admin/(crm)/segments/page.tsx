@@ -67,7 +67,7 @@ export default async function SegmentsPage({ searchParams }: { searchParams: { s
             )
           })()}
           <table className="w-full text-sm">
-            <thead className="text-left text-gray-500 border-b"><tr><th className="p-3">Client</th><th className="p-3">Statut</th><th className="p-3">Région</th><th className="p-3">Inactif depuis</th><th className="p-3">Dernière activité</th></tr></thead>
+            <thead className="text-left text-gray-500 border-b"><tr><th scope="col" className="p-3">Client</th><th scope="col" className="p-3">Statut</th><th scope="col" className="p-3">Région</th><th scope="col" className="p-3">Inactif depuis</th><th scope="col" className="p-3">Dernière activité</th></tr></thead>
             <tbody data-testid="segment-members">
               {shown.eligible.map((c) => (
                 <tr key={c.phone} data-phone={c.phone} className="border-b last:border-0">

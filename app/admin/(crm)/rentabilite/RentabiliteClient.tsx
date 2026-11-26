@@ -89,7 +89,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
             <div className="md:col-span-5 flex items-center gap-3"><Submit>Enregistrer la dépense</Submit>{state?.message && <span className={`text-sm ${state.ok ? "text-green-700" : "text-red-600"}`}>{state.message}</span>}</div>
           </form>
         )}
-        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th className="py-1 pr-3">Date</th><th className="pr-3">Réseau</th><th className="pr-3">Campagne</th><th className="pr-3 text-right">Montant</th><th className="pr-3">Réf.</th><th /></tr></thead>
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th scope="col" className="py-1 pr-3">Date</th><th scope="col" className="pr-3">Réseau</th><th scope="col" className="pr-3">Campagne</th><th scope="col" className="pr-3 text-right">Montant</th><th scope="col" className="pr-3">Réf.</th><th /></tr></thead>
           <tbody>
             {spend.length === 0 && <tr><td colSpan={6} className="py-3 text-gray-500">Aucune dépense saisie.</td></tr>}
             {spend.map((s) => (
@@ -117,7 +117,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
             {cstate?.message && <p className={`md:col-span-4 text-sm ${cstate.ok ? "text-green-700" : "text-red-600"}`}>{cstate.message}</p>}
           </form>
         )}
-        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th className="py-1 pr-3">Date</th><th className="pr-3">Catégorie</th><th className="pr-3">Rattaché à</th><th className="pr-3 text-right">Montant</th><th /></tr></thead>
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th scope="col" className="py-1 pr-3">Date</th><th scope="col" className="pr-3">Catégorie</th><th scope="col" className="pr-3">Rattaché à</th><th scope="col" className="pr-3 text-right">Montant</th><th /></tr></thead>
           <tbody>
             {costs.length === 0 && <tr><td colSpan={5} className="py-3 text-gray-500">Aucun coût variable saisi : la marge affichée est « avant coûts variables non saisis ».</td></tr>}
             {costs.map((c) => (
@@ -175,7 +175,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
           </div>
         )}
         {msg && <p role="status" className="text-sm text-gray-800 bg-gray-50 border rounded-xl p-3">{msg}</p>}
-        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th className="py-1 pr-3">Date</th><th className="pr-3">Réservation</th><th className="pr-3">Dossier</th><th className="pr-3">Nature</th><th className="pr-3 text-right">Montant</th><th className="pr-3">Statut</th><th /></tr></thead>
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th scope="col" className="py-1 pr-3">Date</th><th scope="col" className="pr-3">Réservation</th><th scope="col" className="pr-3">Dossier</th><th scope="col" className="pr-3">Nature</th><th scope="col" className="pr-3 text-right">Montant</th><th scope="col" className="pr-3">Statut</th><th /></tr></thead>
           <tbody>
             {commissions.length === 0 && <tr><td colSpan={7} className="py-3 text-gray-500">Aucune commission importée.</td></tr>}
             {commissions.map((c) => (
