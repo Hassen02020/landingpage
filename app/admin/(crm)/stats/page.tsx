@@ -7,6 +7,7 @@ import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
 import { loadAnalytics } from "@/lib/server/analytics"
 import { groupBy, groupByOffer, loadLeadStats, loadTeam, parsePeriod, ratio, rates, teamStats, totals, type Counts, type Level, type Period } from "@/lib/server/stats"
 import { formatTnd } from "@/app/admin/format"
+import { Notice } from "../_components/ui"
 
 export const dynamic = "force-dynamic"
 
@@ -20,7 +21,7 @@ const tndOrNC = (n: number | null) => (n === null ? NC : tnd(n))
 function Kpi({ label, value, sub, tone }: { label: string; value: string | number; sub?: string; tone: string }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-      <div className={`inline-block w-2.5 h-2.5 rounded-full mb-2 ${tone}`} />
+      <div className={`inline-block w-2.5 h-2.5 rounded-full mb-2 ${tone}`} aria-hidden="true" />
       <div className="text-2xl font-black">{value}</div>
       <div className="text-sm font-semibold text-gray-700">{label}</div>
       {sub && <div className="mt-2 text-xs bg-gray-50 rounded-lg px-2 py-1 text-gray-600">{sub}</div>}
@@ -30,16 +31,14 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string | numbe
 
 function Tabs({ view, p }: { view: string; p: Period }) {
   const q = `from=${p.from}&to=${p.to}`
-  const cls = (v: string) => `px-4 py-2 rounded-xl text-sm font-bold ${view === v ? "bg-brand-700 text-white" : "bg-white border hover:bg-gray-50"}`
+  const TABS: [string, string][] = [["marketing", "Marketing"], ["equipe", "Équipe | Suivi"], ["entonnoir", "Entonnoir"], ["whatsapp", "WhatsApp"], ["offres", "Offres"], ["niches", "Niches"]]
   return (
-    <div className="flex gap-2">
-      <Link href={`/admin/stats?view=marketing&${q}`} className={cls("marketing")}>Marketing</Link>
-      <Link href={`/admin/stats?view=equipe&${q}`} className={cls("equipe")}>Équipe | Suivi</Link>
-      <Link href={`/admin/stats?view=entonnoir&${q}`} className={cls("entonnoir")}>Entonnoir</Link>
-      <Link href={`/admin/stats?view=whatsapp&${q}`} className={cls("whatsapp")}>WhatsApp</Link>
-      <Link href={`/admin/stats?view=offres&${q}`} className={cls("offres")}>Offres</Link>
-      <Link href={`/admin/stats?view=niches&${q}`} className={cls("niches")}>Niches</Link>
-    </div>
+    <nav aria-label="Vues des statistiques" className="flex flex-wrap gap-2">
+      {TABS.map(([v, label]) => (
+        <Link key={v} href={`/admin/stats?view=${v}&${q}`} aria-current={view === v ? "page" : undefined}
+          className={`inline-flex min-h-[40px] items-center rounded-xl px-4 py-2 text-sm font-bold ${view === v ? "bg-brand-700 text-white" : "border border-gray-300 bg-white text-gray-800 hover:bg-brand-50"}`}>{label}</Link>
+      ))}
+    </nav>
   )
 }
 
@@ -84,7 +83,7 @@ const td = "p-3 whitespace-nowrap"
 
 async function Marketing({ p, level }: { p: Period; level: Level }) {
   const rows = await loadLeadStats(p).catch(() => null)
-  if (!rows) return <p className="text-red-700">Lecture impossible.</p>
+  if (!rows) return <Notice tone="error">Lecture impossible. Rechargez la page ; si le problème persiste, vérifiez la base.</Notice>
   const c = totals(rows)
   const groups = groupBy(rows, level)
   const r = rates(c)
@@ -96,7 +95,7 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
         <div className="bg-white rounded-2xl border p-4">Panier moyen <strong className="block text-xl">{tndOrNC(r.avgBasket)}</strong><span className="text-xs text-gray-500">{r.avgBasket === null ? "aucune réservation sur la période" : "par réservation"}</span></div>
         <div className="bg-white rounded-2xl border p-4">Chiffre d&apos;affaires <strong className="block text-xl">{tnd(c.revenue)}</strong><span className="text-xs text-gray-500">montants saisis à la réservation</span></div>
       </div>
-      <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <section tabIndex={0} aria-label="Tableau défilant" className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50">
             <tr>
@@ -145,7 +144,7 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
 
 async function Team({ p, member }: { p: Period; member: string }) {
   const data = await loadTeam(p).catch(() => null)
-  if (!data) return <p className="text-red-700">Lecture impossible.</p>
+  if (!data) return <Notice tone="error">Lecture impossible. Rechargez la page ; si le problème persiste, vérifiez la base.</Notice>
   const all = teamStats(data.staff, data.activities, data.leads)
   const list = member ? all.filter((m) => m.userId === member) : all
   const sum = list.reduce(
@@ -165,7 +164,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
         <Kpi label="Perdus" value={sum.lost} tone="bg-red-500" />
         <Kpi label="Taux de conclusion" value={pct(closing)} tone="bg-emerald-600" sub="réservés / (réservés + perdus)" />
       </div>
-      <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <section tabIndex={0} aria-label="Tableau défilant" className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50">
             <tr>
@@ -197,7 +196,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
 
 async function WhatsAppView({ p }: { p: Period }) {
   const f = await loadWhatsApp(p).catch(() => null)
-  if (!f) return <p className="text-red-700">Lecture impossible.</p>
+  if (!f) return <Notice tone="error">Lecture impossible. Rechargez la page ; si le problème persiste, vérifiez la base.</Notice>
   const rows: { step: string; value: string | number; nature: "Observé" | "Saisi par l'équipe" | "Calculé"; source: string }[] = [
     { step: "Clics WhatsApp", value: f.clicks, nature: "Observé", source: "Navigateur du visiteur (événement « Contact »), uniquement s'il a accepté les traceurs. Un clic n'est pas un message envoyé." },
     { step: "Visiteurs distincts ayant cliqué", value: f.visitorsClicked, nature: "Observé", source: "Références E2B distinctes des clics." },
@@ -218,7 +217,7 @@ async function WhatsAppView({ p }: { p: Period }) {
         <Kpi label="Rattachement des messages" value={pct(f.whatsappAttachedRate)} tone="bg-brand-600" sub="leads WhatsApp dont le clic est retrouvé" />
         <Kpi label="Réservations" value={f.reserved} tone="bg-green-600" sub={`CA : ${tnd(f.revenue)}`} />
       </div>
-      <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <section tabIndex={0} aria-label="Tableau défilant" className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50"><tr>{["Étape", "Valeur", "Nature", "Définition et source"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
           <tbody>
@@ -242,12 +241,12 @@ async function WhatsAppView({ p }: { p: Period }) {
 
 async function Offers({ p }: { p: Period }) {
   const rows = await loadLeadStats(p).catch(() => null)
-  if (!rows) return <p className="text-red-700">Lecture impossible.</p>
+  if (!rows) return <Notice tone="error">Lecture impossible. Rechargez la page ; si le problème persiste, vérifiez la base.</Notice>
   const groups = groupByOffer(rows)
   return (
     <div className="space-y-4">
       <KpiGrid c={totals(rows)} />
-      <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <section tabIndex={0} aria-label="Tableau défilant" className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50"><tr>{["Produit", "Offre", "Leads", "À traiter", "En contact", "Qualifiés", "Devis / négo.", "Vendus", "Perdus", "Taux de vente", "CA"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
           <tbody>
@@ -278,7 +277,7 @@ const fmtDuration = (m: number | null) => (m === null ? "—" : m < 60 ? `${m} m
 
 async function Funnel({ p }: { p: Period }) {
   const a = await loadAnalytics(p).catch(() => null)
-  if (!a) return <p className="text-red-700">Lecture impossible.</p>
+  if (!a) return <Notice tone="error">Lecture impossible. Rechargez la page ; si le problème persiste, vérifiez la base.</Notice>
   const max = Math.max(1, ...a.series.map((d) => d.leads))
   return (
     <div className="space-y-4">
@@ -289,7 +288,7 @@ async function Funnel({ p }: { p: Period }) {
           {a.funnel.map((s) => (
             <div key={s.key} data-step={s.key}>
               <div className="flex justify-between text-sm"><span className="font-semibold">{s.label}</span><span><b data-count>{s.count}</b> <span className="text-gray-500">· {pct(s.fromStart)} du total · {pct(s.fromPrevious)} de l&apos;étape précédente</span></span></div>
-              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-brand-600 rounded" style={{ width: `${Math.round((s.fromStart ?? 0) * 100)}%` }} /></div>
+              <div className="h-2.5 bg-gray-100 rounded" role="img" aria-label={`${s.label} : ${pct(s.fromStart)} du total`}><div className="h-2.5 bg-brand-600 rounded" style={{ width: `${Math.round((s.fromStart ?? 0) * 100)}%` }} /></div>
             </div>
           ))}
         </div>
@@ -300,7 +299,7 @@ async function Funnel({ p }: { p: Period }) {
         <Kpi label="Traités dans les 24 h" value={`${a.response.within24h} / ${a.leads.length}`} tone="bg-amber-500" />
         <Kpi label="Jamais traités" value={a.response.untreated} tone="bg-red-500" />
       </section>
-      <section className="bg-white rounded-2xl shadow-sm p-4 overflow-x-auto">
+      <section tabIndex={0} aria-label="Tableau défilant" className="bg-white rounded-2xl shadow-sm p-4 overflow-x-auto">
         <h2 className="font-bold mb-2">Par jour</h2>
         <table className="w-full text-sm" data-testid="daily">
           <thead className="border-b bg-gray-50"><tr>{["Jour", "Leads", "", "Ventes", "CA"].map((h, i) => <th key={i} className={th}>{h}</th>)}</tr></thead>
@@ -315,9 +314,9 @@ async function Funnel({ p }: { p: Period }) {
 
 async function Niches() {
   const niches = await select<Niche>("landing_niche_performance", "select=*&order=leads.desc&limit=200").catch(() => null)
-  if (!niches) return <p className="text-red-700">Lecture impossible.</p>
+  if (!niches) return <Notice tone="error">Lecture impossible. Rechargez la page ; si le problème persiste, vérifiez la base.</Notice>
   return (
-    <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+    <section tabIndex={0} aria-label="Tableau défilant" className="bg-white rounded-2xl shadow-sm overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="border-b bg-gray-50"><tr>{["Produit", "Niche", "Clics WhatsApp", "Visiteurs", "Leads", "Réservations", "CA"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
         <tbody>{niches.map((n, i) => (

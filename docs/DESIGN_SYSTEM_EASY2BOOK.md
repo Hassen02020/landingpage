@@ -95,3 +95,12 @@ Règles : affichage seul (aucune lecture de données, aucun droit) ; une donnée
 
 ### Exception
 `createur/modeles` garde le dégradé violet de la famille « autre » : c'est l'aperçu d'un thème de landing page (`lib/page-builder/style.ts`), pas la couleur du CRM. `/o/[slug]` (page d'une autre entreprise) n'est pas passé au bleu Easy2Book.
+
+### Lots 2 à 6 (26/11/2026) — navigation, CRM, pilotage, public, qualité
+- **Tableau de bord `/admin`** : `KpiCard` (valeur, libellé, sous-texte séparés ; le montant des réservations n'est plus collé au libellé), `PageHeader`, `FilterChip`, puces de filtres actifs retirables, compteur « n leads affichés », `EmptyState` / `Notice`, tableau avec `caption` et `scope="col"`, zone défilante focusable.
+- **Menu** : une icône par concept pour les entrées qui se confondaient (À traiter, Relances, Doublons, Segments, Rentabilité, Clients, Avis, Formulaire) ; titre de la page courante dans la barre mobile. Aucune entrée supprimée (27), routes et droits inchangés.
+- **Pipeline** : colonnes empilées sur mobile (colonnes vides masquées), boutons ≥ 44 px, « 100 sur N » quand une colonne dépasse le plafond d'affichage.
+- **Fiche dossier** : les actions (statut, relance, responsable) viennent avant les blocs d'information ; champs étiquetés ; formulaires d'échanges qui passent à la ligne sur mobile.
+- **Statistiques** : onglets en `nav` avec `aria-current`, retour à la ligne ; barres de l'entonnoir avec alternative textuelle ; erreurs de lecture annoncées (`role="alert"`).
+- **Public** : accueil `/` aux variables de marque (bleu, jaune en accent, vert WhatsApp accessible) ; boutons WhatsApp de `/omra`, `/summer-vibes`, `/voyages-organises` au vert validé. `/c/*` (rendu historique figé), `LeadCaptureForm` partagé et `/o/*` non modifiés.
+- **Règle** : texte informatif ≥ 4,5:1 (plus de `gray-400` / `amber-600` sur du texte utile) ; tout défilement horizontal est une région focusable et nommée ; `sr-only` dans une zone défilante exige un parent `relative`.

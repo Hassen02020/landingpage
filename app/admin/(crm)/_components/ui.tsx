@@ -12,7 +12,7 @@ export function StatusBadge({ status }: { status: string }) {
   const phase = statusPhase(status)
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold ${STATUS_COLORS[status] ?? "bg-gray-100 text-gray-700"}`}
+      className={`relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold ${STATUS_COLORS[status] ?? "bg-gray-100 text-gray-700"}`}
       title={`Phase : ${PHASE_LABELS[phase]}`}
       data-phase={phase}
     >

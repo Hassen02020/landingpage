@@ -19,11 +19,11 @@ export function CreateOrganization() {
     <form action={action} className="space-y-3">
       {state?.message && <div className={`rounded-xl border p-3 text-sm ${state.ok ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-700"}`}>{state.message}</div>}
       <div className="grid gap-3 md:grid-cols-3">
-        <input name="name" required placeholder="Nom de l'entreprise" className={input} />
-        <input name="slug" placeholder="Identifiant (ex. bob-sarl, facultatif)" className={input} dir="ltr" />
-        <input name="sector" placeholder="Secteur (ex. voyage)" className={input} />
-        <input name="admin_email" type="email" required placeholder="E-mail du premier administrateur" className={input} dir="ltr" />
-        <input name="admin_name" placeholder="Nom du premier administrateur" className={input} />
+        <input name="name" required aria-label="Nom de l'entreprise" placeholder="Nom de l'entreprise" className={input} />
+        <input name="slug" aria-label="Identifiant (ex. bob-sarl, facultatif)" placeholder="Identifiant (ex. bob-sarl, facultatif)" className={input} dir="ltr" />
+        <input name="sector" aria-label="Secteur (ex. voyage)" placeholder="Secteur (ex. voyage)" className={input} />
+        <input name="admin_email" type="email" required aria-label="E-mail du premier administrateur" placeholder="E-mail du premier administrateur" className={input} dir="ltr" />
+        <input name="admin_name" aria-label="Nom du premier administrateur" placeholder="Nom du premier administrateur" className={input} />
       </div>
       <Submit />
     </form>

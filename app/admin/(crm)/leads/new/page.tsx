@@ -10,8 +10,8 @@ export default function NewLeadPage({ searchParams }: { searchParams: { erreur?:
       <p className="text-sm text-gray-500">Pour un prospect arrivé par WhatsApp ou par téléphone, sans passer par le formulaire.</p>
       {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
       <form action={createLeadAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-3 text-sm">
-        <input name="name" required placeholder="Nom complet" className={input} />
-        <input name="phone" required placeholder="Téléphone (98 140 514 ou +33…)" className={input} />
+        <input name="name" required aria-label="Nom complet" placeholder="Nom complet" className={input} />
+        <input name="phone" required aria-label="Téléphone (98 140 514 ou +33…)" placeholder="Téléphone (98 140 514 ou +33…)" className={input} />
         <select name="product" required className={input}>
           {Object.entries(PRODUCTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
@@ -19,11 +19,11 @@ export default function NewLeadPage({ searchParams }: { searchParams: { erreur?:
           {(["whatsapp", "phone", "manual"] as const).map((s) => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
         </select>
         <div className="space-y-1">
-          <input name="wa_ref" placeholder="Message WhatsApp reçu ou référence E2B-XXXXXX (facultatif)" className={`${input} font-mono`} dir="ltr" autoComplete="off" />
+          <input name="wa_ref" aria-label="Message WhatsApp reçu ou référence E2B-XXXXXX (facultatif)" placeholder="Message WhatsApp reçu ou référence E2B-XXXXXX (facultatif)" className={`${input} font-mono`} dir="ltr" autoComplete="off" />
           <p className="text-xs text-gray-500">Collez le message reçu : la référence « Réf: E2B-… » qu&apos;il contient permet de retrouver la page, la campagne et le bouton d&apos;origine. Le texte du message n&apos;est pas conservé : seule la référence est utilisée. Si ce visiteur a déjà une demande, un échange lui est rattaché (pas de doublon).</p>
         </div>
-        <input name="offer" placeholder="Offre (facultatif)" className={input} />
-        <input name="destination" placeholder="Destination (facultatif)" className={input} />
+        <input name="offer" aria-label="Offre (facultatif)" placeholder="Offre (facultatif)" className={input} />
+        <input name="destination" aria-label="Destination (facultatif)" placeholder="Destination (facultatif)" className={input} />
         <p className="text-xs text-gray-500">Le prospect nous a contactés lui-même : le recontact au sujet de sa demande est autorisé. Aucun consentement marketing n&apos;est enregistré.</p>
         <button className="w-full bg-brand-700 text-white font-bold py-2 rounded-lg">Créer le lead</button>
       </form>

@@ -112,3 +112,23 @@ describe("LOTS 2-3 : navigation, tableau de bord, pipeline, fiche dossier (prés
     expect(src).not.toMatch(/label=\{`[^`]*·[^`]*tnd/); expect(src).toMatch(/hint=\{`\$\{tnd\(dash\.revenueMonth\)\}/)
   })
 })
+
+describe("LOTS 4-5 : statistiques et pages publiques (présentation seule)", () => {
+  it("statistiques : onglets en navigation étiquetée avec aria-current, barres de l'entonnoir avec alternative textuelle, erreurs annoncées", () => {
+    const src = read("app/admin/(crm)/stats/page.tsx")
+    expect(src).toMatch(/<nav aria-label="Vues des statistiques"/); expect(src).toMatch(/aria-current=\{view === v/)
+    expect(src).toMatch(/role="img" aria-label=\{`\$\{s\.label\} : /); expect(src).not.toMatch(/<p className="text-red-700">Lecture impossible/)
+  })
+  it("accueil public : couleurs de marque par variables (bleu, jaune, vert WhatsApp accessible), plus de vert / ambre en dur sur les boutons", () => {
+    const src = read("app/page.tsx")
+    expect(src).toMatch(/bg-e2b-blue/); expect(src).toMatch(/bg-e2b-yellow/); expect(src).toMatch(/bg-e2b-wa/)
+    expect(src).not.toMatch(/bg-green-[78]00|bg-amber-400|from-blue-950/)
+    expect(src).toMatch(/handleWhatsAppClick/) // suivi et liens WhatsApp inchangés
+  })
+  it("pages Omra, Summer Vibes, Voyages organisés : boutons WhatsApp au vert accessible validé", () => {
+    for (const f of ["app/omra/OmraView.tsx", "app/summer-vibes/page.tsx", "app/voyages-organises/VoyagesClient.tsx"]) expect(read(f), f).not.toMatch(/bg-green-700 hover:bg-green-800/)
+  })
+  it("les pages /c (rendu historique) et le formulaire partagé ne sont pas modifiés par ces lots", () => {
+    expect(read("app/c/[slug]/CategoryView.tsx")).not.toMatch(/brand-|e2b-wa/)
+  })
+})

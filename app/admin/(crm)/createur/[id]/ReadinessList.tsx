@@ -16,7 +16,7 @@ export function ReadinessList({ r }: { r: Readiness }) {
           <ul className="space-y-1.5">
             {g.items.map((c) => (
               <li key={c.id} className="flex gap-2 text-sm" data-check={c.id} data-ok={c.ok}>
-                <span aria-hidden="true" className={c.ok ? "text-green-600" : g.title.startsWith("À") ? "text-red-600" : "text-amber-600"}>{c.ok ? "✓" : g.title.startsWith("À") ? "✗" : "!"}</span>
+                <span aria-hidden="true" className={c.ok ? "text-green-600" : g.title.startsWith("À") ? "text-red-600" : "text-amber-700"}>{c.ok ? "✓" : g.title.startsWith("À") ? "✗" : "!"}</span>
                 <span><span className="font-semibold">{c.label}</span>{!c.ok && c.detail ? <span className="text-gray-600"> — {c.detail}</span> : null}</span>
               </li>
             ))}

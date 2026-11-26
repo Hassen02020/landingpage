@@ -150,7 +150,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <p className="text-gray-600 mb-2">Aucune API WhatsApp n&apos;est connectée : enregistrez ici le <strong>thème</strong> des messages reçus ou envoyés pour suivre la conversation (comptée dans les statistiques WhatsApp). Le texte du message n&apos;est pas conservé.</p>
           <div className="grid gap-3">
             {([["in", "💬 Message reçu"], ["out", "💬 Message envoyé"]] as const).map(([dir, label]) => (
-              <form key={dir} action={whatsappLogAction} className="flex gap-2 items-start">
+              <form key={dir} action={whatsappLogAction} className="flex flex-wrap gap-2 items-start">
                 <input type="hidden" name="id" value={lead.id} />
                 <input type="hidden" name="direction" value={dir} />
                 <ConversationFields idPrefix={`wa-${dir}`} />
@@ -159,7 +159,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
             ))}
           </div>
           <h2 className="font-bold mt-4">Appel téléphonique</h2>
-          <form action={callLogAction} className="flex gap-2 items-start mt-2">
+          <form action={callLogAction} className="flex flex-wrap gap-2 items-start mt-2">
             <input type="hidden" name="id" value={lead.id} />
             <ConversationFields idPrefix="call" />
             <button className="shrink-0 bg-gray-900 text-white rounded-lg px-3 py-2 font-semibold">📞 Appel enregistré</button>
@@ -191,7 +191,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
                     <form action={flagDuplicateAction} className="flex flex-wrap items-center gap-1">
                       <input type="hidden" name="id" value={lead.id} />
                       <input type="hidden" name="of" value={d.ref} />
-                      <input name="reason" maxLength={200} placeholder="Motif (facultatif)" className="px-2 py-1 rounded border text-xs" />
+                      <input name="reason" maxLength={200} aria-label="Motif (facultatif)" placeholder="Motif (facultatif)" className="px-2 py-1 rounded border text-xs" />
                       <button className="text-xs underline text-amber-800">Signaler comme doublon potentiel de {d.ref}</button>
                     </form>
                   )}
@@ -213,7 +213,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
               {r.status === "signale" && canDecideDuplicate(me?.orgRole, me?.userId ?? "", r) && (
                 <form action={decideDuplicateAction} className="flex flex-wrap items-center gap-1">
                   <input type="hidden" name="review_id" value={r.id} /><input type="hidden" name="back" value={`/admin/leads/${lead.id}`} />
-                  <input name="note" maxLength={300} placeholder="Note de décision (facultatif)" className="px-2 py-1 rounded border text-xs" />
+                  <input name="note" maxLength={300} aria-label="Note de décision (facultatif)" placeholder="Note de décision (facultatif)" className="px-2 py-1 rounded border text-xs" />
                   <button name="decision" value="confirme" className="text-xs rounded bg-gray-800 text-white px-2 py-1">Confirmer</button>
                   <button name="decision" value="rejete" className="text-xs rounded border px-2 py-1">Rejeter</button>
                 </form>

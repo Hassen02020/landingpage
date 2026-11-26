@@ -39,7 +39,7 @@ export default async function DuplicatesPage({ searchParams }: { searchParams: {
               {r.status === "signale" && canDecideDuplicate(staff.orgRole, staff.userId, r) && (
                 <form action={decideDuplicateAction} className="ml-auto flex flex-wrap items-center gap-1">
                   <input type="hidden" name="review_id" value={r.id} />
-                  <input name="note" maxLength={300} placeholder="Note de décision (facultatif)" className="px-2 py-1 rounded border text-xs" />
+                  <input name="note" maxLength={300} aria-label="Note de décision (facultatif)" placeholder="Note de décision (facultatif)" className="px-2 py-1 rounded border text-xs" />
                   <button name="decision" value="confirme" className="text-xs rounded bg-gray-800 text-white px-2 py-1">Confirmer</button>
                   <button name="decision" value="rejete" className="text-xs rounded border px-2 py-1">Rejeter</button>
                 </form>

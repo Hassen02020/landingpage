@@ -18,8 +18,8 @@ export function LoginForm({ next }: { next: string }) {
     <form action={action} className="space-y-3">
       {state?.error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{state.error}</div>}
       <input type="hidden" name="next" value={next} />
-      <input name="email" type="email" required autoComplete="username" placeholder="E-mail" className="w-full px-4 py-3 rounded-xl border border-gray-300" />
-      <input name="password" type="password" required autoComplete="current-password" placeholder="Mot de passe" className="w-full px-4 py-3 rounded-xl border border-gray-300" />
+      <input name="email" type="email" required autoComplete="username" aria-label="E-mail" placeholder="E-mail" className="w-full px-4 py-3 rounded-xl border border-gray-300" />
+      <input name="password" type="password" required autoComplete="current-password" aria-label="Mot de passe" placeholder="Mot de passe" className="w-full px-4 py-3 rounded-xl border border-gray-300" />
       <Submit />
     </form>
   )

@@ -90,7 +90,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: { p
                         <div className="text-xs text-gray-600">{c.ref} · {PRODUCTS[c.product as Product]} · il y a {age(c.created_at)}</div>
                         {c.offer && <div className="text-xs text-gray-700 truncate">{c.offer}</div>}
                         <div className="flex items-center justify-between mt-1 text-xs">
-                          <span className={c.assigned_to ? "text-gray-600" : "text-amber-600"}>{c.assigned_to ? name.get(c.assigned_to) ?? "—" : "non assigné"}</span>
+                          <span className={c.assigned_to ? "text-gray-600" : "text-amber-700"}>{c.assigned_to ? name.get(c.assigned_to) ?? "—" : "non assigné"}</span>
                           {late && <span className="text-red-600 font-bold">relance échue</span>}
                         </div>
                         {(() => {

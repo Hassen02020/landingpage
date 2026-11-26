@@ -19,7 +19,7 @@ type Search = { status?: string; product?: string; channel?: string; q?: string;
 const tnd = (n: number) => formatTnd(n)
 
 export default async function LeadsPage({ searchParams }: { searchParams: Search }) {
-  if (!dbConfigured()) return <p className="text-red-700">Base non configurée (LANDING_SUPABASE_URL / LANDING_SUPABASE_SERVICE_ROLE_KEY).</p>
+  if (!dbConfigured()) return <Notice tone="error">Base non configurée (LANDING_SUPABASE_URL / LANDING_SUPABASE_SERVICE_ROLE_KEY).</Notice>
   const me = await currentStaff()
   const page = Math.max(0, parseInt(searchParams.page || "0", 10) || 0)
   let leads: LeadRow[] = []
@@ -145,7 +145,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
             <button className="px-3 py-1.5 rounded-lg bg-gray-900 text-white font-bold">Appliquer</button>
             <span className="text-xs text-gray-500">« Réservé » et « Gagné » se font sur la fiche (montant obligatoire).</span>
           </div>
-          <div className="overflow-x-auto bg-white rounded-2xl shadow-sm">
+          <div tabIndex={0} role="region" aria-label="Liste des leads (défilement horizontal)" className="relative overflow-x-auto bg-white rounded-2xl shadow-sm">
             <table className="w-full text-sm">
               <caption className="sr-only">Liste des leads</caption>
               <thead className="text-left text-gray-600 border-b">
@@ -166,7 +166,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
                       <td className="p-3 [overflow-wrap:anywhere] max-w-[16rem]">{l.first_name} {l.last_name ?? ""}{l.is_test && <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-800 text-white text-[10px] font-bold" data-testid="test-badge">TEST</span>}<div className="text-gray-500">{l.phone ? `+${l.phone}` : "—"}</div></td>
                       <td className="p-3">{PRODUCTS[l.product]}<div className="text-gray-500 truncate max-w-[200px]">{l.offer ?? ""}</div></td>
                       <td className="p-3"><StatusBadge status={l.status} /></td>
-                      <td className="p-3 whitespace-nowrap">{l.assigned_to ? staffName.get(l.assigned_to) ?? "—" : <span className="text-amber-600">non assigné</span>}</td>
+                      <td className="p-3 whitespace-nowrap">{l.assigned_to ? staffName.get(l.assigned_to) ?? "—" : <span className="text-amber-700">non assigné</span>}</td>
                       <td className="p-3">{l.channel ?? "—"}<div className="text-gray-500">{l.utm_campaign ?? ""}</div></td>
                       <td className={`p-3 whitespace-nowrap ${late ? "text-red-600 font-bold" : ""}`}>{formatDate(l.next_follow_up_at)}</td>
                     </tr>

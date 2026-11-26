@@ -4,14 +4,14 @@ import { listCustomers } from "@/lib/server/customer"
 import { LoadError } from "../_components/LoadError"
 import { TIER_COLORS, TIER_LABELS } from "@/lib/loyalty"
 import { formatDate, formatTnd } from "../../format"
-import { PageHeader, StatusBadge, fieldCls, primaryBtnCls } from "../_components/ui"
+import { Notice, PageHeader, StatusBadge, fieldCls, primaryBtnCls } from "../_components/ui"
 
 export const dynamic = "force-dynamic"
 
 const tnd = (n: number) => formatTnd(n)
 
 export default async function ClientsPage({ searchParams }: { searchParams: { q?: string; page?: string } }) {
-  if (!dbConfigured()) return <p className="text-red-700">Base non configurée.</p>
+  if (!dbConfigured()) return <Notice tone="error">Base non configurée.</Notice>
   const page = Math.max(0, parseInt(searchParams.page || "0", 10) || 0)
   // un échec de chargement n'est PAS un état vide : on l'affiche comme une erreur
   let customers: Awaited<ReturnType<typeof listCustomers>> = []
@@ -29,7 +29,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
         <button className={primaryBtnCls}>Chercher</button>
       </form>
       {failed ? <LoadError what="les clients" /> : (
-      <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <div tabIndex={0} role="region" aria-label="Liste des clients (défilement horizontal)" className="relative bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <caption className="sr-only">Liste des clients</caption>
           <thead className="text-left text-gray-600 border-b">

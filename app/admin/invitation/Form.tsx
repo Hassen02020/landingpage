@@ -28,8 +28,8 @@ export function InvitationForm() {
     <form action={action} className="space-y-3">
       {state?.error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{state.error}</div>}
       <input type="hidden" name="token" value={token} />
-      <input name="password" type="password" required minLength={10} autoComplete="new-password" placeholder="Mot de passe (10 caractères minimum)" className="w-full rounded-xl border border-gray-300 px-4 py-3" />
-      <input name="again" type="password" required minLength={10} autoComplete="new-password" placeholder="Répéter le mot de passe" className="w-full rounded-xl border border-gray-300 px-4 py-3" />
+      <input name="password" type="password" required minLength={10} autoComplete="new-password" aria-label="Mot de passe (10 caractères minimum)" placeholder="Mot de passe (10 caractères minimum)" className="w-full rounded-xl border border-gray-300 px-4 py-3" />
+      <input name="again" type="password" required minLength={10} autoComplete="new-password" aria-label="Répéter le mot de passe" placeholder="Répéter le mot de passe" className="w-full rounded-xl border border-gray-300 px-4 py-3" />
       <Submit />
     </form>
   )
