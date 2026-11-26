@@ -34,7 +34,7 @@ Seuil : 5 réservations (`MIN_BOOKINGS`, `lib/intelligence.ts:8` ; `minBookings`
 
 - Un seul `Purchase` par dossier : identifiant d'événement `purchase-<id du dossier>` (`lib/server/crm.ts:298, 315`) **[Appliquée]**.
 - Envoyé seulement à la **première** réservation (`booked_at` vide), jamais renvoyé (`crm.ts:286`) **[Appliquée]**.
-- Pas d'envoi sans consentement de suivi (`crm.ts:287`) ; envoi **retenu** et journalisé si un signalement de doublon est ouvert, libéré seulement après décision humaine (`crm.ts:291-294`) **[Appliquée]**.
+- Pas d'envoi sans consentement de suivi (`crm.ts:288`) ; envoi **retenu** et journalisé (`crm.ts:273, 291-294`) quand un motif de retenue existe (ex. contrôle de doublon de réservation indisponible), libéré seulement après décision humaine, jamais automatiquement **[Appliquée]**.
 - Meta refuse les événements de plus de 7 jours : un Purchase tardif n'est pas pris en compte par la plateforme (limite externe).
 - Annulation / correction : une annulation ou un remboursement est une ligne de commission **négative** (`CommissionRow.kind`, `ad-economics.ts:56`) ; le Purchase déjà envoyé n'est pas retiré. **[Appliquée]** pour la commission, **[Proposée, non appliquée]** pour toute correction de la valeur envoyée à Meta.
 
