@@ -10,7 +10,7 @@ export default async function MediaLibrary() {
   return (
     <div className="space-y-5">
       <div>
-        <Link href="/admin/createur" className="text-sm text-violet-700 font-semibold">← Mes pages</Link>
+        <Link href="/admin/createur" className="text-sm text-brand-700 font-semibold">← Mes pages</Link>
         <h1 className="text-2xl font-black mt-1">Médiathèque</h1>
         <p className="text-gray-600 text-sm max-w-2xl">Les images déjà utilisées par vos pages et vos offres. Pour en ajouter une, téléversez-la dans l&apos;éditeur d&apos;une page (JPG, PNG ou WebP, 4 Mo maximum) : elle apparaît ici dès qu&apos;elle est enregistrée sur une page ou une offre, et vous pouvez la réutiliser sans la renvoyer.</p>
       </div>

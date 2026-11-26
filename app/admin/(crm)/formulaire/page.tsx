@@ -20,7 +20,7 @@ export default async function FormPage() {
       </div>
       {url ? (
         <section className="rounded-2xl border bg-white p-5 text-sm">
-          Adresse publique de votre formulaire : <a href={url} target="_blank" rel="noreferrer" className="font-bold text-violet-700 underline" dir="ltr">{url}</a>
+          Adresse publique de votre formulaire : <a href={url} target="_blank" rel="noreferrer" className="font-bold text-brand-700 underline" dir="ltr">{url}</a>
         </section>
       ) : (
         <section className="rounded-2xl border bg-white p-5 text-sm text-gray-600">Easy2Book utilise ses propres pages publiques : cette configuration concerne les entreprises clientes.</section>

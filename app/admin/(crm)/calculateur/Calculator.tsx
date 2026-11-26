@@ -51,7 +51,7 @@ export function Calculator({ real }: { real: Real }) {
   return (
     <div className="space-y-5">
       {real && (
-        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 text-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-brand-50 border border-brand-200 rounded-2xl p-4 text-sm flex flex-wrap items-center justify-between gap-3">
           <span>
             Vos chiffres réels (90 j, {real.leads} leads) : contact {real.contactRate === null ? "non calculable" : `${real.contactRate} %`}, réservation {real.bookingRate === null ? "non calculable" : `${real.bookingRate} %`}
             {real.avgBasket !== null ? `, panier moyen ${fmt(real.avgBasket)} TND` : ", panier moyen non calculable"}.
@@ -59,7 +59,7 @@ export function Calculator({ real }: { real: Real }) {
           <button
             type="button"
             onClick={() => setInput((s) => ({ ...s, leads: real.leads, ...(real.contactRate !== null ? { contactRate: real.contactRate } : {}), ...(real.bookingRate !== null ? { bookingRate: real.bookingRate } : {}) }))}
-            className="bg-violet-700 text-white font-bold px-3 py-1.5 rounded-lg"
+            className="bg-brand-700 text-white font-bold px-3 py-1.5 rounded-lg"
           >
             Utiliser mes taux réels
           </button>
@@ -70,7 +70,7 @@ export function Calculator({ real }: { real: Real }) {
         {FIELDS.map((f) => (
           <label key={f.key} className="bg-white rounded-2xl border border-gray-100 p-4 text-sm">
             <span className="font-bold">{f.label}</span>
-            <span className="mt-2 flex items-center border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-violet-500">
+            <span className="mt-2 flex items-center border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-brand-500">
               <input
                 type="number"
                 inputMode="decimal"
@@ -90,9 +90,9 @@ export function Calculator({ real }: { real: Real }) {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {cards.map((c) => (
-          <div key={c.label} className="bg-white rounded-2xl border-2 border-dashed border-violet-300 p-4 text-center">
+          <div key={c.label} className="bg-white rounded-2xl border-2 border-dashed border-brand-300 p-4 text-center">
             <div className="text-sm font-semibold text-gray-600">{c.label}</div>
-            <div className={`text-xl font-black ${c.tone ?? "text-violet-800"}`}>{c.value}</div>
+            <div className={`text-xl font-black ${c.tone ?? "text-brand-800"}`}>{c.value}</div>
             {c.sub && <div className="text-xs text-gray-500">{c.sub}</div>}
           </div>
         ))}

@@ -70,7 +70,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: { di
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/rentabilite" className="text-sm text-violet-700 font-semibold">← Saisie des dépenses et commissions</Link>
+        <Link href="/admin/rentabilite" className="text-sm text-brand-700 font-semibold">← Saisie des dépenses et commissions</Link>
         <h1 className="text-2xl font-black mt-1">Quelles campagnes rapportent réellement de l&apos;argent ?</h1>
         <p className="text-gray-600 text-sm">Une publicité n&apos;est gagnante que si elle rapporte une <strong>marge nette réellement conservée</strong> (commission confirmée − publicité − coûts variables), pas seulement des réservations ou du chiffre d&apos;affaires.</p>
       </div>
@@ -96,7 +96,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: { di
       </form>
 
       <div className="flex flex-wrap gap-2">
-        {DIMS.map((d) => <Link key={d.key} href={q(d.key)} className={`px-4 py-2 rounded-xl text-sm font-bold ${d.key === dim ? "bg-violet-700 text-white" : "bg-white border hover:bg-gray-50"}`}>{d.label}</Link>)}
+        {DIMS.map((d) => <Link key={d.key} href={q(d.key)} className={`px-4 py-2 rounded-xl text-sm font-bold ${d.key === dim ? "bg-brand-700 text-white" : "bg-white border hover:bg-gray-50"}`}>{d.label}</Link>)}
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

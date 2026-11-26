@@ -7,7 +7,7 @@ import type { MetaPageView } from "@/lib/server/meta-pages"
 function Submit() {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" disabled={pending} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-60">
+    <button type="submit" disabled={pending} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60">
       {pending ? "…" : "Enregistrer"}
     </button>
   )
@@ -15,7 +15,7 @@ function Submit() {
 
 export function MetaLeadsCard({ pages, webhookUrl, webhookReady, migrationApplied }: { pages: MetaPageView[]; webhookUrl: string; webhookReady: boolean; migrationApplied: boolean }) {
   const [state, save] = useFormState(saveMetaPageAction, undefined)
-  const input = "w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500"
+  const input = "w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
   const err = (k: string) => state?.errors?.[k]
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden lg:col-span-2">

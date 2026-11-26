@@ -13,12 +13,12 @@ interface ComRow { id: number; leadRef: string | null; reservation: string; kind
 
 const CSV_TEMPLATE = "reservation_ref;nature;montant_tnd;date;lead_ref;telephone;ligne\nRES-0001;commission;350,000;2026-11-12;E2B-ABC234;;1\nRES-0001;remboursement;50,000;2026-11-20;E2B-ABC234;;1\n"
 const tnd = (n: number) => `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 3 })} TND`
-const input = "w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500"
+const input = "w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
 const STATUS_LABEL: Record<string, string> = { rapproche: "Rapprochée", a_valider: "À valider", ambigu: "Ambiguë — refusée", introuvable: "Dossier introuvable", deja_importee: "Déjà importée", conflit: "Conflit de dossier" }
 
 function Submit({ children }: { children: string }) {
   const { pending } = useFormStatus()
-  return <button type="submit" disabled={pending} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-60">{pending ? "…" : children}</button>
+  return <button type="submit" disabled={pending} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60">{pending ? "…" : children}</button>
 }
 
 export function RentabiliteClient({ canManage, spend, commissions, costs, costsEnabled, campaigns }: { canManage: boolean; campaigns: { name: string; conventional: boolean }[]; spend: SpendRow[]; commissions: ComRow[]; costs: CostRowUi[]; costsEnabled: boolean }) {
@@ -139,7 +139,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
           </label>
           <div className="flex gap-3">
             <button type="button" disabled={pending || !scsv.trim()} onClick={runSpendPreview} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-gray-900 text-white disabled:opacity-60">Aperçu</button>
-            {spreview && !spreview.needsRate && spreview.counts.nouvelle > 0 && <button type="button" disabled={pending} onClick={runSpendCommit} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 text-white disabled:opacity-60">Importer {spreview.counts.nouvelle} dépense(s)</button>}
+            {spreview && !spreview.needsRate && spreview.counts.nouvelle > 0 && <button type="button" disabled={pending} onClick={runSpendCommit} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-brand-600 text-white disabled:opacity-60">Importer {spreview.counts.nouvelle} dépense(s)</button>}
           </div>
           {spreview?.needsRate && <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">Le fichier est en {spreview.currency} : indiquez le taux de change vers le TND, puis refaites l&apos;aperçu.</p>}
           {spreview && !spreview.needsRate && (
@@ -158,11 +158,11 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
         <h2 className="font-black">Commissions EasyV4</h2>
         {canManage && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-600"><a download="modele-commissions-easyv4.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`} className="font-bold text-violet-700 underline">Télécharger le modèle de fichier</a>. Sans commissions importées, la marge ne représente PAS la rentabilité réelle : EasyV4 reste la référence, rien n&apos;est inventé ici.</p>
+            <p className="text-sm text-gray-600"><a download="modele-commissions-easyv4.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`} className="font-bold text-brand-700 underline">Télécharger le modèle de fichier</a>. Sans commissions importées, la marge ne représente PAS la rentabilité réelle : EasyV4 reste la référence, rien n&apos;est inventé ici.</p>
             <p className="text-sm text-gray-600">Collez le CSV exporté d&apos;EasyV4 (colonnes : reservation_ref ; nature ; montant_tnd ; date ; lead_ref ; telephone ; ligne). Rien n&apos;est écrit avant l&apos;aperçu et votre validation.</p>
             <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={5} className={input + " font-mono text-xs"} dir="ltr" aria-label="Contenu CSV des commissions" />
             <div className="flex gap-3"><button type="button" disabled={pending || !csv.trim()} onClick={runPreview} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-gray-900 text-white disabled:opacity-60">Aperçu</button>
-              {preview && <button type="button" disabled={pending} onClick={runCommit} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 text-white disabled:opacity-60">Importer (provisoire)</button>}</div>
+              {preview && <button type="button" disabled={pending} onClick={runCommit} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-brand-600 text-white disabled:opacity-60">Importer (provisoire)</button>}</div>
             {preview && (
               <div className="space-y-2">
                 <p className="text-sm">{Object.entries(preview.counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${STATUS_LABEL[k]}`).join(" · ") || "Aucune ligne exploitable."}</p>
@@ -181,7 +181,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
             {commissions.map((c) => (
               <tr key={c.id} className="border-t"><td className="py-1.5 pr-3">{c.date}</td><td className="pr-3">{c.reservation}</td><td className="pr-3">{c.leadRef}</td><td className="pr-3">{c.kind}</td><td className="pr-3 text-right">{tnd(c.amount)}</td>
                 <td className="pr-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${c.status === "confirme" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{c.status === "confirme" ? "Confirmée" : "Provisoire"}</span></td>
-                <td>{canManage && c.status === "provisoire" && <button type="button" disabled={pending} className="text-xs font-bold text-violet-700 hover:underline" onClick={() => start(async () => { const r = await confirmCommissionsAction([c.id]); setMsg(r.message ?? (r.confirmed ? "Commission confirmée." : "Rien à confirmer.")) })}>Confirmer</button>}</td></tr>
+                <td>{canManage && c.status === "provisoire" && <button type="button" disabled={pending} className="text-xs font-bold text-brand-700 hover:underline" onClick={() => start(async () => { const r = await confirmCommissionsAction([c.id]); setMsg(r.message ?? (r.confirmed ? "Commission confirmée." : "Rien à confirmer.")) })}>Confirmer</button>}</td></tr>
             ))}
           </tbody></table></div>
       </section>

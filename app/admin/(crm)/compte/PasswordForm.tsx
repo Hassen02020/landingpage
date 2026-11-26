@@ -5,7 +5,7 @@ import { changePasswordAction } from "../../team-actions"
 
 function Save() {
   const { pending } = useFormStatus()
-  return <button type="submit" disabled={pending} className="bg-violet-700 text-white font-bold px-4 py-2 rounded-xl disabled:opacity-50">{pending ? "…" : "Changer le mot de passe"}</button>
+  return <button type="submit" disabled={pending} className="bg-brand-700 text-white font-bold px-4 py-2 rounded-xl disabled:opacity-50">{pending ? "…" : "Changer le mot de passe"}</button>
 }
 
 export function PasswordForm() {

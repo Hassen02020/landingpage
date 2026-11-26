@@ -2,13 +2,13 @@ import Link from "next/link"
 import { dbConfigured } from "@/lib/server/db"
 import { listCustomers } from "@/lib/server/customer"
 import { LoadError } from "../_components/LoadError"
-import { STATUS_LABELS } from "@/lib/status"
 import { TIER_COLORS, TIER_LABELS } from "@/lib/loyalty"
-import { STATUS_COLORS, formatDate } from "../../format"
+import { formatDate, formatTnd } from "../../format"
+import { StatusBadge } from "../_components/ui"
 
 export const dynamic = "force-dynamic"
 
-const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} TND`
+const tnd = (n: number) => formatTnd(n)
 
 export default async function ClientsPage({ searchParams }: { searchParams: { q?: string; page?: string } }) {
   if (!dbConfigured()) return <p className="text-red-700">Base non configurée.</p>
@@ -42,7 +42,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
               <tr key={c.phone} data-phone={c.phone} className="border-b last:border-0 hover:bg-gray-50">
                 <td className="p-3 max-w-[16rem]"><Link href={`/admin/clients/${c.phone}`} className="font-bold underline [overflow-wrap:anywhere]">{c.name}</Link><div className="text-xs text-gray-500">+{c.phone}</div></td>
                 <td className="p-3">{c.leads}{c.openLeads ? <span className="text-xs text-gray-500"> ({c.openLeads} en cours)</span> : null}</td>
-                <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[c.lastStatus]}`}>{STATUS_LABELS[c.lastStatus]}</span></td>
+                <td className="p-3"><StatusBadge status={c.lastStatus} /></td>
                 <td className="p-3">{c.booked}</td>
                 <td className="p-3">{c.revenue ? tnd(c.revenue) : "—"}</td>
                 <td className="p-3" data-tier={c.tier ?? ""}>{c.tier ? <span className={`px-2 py-1 rounded-full text-xs font-bold ${TIER_COLORS[c.tier]}`}>{TIER_LABELS[c.tier]}</span> : "—"}</td>

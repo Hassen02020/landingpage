@@ -10,13 +10,13 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   if (!actor) redirect("/admin/login")
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-violet-950 text-white">
+      <header className="bg-brand-950 text-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="" width={32} height={32} className="rounded-full bg-white" />
             <div>
               <div className="font-black leading-tight">Plateforme</div>
-              <div className="text-[11px] text-violet-300">Super Admin · {actor.email}</div>
+              <div className="text-[11px] text-brand-300">Super Admin · {actor.email}</div>
             </div>
           </div>
           <form action={logoutAction}>

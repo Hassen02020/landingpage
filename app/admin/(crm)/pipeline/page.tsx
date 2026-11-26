@@ -10,17 +10,18 @@ import { moveLeadAction } from "../../actions"
 export const dynamic = "force-dynamic"
 
 // Une colonne par statut, dans l'ordre du pipeline commercial (lib/status.ts).
+// Filet de colonne : même palette par PHASE que les badges de statut (LOT 1) — à traiter, en cours, vendu, perdu.
 const TONES: Record<Status, string> = {
-  nouveau: "border-blue-400",
-  a_contacter: "border-sky-400",
-  contacte: "border-amber-400",
-  a_qualifier: "border-orange-400",
-  qualifie: "border-purple-400",
-  devis: "border-indigo-400",
-  negociation: "border-fuchsia-400",
+  nouveau: "border-amber-400",
+  a_contacter: "border-amber-400",
+  contacte: "border-brand-300",
+  a_qualifier: "border-brand-300",
+  qualifie: "border-brand-500",
+  devis: "border-brand-500",
+  negociation: "border-brand-700",
   reserve: "border-green-500",
-  gagne: "border-emerald-600",
-  perdu: "border-red-400",
+  gagne: "border-green-700",
+  perdu: "border-gray-400",
 }
 const COLUMNS = STATUSES.map((status) => ({ status, tone: TONES[status] }))
 

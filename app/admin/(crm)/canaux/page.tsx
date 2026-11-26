@@ -36,7 +36,7 @@ export default async function ChannelsPage() {
           </li>
         ))}
       </ul>
-      <p className="text-sm"><Link href="/admin/integrations" className="text-violet-700 font-bold underline">Intégrations et journal des événements entrants</Link></p>
+      <p className="text-sm"><Link href="/admin/integrations" className="text-brand-700 font-bold underline">Intégrations et journal des événements entrants</Link></p>
     </div>
   )
 }

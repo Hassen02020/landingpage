@@ -9,12 +9,13 @@ import ConversationFields from "./ConversationFields"
 import { addNoteAction, callLogAction, assignAction, changeStatusAction, decideDuplicateAction, flagDuplicateAction, followUpAction, markTestAction, reopenDuplicateAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
 import { CONTACT_CHANNEL_LABELS, CONTACT_CHANNELS, REGIONS } from "@/lib/regions"
 import { listTemplates, renderTemplate } from "@/lib/server/templates"
-import { STATUS_COLORS, formatDate } from "../../../format"
+import { formatDate } from "../../../format"
 import { blockLeadPhoneAction } from "../../../settings-actions"
 import { currentStaff } from "@/lib/server/auth"
 import { waText } from "@/lib/wa-text"
 import { loadFormConfig } from "@/lib/server/org-public"
 import { LOSS_REASONS, LOSS_REASON_LABELS } from "@/lib/governance"
+import { StatusBadge } from "../../_components/ui"
 
 export const dynamic = "force-dynamic"
 
@@ -62,7 +63,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
         <h1 className="text-2xl font-black [overflow-wrap:anywhere] min-w-0">{lead.first_name} {lead.last_name ?? ""}</h1>
         <span className="font-mono text-gray-500">{lead.ref}</span>
         {lead.phone && !locked && <Link href={`/admin/clients/${lead.phone}`} className="text-sm underline">Voir le client (360°)</Link>}
-        <span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>
+        <StatusBadge status={lead.status} />
         {lead.is_test && <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-800 text-white" data-testid="test-badge">TEST : exclu des analyses</span>}
         {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="ml-auto bg-e2b-wa hover:bg-e2b-wa-dark text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>}
       </div>
@@ -272,7 +273,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
               <input name="travel_period" defaultValue={lead.travel_period ?? ""} placeholder="ex. février 2027" maxLength={64} className="mt-1 w-full px-3 py-2 rounded-lg border" />
             </label>
           </div>
-          <div className="flex justify-end"><button className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-2 rounded-lg">Enregistrer la qualification</button></div>
+          <div className="flex justify-end"><button className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2 rounded-lg">Enregistrer la qualification</button></div>
         </form>
       )}
 
@@ -298,14 +299,14 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
             </label>
             <input name="notes" placeholder="Commentaire (facultatif)" className="w-full px-3 py-2 rounded-lg border" />
             <input name="distinct_reason" maxLength={300} placeholder="Réservation distincte d'un autre dossier du client : motif (seulement si demandé)" className="w-full px-3 py-2 rounded-lg border" data-testid="distinct-reason" />
-            <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Enregistrer</button>
+            <button className="w-full bg-brand-700 text-white font-bold py-2 rounded-lg">Enregistrer</button>
           </form>
           <form action={followUpAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
             <h2 className="font-bold">Relance</h2>
             <input type="hidden" name="id" value={lead.id} />
             <p className="text-gray-500">Actuelle : {formatDate(lead.next_follow_up_at)}</p>
             <input type="datetime-local" name="follow_up" className="w-full px-3 py-2 rounded-lg border" />
-            <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Planifier (vide = supprimer)</button>
+            <button className="w-full bg-brand-700 text-white font-bold py-2 rounded-lg">Planifier (vide = supprimer)</button>
           </form>
           <form action={assignAction} className="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
             <h2 className="font-bold">Responsable</h2>
@@ -314,7 +315,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
               <option value="">Non assigné</option>
               {staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.full_name || s.email}</option>)}
             </select>
-            <button className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg">Assigner</button>
+            <button className="w-full bg-brand-700 text-white font-bold py-2 rounded-lg">Assigner</button>
           </form>
         </div>
       )}

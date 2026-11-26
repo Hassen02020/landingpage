@@ -6,12 +6,13 @@ import { select } from "@/lib/server/db"
 import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
 import { loadAnalytics } from "@/lib/server/analytics"
 import { groupBy, groupByOffer, loadLeadStats, loadTeam, parsePeriod, ratio, rates, teamStats, totals, type Counts, type Level, type Period } from "@/lib/server/stats"
+import { formatTnd } from "@/app/admin/format"
 
 export const dynamic = "force-dynamic"
 
 type Niche = { product: Product | null; niche: string; clics_whatsapp: number; visiteurs_contact: number; leads: number; reservations: number; chiffre_affaires_tnd: number }
 
-const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} TND`
+const tnd = (n: number) => formatTnd(n)
 const NC = "Non calculable"
 const pct = (r: number | null) => (r === null ? NC : `${Math.round(r * 100)} %`)
 const tndOrNC = (n: number | null) => (n === null ? NC : tnd(n))
@@ -29,7 +30,7 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string | numbe
 
 function Tabs({ view, p }: { view: string; p: Period }) {
   const q = `from=${p.from}&to=${p.to}`
-  const cls = (v: string) => `px-4 py-2 rounded-xl text-sm font-bold ${view === v ? "bg-violet-700 text-white" : "bg-white border hover:bg-gray-50"}`
+  const cls = (v: string) => `px-4 py-2 rounded-xl text-sm font-bold ${view === v ? "bg-brand-700 text-white" : "bg-white border hover:bg-gray-50"}`
   return (
     <div className="flex gap-2">
       <Link href={`/admin/stats?view=marketing&${q}`} className={cls("marketing")}>Marketing</Link>
@@ -67,7 +68,7 @@ function KpiGrid({ c }: { c: Counts }) {
   const r = rates(c)
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-      <Kpi label="Leads reçus" value={c.leads} tone="bg-violet-600" sub={`Traités : ${pct(r.treatmentRate)}`} />
+      <Kpi label="Leads reçus" value={c.leads} tone="bg-brand-600" sub={`Traités : ${pct(r.treatmentRate)}`} />
       <Kpi label="À traiter" value={c.toTreat} tone="bg-blue-500" sub="nouveau + à contacter" />
       <Kpi label="En contact" value={c.inContact} tone="bg-sky-500" sub="contacté + à qualifier" />
       <Kpi label="Qualifiés" value={c.qualified} tone="bg-amber-500" />
@@ -155,7 +156,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi label="Leads assignés" value={sum.assigned} tone="bg-violet-600" />
+        <Kpi label="Leads assignés" value={sum.assigned} tone="bg-brand-600" />
         <Kpi label="Actions (statuts, notes…)" value={sum.actions} tone="bg-blue-500" sub={`dont notes : ${sum.notes}`} />
         <Kpi label="Contactés" value={sum.contacted} tone="bg-sky-500" />
         <Kpi label="Qualifiés" value={sum.qualified} tone="bg-amber-500" />
@@ -214,7 +215,7 @@ async function WhatsAppView({ p }: { p: Period }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Kpi label="Clics WhatsApp" value={f.clicks} tone="bg-blue-500" sub={`${f.visitorsClicked} visiteur(s)`} />
         <Kpi label="Conversations suivies" value={f.conversations} tone="bg-amber-500" sub={`${f.messagesIn} reçus · ${f.messagesOut} envoyés`} />
-        <Kpi label="Rattachement des messages" value={pct(f.whatsappAttachedRate)} tone="bg-violet-600" sub="leads WhatsApp dont le clic est retrouvé" />
+        <Kpi label="Rattachement des messages" value={pct(f.whatsappAttachedRate)} tone="bg-brand-600" sub="leads WhatsApp dont le clic est retrouvé" />
         <Kpi label="Réservations" value={f.reserved} tone="bg-green-600" sub={`CA : ${tnd(f.revenue)}`} />
       </div>
       <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
@@ -288,7 +289,7 @@ async function Funnel({ p }: { p: Period }) {
           {a.funnel.map((s) => (
             <div key={s.key} data-step={s.key}>
               <div className="flex justify-between text-sm"><span className="font-semibold">{s.label}</span><span><b data-count>{s.count}</b> <span className="text-gray-500">· {pct(s.fromStart)} du total · {pct(s.fromPrevious)} de l&apos;étape précédente</span></span></div>
-              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-violet-600 rounded" style={{ width: `${Math.round((s.fromStart ?? 0) * 100)}%` }} /></div>
+              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-brand-600 rounded" style={{ width: `${Math.round((s.fromStart ?? 0) * 100)}%` }} /></div>
             </div>
           ))}
         </div>
@@ -304,7 +305,7 @@ async function Funnel({ p }: { p: Period }) {
         <table className="w-full text-sm" data-testid="daily">
           <thead className="border-b bg-gray-50"><tr>{["Jour", "Leads", "", "Ventes", "CA"].map((h, i) => <th key={i} className={th}>{h}</th>)}</tr></thead>
           <tbody>{a.series.map((d) => (
-            <tr key={d.day} data-day={d.day} className="border-b last:border-0"><td className={td}>{d.day}</td><td className={td}>{d.leads}</td><td className={td}><div className="h-2 bg-violet-300 rounded" style={{ width: `${Math.round((d.leads / max) * 120)}px` }} /></td><td className={td}>{d.sales}</td><td className={td}>{d.revenue ? tnd(d.revenue) : "—"}</td></tr>
+            <tr key={d.day} data-day={d.day} className="border-b last:border-0"><td className={td}>{d.day}</td><td className={td}>{d.leads}</td><td className={td}><div className="h-2 bg-brand-300 rounded" style={{ width: `${Math.round((d.leads / max) * 120)}px` }} /></td><td className={td}>{d.sales}</td><td className={td}>{d.revenue ? tnd(d.revenue) : "—"}</td></tr>
           ))}</tbody>
         </table>
       </section>

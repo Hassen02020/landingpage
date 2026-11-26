@@ -8,12 +8,12 @@ import { BLOCK_TYPES, PRESETS, sectionLabel, type BlockType, type DesignBlock, t
 import { MediaPicker } from "./PageEditor"
 import type { MediaEntry } from "@/lib/server/page-builder"
 
-const inp = "w-full border border-gray-300 rounded-xl px-3 py-2 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-violet-500"
+const inp = "w-full border border-gray-300 rounded-xl px-3 py-2 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-500"
 const btn = "px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white hover:bg-gray-50"
 
 function Save() {
   const { pending } = useFormStatus()
-  return <button disabled={pending} className="bg-violet-700 hover:bg-violet-800 disabled:opacity-60 text-white font-bold px-6 py-3 rounded-xl min-h-[44px]" data-testid="save-design">{pending ? "Enregistrement…" : "Enregistrer la personnalisation"}</button>
+  return <button disabled={pending} className="bg-brand-700 hover:bg-brand-800 disabled:opacity-60 text-white font-bold px-6 py-3 rounded-xl min-h-[44px]" data-testid="save-design">{pending ? "Enregistrement…" : "Enregistrer la personnalisation"}</button>
 }
 
 /** Éditeur de personnalisation : l'aperçu (étape 5) montre exactement le résultat ; rien n'est publié tant que la page n'est pas publiée. */

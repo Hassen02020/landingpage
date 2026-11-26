@@ -6,7 +6,7 @@ import { createOrganizationAction } from "./actions"
 function Submit() {
   const { pending } = useFormStatus()
   return (
-    <button disabled={pending} className="rounded-xl bg-violet-700 px-5 py-2.5 font-bold text-white hover:bg-violet-800 disabled:opacity-50">
+    <button disabled={pending} className="rounded-xl bg-brand-700 px-5 py-2.5 font-bold text-white hover:bg-brand-800 disabled:opacity-50">
       {pending ? "Création…" : "Créer l'entreprise et inviter son administrateur"}
     </button>
   )

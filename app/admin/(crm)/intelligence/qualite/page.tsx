@@ -21,7 +21,7 @@ export default async function QualityPage({ searchParams }: { searchParams: { fr
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/intelligence" className="text-sm text-violet-700 font-semibold">← Vue d&apos;ensemble</Link>
+        <Link href="/admin/intelligence" className="text-sm text-brand-700 font-semibold">← Vue d&apos;ensemble</Link>
         <h1 className="text-2xl font-black mt-1">Qualité des données</h1>
         <p className="text-sm text-gray-600">Les analyses ne valent que ce que valent les données. Cette page liste ce qui manque ou peut fausser les chiffres. Comptages seulement : aucun nom ni numéro n&apos;est affiché.</p>
       </div>
@@ -43,7 +43,7 @@ export default async function QualityPage({ searchParams }: { searchParams: { fr
       {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
       {q.issues.some((i) => i.key === "conversions_failed") && (
         <form action={retryConversionsAction} data-testid="retry-form">
-          <button className="bg-violet-700 text-white font-bold px-4 py-2 rounded-lg text-sm">Relancer maintenant les conversions Meta</button>
+          <button className="bg-brand-700 text-white font-bold px-4 py-2 rounded-lg text-sm">Relancer maintenant les conversions Meta</button>
         </form>
       )}
 

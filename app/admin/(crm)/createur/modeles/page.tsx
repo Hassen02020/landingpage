@@ -13,7 +13,7 @@ export default async function ThemeChoice() {
   return (
     <div className="space-y-5">
       <div>
-        <Link href="/admin/createur" className="text-sm text-violet-700 font-semibold">← Mes pages</Link>
+        <Link href="/admin/createur" className="text-sm text-brand-700 font-semibold">← Mes pages</Link>
         <h1 className="text-2xl font-black mt-1">Étape 1 — Choisissez un modèle</h1>
         <p className="text-gray-600 text-sm max-w-2xl">Le modèle règle le produit, la langue et les informations à fournir. La page publique prend l&apos;apparence de sa famille (Omra, Voyage, Hôtel ou Offre) et n&apos;affiche que les sections pour lesquelles vous avez des informations.</p>
       </div>
@@ -25,7 +25,7 @@ export default async function ThemeChoice() {
               <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-full">{FAMILY_LABEL[t.family]}</span>
             </div>
             <div className="p-4">
-              <h2 className="font-black group-hover:text-violet-700">{t.label}</h2>
+              <h2 className="font-black group-hover:text-brand-700">{t.label}</h2>
               <p className="text-sm text-gray-600 mt-1">{t.tagline}</p>
               <p className="text-xs text-gray-500 mt-2">Langue : {t.lang === "ar" ? "arabe" : t.lang === "en" ? "anglais" : "français"} · à fournir : {t.offerRequired.length ? "prix" + t.offerRequired.map((f) => ({ departure_date: ", date", nights: ", nuits", destination: ", destination", description: ", programme", price_before: ", prix barré" } as Record<string, string>)[f] ?? "").join("") : "nom et prix"}</p>
             </div>

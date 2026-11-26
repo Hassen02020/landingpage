@@ -26,7 +26,7 @@ export default async function DuplicatesPage({ searchParams }: { searchParams: {
       {searchParams.erreur && <div role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
       <nav className="flex gap-2" aria-label="Statut">
         {DUP_STATUSES.map((s) => (
-          <Link key={s} href={`/admin/doublons?statut=${s}`} aria-current={s === status ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${s === status ? "bg-violet-600 text-white" : "bg-white border text-gray-700"}`}>{DUP_STATUS_LABELS[s]}</Link>
+          <Link key={s} href={`/admin/doublons?statut=${s}`} aria-current={s === status ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${s === status ? "bg-brand-600 text-white" : "bg-white border text-gray-700"}`}>{DUP_STATUS_LABELS[s]}</Link>
         ))}
       </nav>
       {reviews.length === 0 ? <p className="bg-white rounded-2xl p-6 text-sm text-gray-500">Aucun signalement dans cette liste.</p> : (

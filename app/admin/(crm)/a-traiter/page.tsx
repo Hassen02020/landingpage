@@ -19,7 +19,7 @@ export default async function ToTreatPage() {
         <strong>{a.ref}</strong> · {a.message}
         <span className="text-gray-500"> → {a.suggestion}</span>
       </div>
-      <Link href={`/admin/leads/${a.leadId}`} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-violet-600 text-white">Ouvrir</Link>
+      <Link href={`/admin/leads/${a.leadId}`} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-600 text-white">Ouvrir</Link>
     </li>
   )
   return (

@@ -7,7 +7,7 @@ import { acceptInvitationAction } from "./actions"
 function Submit() {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" disabled={pending} className="w-full rounded-xl bg-violet-700 py-3 font-bold text-white hover:bg-violet-800 disabled:opacity-50">
+    <button type="submit" disabled={pending} className="w-full rounded-xl bg-brand-700 py-3 font-bold text-white hover:bg-brand-800 disabled:opacity-50">
       {pending ? "Enregistrement…" : "Choisir mon mot de passe"}
     </button>
   )

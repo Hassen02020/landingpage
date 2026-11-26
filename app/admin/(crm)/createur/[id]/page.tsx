@@ -47,7 +47,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
   return (
     <div className="space-y-5">
       <div>
-        <Link href="/admin/createur" className="text-sm text-violet-700 font-semibold">← Mes pages</Link>
+        <Link href="/admin/createur" className="text-sm text-brand-700 font-semibold">← Mes pages</Link>
         <div className="flex flex-wrap items-center gap-3 mt-1">
           <h1 className="text-2xl font-black">{category ? category.name : `Nouvelle page — ${theme.label}`}</h1>
           {page && <span title={page.status.detail} className={`px-2 py-0.5 rounded-full text-xs font-bold ${TONE[page.status.tone]}`}>{page.status.label}</span>}
@@ -74,7 +74,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
             <li>✓ Protection anti-spam et limitation de débit déjà en place.</li>
           </ul>
           <p className="text-xs text-gray-500">Les champs ne sont pas modifiables page par page pour l&apos;instant ; région, e-mail et message restent des champs facultatifs de qualification dans le CRM.</p>
-          <Link href={`/admin/createur/${params.id}?etape=apercu&theme=${theme.id}`} className="inline-block bg-violet-700 text-white font-bold px-5 py-2.5 rounded-xl">Continuer vers l&apos;aperçu →</Link>
+          <Link href={`/admin/createur/${params.id}?etape=apercu&theme=${theme.id}`} className="inline-block bg-brand-700 text-white font-bold px-5 py-2.5 rounded-xl">Continuer vers l&apos;aperçu →</Link>
         </section>
       )}
 
@@ -87,7 +87,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
           <section className="bg-white rounded-2xl border p-5 space-y-3" aria-label="Vérifications">
             <h2 className="font-black">Vérifications</h2>
             <ReadinessList r={page.readiness} />
-            <Link href={`/admin/createur/${params.id}?etape=publication&theme=${theme.id}`} className="inline-block bg-violet-700 text-white font-bold px-5 py-2.5 rounded-xl">Continuer vers la publication →</Link>
+            <Link href={`/admin/createur/${params.id}?etape=publication&theme=${theme.id}`} className="inline-block bg-brand-700 text-white font-bold px-5 py-2.5 rounded-xl">Continuer vers la publication →</Link>
           </section>
         </div>
       )}
@@ -104,7 +104,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
             ) : (
               <>
                 {(sched.schedule.publishAt || sched.schedule.unpublishAt) && (
-                  <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm" data-testid="schedule-current">
+                  <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 text-sm" data-testid="schedule-current">
                     {sched.schedule.publishAt && <div>Publication prévue le <strong>{toTunisLocal(sched.schedule.publishAt).replace("T", " à ")}</strong> (heure de Tunis).</div>}
                     {sched.schedule.unpublishAt && <div>Masquage prévu le <strong>{toTunisLocal(sched.schedule.unpublishAt).replace("T", " à ")}</strong> (heure de Tunis).</div>}
                     <form action={clearScheduleAction} className="mt-2"><input type="hidden" name="id" value={page.category.id} /><button className="px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white">Annuler la programmation</button></form>
@@ -114,7 +114,7 @@ export default async function CreatorEditor({ params, searchParams }: { params: 
                   <input type="hidden" name="id" value={page.category.id} />
                   {!page.category.visible && <label className="text-sm block"><span className="font-bold">Publier le</span><input type="datetime-local" name="publish_at" defaultValue={toTunisLocal(sched.schedule.publishAt)} className="w-full border rounded-xl px-3 py-2 min-h-[44px] mt-1" aria-label="Publier le" /></label>}
                   <label className="text-sm block"><span className="font-bold">Masquer le (facultatif)</span><input type="datetime-local" name="unpublish_at" defaultValue={toTunisLocal(sched.schedule.unpublishAt)} className="w-full border rounded-xl px-3 py-2 min-h-[44px] mt-1" aria-label="Masquer le" /></label>
-                  <div className="sm:col-span-2"><button className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="schedule-save">Enregistrer la programmation</button></div>
+                  <div className="sm:col-span-2"><button className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="schedule-save">Enregistrer la programmation</button></div>
                 </form>
                 <p className="text-xs text-gray-500">Heure de Tunis. Une page incomplète ne peut pas être programmée, et une programmation échue est appliquée avec les mêmes contrôles que la publication manuelle (le bouton « Appliquer les programmations échues » du tableau de bord ou, si le propriétaire l&apos;active, la tâche planifiée).</p>
               </>

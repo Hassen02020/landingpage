@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 
 const fmt = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { timeZone: "Africa/Tunis", dateStyle: "short" })
 const input = "border rounded-lg px-3 py-2 text-sm bg-white w-full min-w-0"
-const btn = "px-4 py-2 rounded-lg text-sm font-bold bg-violet-600 text-white"
+const btn = "px-4 py-2 rounded-lg text-sm font-bold bg-brand-600 text-white"
 
 export default async function ConversationsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   const staff = await currentStaff()
@@ -73,7 +73,7 @@ export default async function ConversationsPage({ searchParams }: { searchParams
 
       <nav className="flex gap-2" aria-label="Période">
         {[7, 30, 90].map((d) => (
-          <a key={d} href={`/admin/conversations?jours=${d}`} aria-current={d === days ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${d === days ? "bg-violet-600 text-white" : "bg-white border text-gray-700"}`}>{d} jours</a>
+          <a key={d} href={`/admin/conversations?jours=${d}`} aria-current={d === days ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${d === days ? "bg-brand-600 text-white" : "bg-white border text-gray-700"}`}>{d} jours</a>
         ))}
       </nav>
 
