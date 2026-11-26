@@ -15,7 +15,7 @@ const jwt = () => {
 }
 
 const E2B_ORG = "00000000-0000-4000-8000-0000000e2b01"
-const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs", "landing_page_versions", "landing_reviews", "landing_conversations", "landing_duplicate_reviews"]
+const TENANT_TABLES = ["landing_leads", "landing_events", "landing_lead_activities", "landing_staff", "landing_integrations", "landing_integration_changes", "landing_admin_log", "landing_protection", "landing_blocklist", "landing_categories", "landing_offers", "landing_promo_codes", "landing_message_templates", "landing_form_configs", "landing_page_versions", "landing_reviews", "landing_conversations", "landing_duplicate_reviews", "landing_booking_confirmations"]
 
 // tenant: true → joue la base APRÈS la migration 0008 avec UNE organisation (Easy2Book) : table organizations présente,
 // lignes rattachées, organization_id par défaut à l'insertion (comme le DEFAULT de la vraie base).
@@ -78,6 +78,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     landing_reviews: [],
     landing_conversations: [],
     landing_duplicate_reviews: [],
+    landing_booking_confirmations: [],
     landing_staff: [
       { user_id: ADMIN_ID, email: ADMIN.email, full_name: "Direction", role: "admin", active: true, created_at: day(40) },
       { user_id: AGENT_ID, email: AGENT.email, full_name: "Agent Sami", role: "agent", active: true, created_at: day(20) },
@@ -107,7 +108,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
       { id: "cccccccc-0000-4000-8000-000000000002", slug: "turquie-ete", name: "Turquie été 2027", product: "voyage", lang: "fr", headline: "Istanbul, Cappadoce, Antalya", description: null, banner_desktop: null, banner_mobile: null, seo_title: null, seo_description: null, visible: false, position: 1, updated_at: day(1) },
     ],
     landing_offers: [
-      { id: "aaaaaaaa-0000-4000-8000-000000000001", category_id: "cccccccc-0000-4000-8000-000000000001", product: "omra", name: "الفوج الأول", sku: "OMRA-2701", tag: "✈️ أول فوج", destination: null, departure_date: "2027-01-27", nights: 14, nights_detail: "10 بمكة + 4 بالمدينة", price: 5500, price_before: null, cost: 4700, seats_total: 40, seats_sold: 22, features: ["طيران", "تأشيرة"], description: null, image_url: null, visible: true, position: 1, archived_at: null, updated_at: day(1) },
+      { id: "aaaaaaaa-0000-4000-8000-000000000001", category_id: "cccccccc-0000-4000-8000-000000000001", product: "omra", name: "الفوج الأول", sku: "OMRA-2701", tag: "✈️ أول فوج", destination: null, departure_date: "2027-01-27", nights: 14, nights_detail: "10 بمكة + 4 بالمدينة", price: 5500, price_before: null, cost: 4700, seats_total: 40, seats_sold: 22, features: ["طيران", "تأشيرة"], description: null, image_url: null, visible: true, position: 1, archived_at: null, updated_at: day(1), payment_terms_defined: false, deposit_kind: null, deposit_value: null, deposit_due_date: null, payment_terms_note: null, payment_terms_updated_at: null },
       { id: "aaaaaaaa-0000-4000-8000-000000000002", category_id: "cccccccc-0000-4000-8000-000000000001", product: "omra", name: "الفوج الثاني", sku: "OMRA-1802", tag: "⭐ الإقامة الأطول", destination: null, departure_date: "2027-02-18", nights: 25, nights_detail: "20 بمكة + 5 بالمدينة", price: 7800, price_before: 8500, cost: 6600, seats_total: 30, seats_sold: 24, features: ["طيران", "تأشيرة"], description: null, image_url: null, visible: true, position: 2, archived_at: null, updated_at: day(1) },
       { id: "aaaaaaaa-0000-4000-8000-000000000003", category_id: "cccccccc-0000-4000-8000-000000000001", product: "omra", name: "عمرة شوال", sku: "OMRA-1503", tag: "🕌 السعر الأقل", destination: null, departure_date: "2027-03-15", nights: 14, nights_detail: "10 بمكة + 4 بالمدينة", price: 4800, price_before: null, cost: 4100, seats_total: null, seats_sold: 0, features: [], description: null, image_url: null, visible: true, position: 3, archived_at: null, updated_at: day(1) },
     ],
@@ -159,19 +160,20 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     ]
     for (const l of bobLeads) db.landing_leads.push({ ...l, organization_id: BOB_ORG, ref: `E2B-B${l.ref.slice(5)}`.slice(0, 10) })
   }
-  const seq = { landing_lead_activities: 100, landing_promo_codes: 100, landing_blocklist: 100, landing_integration_changes: 100, landing_admin_log: 100, landing_conversations: 0, landing_duplicate_reviews: 0 }
+  const seq = { landing_lead_activities: 100, landing_promo_codes: 100, landing_blocklist: 100, landing_integration_changes: 100, landing_admin_log: 100, landing_conversations: 0, landing_duplicate_reviews: 0, landing_booking_confirmations: 0 }
   // valeurs par défaut posées par la vraie base (DEFAULT des migrations)
   const DEFAULTS = {
     landing_promo_codes: { active: true, used_count: 0 },
     landing_blocklist: { active: true },
     landing_message_templates: { active: true, position: 0 },
-    landing_offers: { visible: false, position: 0, seats_sold: 0, features: [], archived_at: null },
+    landing_offers: { visible: false, position: 0, seats_sold: 0, features: [], archived_at: null, payment_terms_defined: false, deposit_kind: null, deposit_value: null, deposit_due_date: null, payment_terms_note: null, payment_terms_updated_at: null },
+    landing_booking_confirmations: { supplier_confirmed: null, supplier_confirmed_on: null, supplier_proof_note: null, payment_respected: null, payment_respected_on: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     landing_categories: { visible: false, position: 0, lang: "fr" },
     landing_reviews: { status: "pending", moderated_at: null },
     landing_duplicate_reviews: { status: "signale", decided_by: null, decided_at: null, decision_note: null, purchase_state: null },
     landing_conversations: { status: "ouverte", is_test: false, source_kind: "saisie", anonymized_at: null, started_at: new Date().toISOString(), last_activity_at: new Date().toISOString() },
   }
-  const UNIQUE = { landing_leads: ["ref", "idempotency_key"], landing_promo_codes: ["code"], landing_staff: ["email"], landing_offers: ["sku"], landing_categories: ["slug"], landing_reviews: ["content_hash"] }
+  const UNIQUE = { landing_leads: ["ref", "idempotency_key"], landing_promo_codes: ["code"], landing_staff: ["email"], landing_offers: ["sku"], landing_categories: ["slug"], landing_reviews: ["content_hash"], landing_booking_confirmations: ["lead_id"] }
 
   const match = (row, params) => {
     for (const [k, raw] of params) {

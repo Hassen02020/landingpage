@@ -101,7 +101,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: { di
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card label="Dépensé pour attirer un client" value={tnd(t.costPerBooking)} note={t.costPerBooking === null ? "non calculable (aucune dépense ou aucune réservation)" : "dépenses ÷ réservations"} />
-        <Card label="Réservations confirmées" value={`${t.confirmedBookings} / ${t.bookings}`} note="confirmées = commission confirmée · total = dossiers réservés" />
+        <Card label="Réservations à commission confirmée" value={`${t.confirmedBookings} / ${t.bookings}`} note="commission confirmée par un administrateur (ni confirmation du fournisseur, ni paiement) · total = dossiers réservés" />
         <Card label="Commission conservée" value={tnd(t.commissionConfirmed)} note={`+ ${tnd(t.commissionProvisional)} encore provisoire`} tone="warn" />
         <Card label="Reste après tous les coûts" value={signed(t.marginConfirmed)} note="marge nette confirmée (définitive)" tone={tone(t.marginConfirmed)} />
       </div>

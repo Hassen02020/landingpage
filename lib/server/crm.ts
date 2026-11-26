@@ -111,7 +111,7 @@ export interface Activity {
 export async function logActivity(
   leadId: string,
   actor: Actor,
-  type: "created" | "status_change" | "note" | "assignment" | "follow_up" | "marketing_withdrawn" | "wa_in" | "wa_out" | "duplicate_flagged" | "duplicate_confirmed" | "duplicate_rejected" | "duplicate_reopened",
+  type: "created" | "status_change" | "note" | "assignment" | "follow_up" | "marketing_withdrawn" | "wa_in" | "wa_out" | "duplicate_flagged" | "duplicate_confirmed" | "duplicate_rejected" | "duplicate_reopened" | "booking_confirmation_changed",
   extra: { from_status?: Status; to_status?: Status; body?: string } = {}
 ): Promise<void> {
   await insertQuiet("landing_lead_activities", {

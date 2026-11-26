@@ -67,13 +67,13 @@ export async function commitImportAction(csv: string, validatedKeys: string[]): 
   return res
 }
 
-export async function confirmCommissionsAction(ids: number[]): Promise<{ confirmed: number; failed: number; message?: string }> {
+export async function confirmCommissionsAction(ids: number[], confirmationRef?: string): Promise<{ confirmed: number; failed: number; message?: string }> {
   const staff = await manager()
   if (!staff) return { confirmed: 0, failed: 0, message: "Réservé aux administrateurs." }
   const clean = (Array.isArray(ids) ? ids : []).map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 200)
-  const res = await runWithOrg(staff.organizationId, () => confirmCommissions(clean, staff.userId))
+  const res = await runWithOrg(staff.organizationId, () => confirmCommissions(clean, staff.userId, typeof confirmationRef === "string" ? confirmationRef : null))
   revalidatePath("/admin/rentabilite")
-  return res
+  return { confirmed: res.confirmed, failed: res.failed, ...(res.error ? { message: res.error } : {}) }
 }
 
 export async function addCostAction(_prev: SpendFormState | undefined, fd: FormData): Promise<SpendFormState> {

@@ -1,4 +1,4 @@
-import { can, canDecideDuplicate, canFlagDuplicate, canReopenDuplicate } from "@/lib/permissions"
+import { can, canConfirmBooking, canDecideDuplicate, canFlagDuplicate, canReopenDuplicate } from "@/lib/permissions"
 import { candidatesFor, reviewsForLead } from "@/lib/server/duplicates"
 import { DUP_RULE_LABELS, DUP_STATUS_LABELS } from "@/lib/duplicates"
 import Link from "next/link"
@@ -6,6 +6,9 @@ import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
 import { SOURCE_LABELS, STATUSES, STATUS_LABELS, findDuplicates, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
 import ConversationFields from "./ConversationFields"
+import BookingConfirmation from "./BookingConfirmation"
+import { getBookingView } from "@/lib/server/booking-confirmations"
+import { isBooking } from "@/lib/status"
 import { addNoteAction, callLogAction, assignAction, changeStatusAction, decideDuplicateAction, flagDuplicateAction, followUpAction, markTestAction, reopenDuplicateAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
 import { CONTACT_CHANNEL_LABELS, CONTACT_CHANNELS, REGIONS } from "@/lib/regions"
 import { listTemplates, renderTemplate } from "@/lib/server/templates"
@@ -23,6 +26,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   created: "Création", status_change: "Statut", note: "Note", assignment: "Assignation",
   follow_up: "Relance", marketing_withdrawn: "Consentement", anonymized: "Anonymisation",
   wa_in: "💬 WhatsApp reçu", wa_out: "💬 WhatsApp envoyé",
+  booking_confirmation_changed: "Confirmation de réservation modifiée",
   duplicate_flagged: "Doublon signalé", duplicate_confirmed: "Doublon confirmé", duplicate_rejected: "Doublon rejeté", duplicate_reopened: "Doublon rouvert",
 }
 
@@ -41,7 +45,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
   const lead = await getLead(params.id)
   const formConfig = await loadFormConfig()
   if (!lead) notFound()
-  const [activities, staff, me, templates, duplicates, candidates, dupReviews] = await Promise.all([
+  const [activities, staff, me, templates, duplicates, candidates, dupReviews, bookingView] = await Promise.all([
     getActivities(lead.id),
     listStaff().catch(() => []),
     currentStaff(),
@@ -49,6 +53,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
     findDuplicates(lead).catch(() => []),
     candidatesFor(lead).catch(() => []),
     reviewsForLead(lead.id).catch(() => []),
+    getBookingView(lead).catch(() => ({ migrationApplied: false, confirmation: null, offer: null, state: "non_renseigne" as const })),
   ])
   const refOfId = new Map<string, string>([[lead.id, lead.ref], ...duplicates.map((d): [string, string] => [d.id, d.ref])])
   const reviewedOthers = new Set(dupReviews.filter((r) => r.status !== "rejete").map((r) => (r.lead_id === lead.id ? r.primary_lead_id : r.lead_id)))
@@ -321,6 +326,8 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
           <div className="flex justify-end"><button className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2 rounded-lg">Enregistrer la qualification</button></div>
         </form>
       )}
+
+      {isBooking(lead.status) && <BookingConfirmation leadId={lead.id} view={bookingView} canEdit={Boolean(me) && canConfirmBooking(me?.orgRole, me?.userId ?? "", lead)} isBooking locked={locked} />}
 
       <section className="bg-white rounded-2xl shadow-sm p-4 text-sm space-y-3">
         <h2 className="font-bold">Historique</h2>

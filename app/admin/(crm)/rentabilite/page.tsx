@@ -33,7 +33,7 @@ export default async function RentabilitePage() {
         costsEnabled={costs.migrationApplied}
         campaigns={campaigns}
         spend={spend.rows.map((r) => ({ id: r.id, date: r.spend_date, network: r.network, campaign: r.campaign, amount: Number(r.amount_tnd), voids: r.voids_id, reference: r.reference ?? null }))}
-        commissions={commissions.rows.map((c) => ({ id: c.id, leadRef: c.lead_ref, reservation: c.external_ref, kind: c.kind, amount: Number(c.amount_tnd), status: c.status, date: c.event_date }))}
+        commissions={commissions.rows.map((c) => ({ id: c.id, leadRef: c.lead_ref, reservation: c.external_ref, kind: c.kind, amount: Number(c.amount_tnd), status: c.status, date: c.event_date, confirmationRef: c.confirmation_ref ?? null }))}
       />
     </div>
   )

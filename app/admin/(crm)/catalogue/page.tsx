@@ -4,6 +4,7 @@ import { currentStaff } from "@/lib/server/auth"
 import { isPlatformOrg, select } from "@/lib/server/db"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { listCategories, listOffers, seatsLeft, type Category, type Offer } from "@/lib/server/catalog"
+import PaymentTerms from "./PaymentTerms"
 import { archiveOfferAction, duplicateOfferAction } from "../../catalog-actions"
 import { formatTnd } from "@/app/admin/format"
 
@@ -150,6 +151,9 @@ export default async function CataloguePage({ searchParams }: { searchParams: Re
           </table>
         </section>
       )}
+      {searchParams.ok && <div className="p-3 rounded-xl bg-green-50 text-green-800 text-sm" role="status">{searchParams.ok}</div>}
+      {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm" role="alert">{searchParams.erreur}</div>}
+      {tab === "offres" && <PaymentTerms canManage={can(staff?.orgRole, "payment_terms.manage")} />}
       <p className="text-xs text-gray-500">« CRM » = voyageurs des leads au statut Réservé liés à l&apos;offre (formulaire). « Places vendues » se met à jour dans la fiche de l&apos;offre.</p>
     </div>
   )
