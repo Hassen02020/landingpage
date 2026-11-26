@@ -40,13 +40,13 @@ function Row({ r, winner, dim }: { r: GroupRow; winner: boolean; dim: Dimension 
   return (
     <tr className={`border-t align-top ${winner ? "bg-green-50" : ""}`}>
       <td className="py-2 pr-3 font-semibold">{r.label}{winner && <span className="ml-2 text-xs font-bold bg-green-600 text-white px-2 py-0.5 rounded-full">Gagnante</span>}
-        {!r.sufficient && <span className="block text-xs font-normal text-gray-500" data-testid="sample-note">échantillon insuffisant : {m.leads} lead(s), {m.confirmedBookings} réservation(s) confirmée(s) sur {MIN_BOOKINGS} minimum pour comparer</span>}
+        {!r.sufficient && <span className="block text-xs font-normal text-gray-500" data-testid="sample-note">échantillon insuffisant : {m.leads} lead(s), {m.confirmedBookings} réservation(s) à commission confirmée sur {MIN_BOOKINGS} minimum pour comparer (seuil par défaut, non validé)</span>}
         {est && <span className="block text-xs font-normal text-amber-700">dépense répartie au prorata des leads : estimation, pas une dépense réelle par {DIM_NOUN[dim] ?? "groupe"}</span>}
         {offConvention && <span className="block text-xs font-normal text-red-700">nom hors convention : vérifiez le nom de campagne dans l&apos;annonce</span>}
         {m.bookingsWithoutCommission > 0 && <span className="block text-xs font-normal text-red-700">{m.bookingsWithoutCommission} réservation(s) sans commission importée</span>}
       </td>
       <td className="pr-3 text-right">{m.leads}</td>
-      <td className="pr-3 text-right">{m.bookings}<span className="block text-xs text-gray-500">{m.confirmedBookings} confirmée(s)</span></td>
+      <td className="pr-3 text-right">{m.bookings}<span className="block text-xs text-gray-500">{m.confirmedBookings} à commission confirmée</span></td>
       <td className={`pr-3 text-right ${estSpend ? "text-amber-700" : ""}`}>{estSpend ? "≈ " : ""}{tnd(m.spend)}{estSpend && <Est />}</td>
       <td className={`pr-3 text-right ${estCost ? "text-amber-700" : ""}`}>{estCost ? "≈ " : ""}{tnd(m.variableCosts)}{estCost && <Est />}</td>
       <td className="pr-3 text-right">{tnd(m.commissionConfirmed)}<span className="block text-xs text-amber-700">+ {tnd(m.commissionProvisional)} provisoire</span></td>

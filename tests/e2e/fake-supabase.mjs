@@ -216,6 +216,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
   const bearer = (req) => (req.headers.authorization || "").replace(/^Bearer /, "")
 
   let down = false
+  let failCustomers = false // panne ciblée : seules les lectures de la liste des clients échouent (le reste de l'admin reste utilisable)
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://x")
     const p = url.pathname
@@ -228,6 +229,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     calls.push(`${req.method} ${p}${url.search}`)
     // panne simulée de la base (tests de rétablissement) : toute lecture / écriture REST échoue en 503
     if (down && p.startsWith("/rest/v1/")) return send(res, 503, { code: "PGRST000", message: "panne simulée" })
+    if (failCustomers && req.method === "GET" && p === "/rest/v1/landing_leads" && url.search.includes("phone=not.is.null")) return send(res, 503, { code: "PGRST000", message: "panne ciblée simulée" })
 
     // ---------------- Auth
     if (p === "/auth/v1/token") {
@@ -381,6 +383,7 @@ export function createFakeSupabase({ tenant = false, multi = false } = {}) {
     SUPER,
     MANAGER,
     setDown: (v) => { down = Boolean(v) },
+    setFailCustomers: (v) => { failCustomers = Boolean(v) },
     listen: (port) => new Promise((ok) => server.listen(port, "127.0.0.1", () => ok(server))),
     close: () => new Promise((ok) => server.close(ok)),
   }

@@ -11,7 +11,7 @@ const issue = (r: ReturnType<typeof qualityReport>, key: string) => r.issues.fin
 
 describe("sampleState : données insuffisantes", () => {
   it("signale l'effectif, le minimum et ne cache jamais un petit échantillon", () => {
-    expect(sampleState(2, 5, "réservation(s)")).toMatchObject({ enough: false, n: 2, min: 5, message: "Données insuffisantes : 2 réservation(s), 5 minimum pour comparer." })
+    expect(sampleState(2, 5, "réservation(s)")).toMatchObject({ enough: false, n: 2, min: 5, message: "Données insuffisantes pour conclure : 2 réservation(s), 5 minimum pour comparer (seuil par défaut, non validé)." })
     expect(sampleState(5, 5, "réservation(s)")).toMatchObject({ enough: true, message: "" })
   })
   it("valeurs absurdes (NaN, négatif) : 0, jamais une erreur", () => {
@@ -113,7 +113,7 @@ describe("overviewAlerts : alertes issues des seuls chiffres de la période", ()
     const a = overviewAlerts({ ...base, bookings: 0 })
     expect(a.map((x) => x.key)).toEqual(["no_bookings"])
     expect(a[0].text).toMatch(/0 réservation sur 10/)
-    expect(a[0].text).toMatch(/5 réservations confirmées minimum/)
+    expect(a[0].text).toMatch(/5 réservations à commission confirmée minimum/)
   })
   it("rien à signaler : aucune alerte", () => { expect(overviewAlerts(base)).toEqual([]) })
   it("dépense sans lead, dépense non rattachée, leads non traités", () => {

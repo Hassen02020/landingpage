@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { calculate, type CalcInput } from "@/lib/calculator"
 
-type Real = { leads: number; contactRate: number; bookingRate: number; avgBasket: number } | null
+type Real = { leads: number; contactRate: number | null; bookingRate: number | null; avgBasket: number | null } | null
 
 const FIELDS: { key: keyof CalcInput; label: string; unit: string; help?: string }[] = [
   { key: "costPerLead", label: "Coût par lead", unit: "TND", help: "Dépense pub ÷ leads (Meta / TikTok)" },
@@ -53,12 +53,12 @@ export function Calculator({ real }: { real: Real }) {
       {real && (
         <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 text-sm flex flex-wrap items-center justify-between gap-3">
           <span>
-            Vos chiffres réels (90 j, {real.leads} leads) : contact {real.contactRate} %, réservation {real.bookingRate} %
-            {real.avgBasket ? `, panier moyen ${fmt(real.avgBasket)} TND` : ""}.
+            Vos chiffres réels (90 j, {real.leads} leads) : contact {real.contactRate === null ? "non calculable" : `${real.contactRate} %`}, réservation {real.bookingRate === null ? "non calculable" : `${real.bookingRate} %`}
+            {real.avgBasket !== null ? `, panier moyen ${fmt(real.avgBasket)} TND` : ", panier moyen non calculable"}.
           </span>
           <button
             type="button"
-            onClick={() => setInput((s) => ({ ...s, leads: real.leads, contactRate: real.contactRate, bookingRate: real.bookingRate }))}
+            onClick={() => setInput((s) => ({ ...s, leads: real.leads, ...(real.contactRate !== null ? { contactRate: real.contactRate } : {}), ...(real.bookingRate !== null ? { bookingRate: real.bookingRate } : {}) }))}
             className="bg-violet-700 text-white font-bold px-3 py-1.5 rounded-lg"
           >
             Utiliser mes taux réels

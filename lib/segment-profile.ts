@@ -30,7 +30,7 @@ export function profileSegment(result: SegmentResult): SegmentProfile {
   const regionKnownShare = eligible.length ? eligible.filter((c) => c.region).length / eligible.length : 0
   const reasons: string[] = []
   let level: Reliability
-  if (eligible.length < MIN_SAMPLE) { level = "insuffisante"; reasons.push(`Seulement ${eligible.length} contact(s) éligible(s) : sous le seuil de ${MIN_SAMPLE}, aucune conclusion ni taux fiable.`) }
+  if (eligible.length < MIN_SAMPLE) { level = "insuffisante"; reasons.push(`Seulement ${eligible.length} contact(s) éligible(s) : sous le seuil de ${MIN_SAMPLE}, aucune conclusion ni taux fiable : données insuffisantes pour conclure (seuil par défaut, non validé).`) }
   else {
     level = eligible.length >= GOOD_SAMPLE ? "elevee" : "moyenne"
     reasons.push(`${eligible.length} contacts éligibles (${eligible.length >= GOOD_SAMPLE ? "échantillon suffisant" : `entre ${MIN_SAMPLE} et ${GOOD_SAMPLE - 1}`}).`)

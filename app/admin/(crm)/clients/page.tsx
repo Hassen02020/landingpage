@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { dbConfigured } from "@/lib/server/db"
 import { listCustomers } from "@/lib/server/customer"
+import { LoadError } from "../_components/LoadError"
 import { STATUS_LABELS } from "@/lib/status"
 import { TIER_COLORS, TIER_LABELS } from "@/lib/loyalty"
 import { STATUS_COLORS, formatDate } from "../../format"
@@ -12,7 +13,14 @@ const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDi
 export default async function ClientsPage({ searchParams }: { searchParams: { q?: string; page?: string } }) {
   if (!dbConfigured()) return <p className="text-red-700">Base non configurée.</p>
   const page = Math.max(0, parseInt(searchParams.page || "0", 10) || 0)
-  const customers = await listCustomers(searchParams.q, page).catch(() => [])
+  // un échec de chargement n'est PAS un état vide : on l'affiche comme une erreur
+  let customers: Awaited<ReturnType<typeof listCustomers>> = []
+  let failed = false
+  try {
+    customers = await listCustomers(searchParams.q, page)
+  } catch {
+    failed = true
+  }
   return (
     <div className="space-y-4">
       <div>
@@ -23,6 +31,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
         <input name="q" defaultValue={searchParams.q} placeholder="Nom ou téléphone" aria-label="Rechercher un client" className="border rounded-xl px-3 py-2 flex-1 min-w-0 max-w-sm" />
         <button className="bg-gray-900 text-white font-bold px-4 rounded-xl">Chercher</button>
       </form>
+      {failed ? <LoadError what="les clients" /> : (
       <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-gray-500 border-b">
@@ -45,6 +54,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
           </tbody>
         </table>
       </div>
+      )}
       <div className="flex gap-3 text-sm">
         {page > 0 && <Link className="underline" href={`/admin/clients?${new URLSearchParams({ ...(searchParams.q ? { q: searchParams.q } : {}), page: String(page - 1) })}`}>← Précédent</Link>}
         {customers.length === 50 && <Link className="underline" href={`/admin/clients?${new URLSearchParams({ ...(searchParams.q ? { q: searchParams.q } : {}), page: String(page + 1) })}`}>Suivant →</Link>}

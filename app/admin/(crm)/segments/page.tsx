@@ -4,13 +4,28 @@ import { loadAllCustomers } from "@/lib/server/customer"
 import { SEGMENTS, evaluate, getSegment, idleDays } from "@/lib/segments"
 import { RELIABILITY_LABELS, profileSegment } from "@/lib/segment-profile"
 import { STATUS_LABELS } from "@/lib/status"
+import { LoadError } from "../_components/LoadError"
 import { formatDate } from "../../format"
 
 export const dynamic = "force-dynamic"
 
 export default async function SegmentsPage({ searchParams }: { searchParams: { s?: string } }) {
   if (!dbConfigured()) return <p className="text-red-700">Base non configurée.</p>
-  const customers = await loadAllCustomers().catch(() => [])
+  let customers: Awaited<ReturnType<typeof loadAllCustomers>> = []
+  let failed = false
+  try {
+    customers = await loadAllCustomers()
+  } catch {
+    failed = true // un échec de chargement n'est pas un état vide : aucun segment calculé sur des données manquantes
+  }
+  if (failed) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-black">Segments</h1>
+        <LoadError what="les segments" />
+      </div>
+    )
+  }
   const now = Date.now()
   const results = evaluate(customers, now)
   const current = getSegment(searchParams.s)

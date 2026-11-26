@@ -13,9 +13,10 @@ export default async function CalculatorPage() {
     c.leads >= 10
       ? {
           leads: c.leads,
-          contactRate: Math.round(r.treatmentRate * 100),
-          bookingRate: contacted ? Math.round((c.booked / contacted) * 100) : 0,
-          avgBasket: Math.round(r.avgBasket),
+          // null = non calculable (dénominateur nul) : jamais remplacé par 0
+          contactRate: r.treatmentRate === null ? null : Math.round(r.treatmentRate * 100),
+          bookingRate: contacted > 0 ? Math.round((c.booked / contacted) * 100) : null,
+          avgBasket: r.avgBasket === null ? null : Math.round(r.avgBasket),
         }
       : null
   return (

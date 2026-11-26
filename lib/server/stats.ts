@@ -78,15 +78,18 @@ function add(c: Counts, r: LeadStatRow) {
   }
 }
 
+/** Rapport a / b en fraction, ou `null` (« non calculable ») quand le dénominateur est 0 : une absence de données n'est jamais présentée comme 0 %. Un numérateur nul avec un dénominateur > 0 reste un vrai 0. */
+export const ratio = (a: number, b: number): number | null => (b > 0 ? a / b : null)
+
 export function rates(c: Counts) {
   const treated = c.leads - c.toTreat
   const closed = c.booked + c.lost
   return {
     treated,
-    treatmentRate: c.leads ? treated / c.leads : 0, // leads traités / leads reçus
-    bookingRate: c.leads ? c.booked / c.leads : 0, // ventes / leads reçus
-    closingRate: closed ? c.booked / closed : 0, // ventes / dossiers conclus (vendu + perdu)
-    avgBasket: c.booked ? c.revenue / c.booked : 0,
+    treatmentRate: ratio(treated, c.leads), // leads traités / leads reçus
+    bookingRate: ratio(c.booked, c.leads), // ventes / leads reçus
+    closingRate: ratio(c.booked, closed), // ventes / dossiers conclus (vendu + perdu)
+    avgBasket: ratio(c.revenue, c.booked), // CA / ventes (montant, pas une fraction)
   }
 }
 
@@ -184,7 +187,7 @@ export interface MemberStats {
   proposals: number
   booked: number
   lost: number
-  closingRate: number // ventes / (ventes + perdus) traités par ce membre
+  closingRate: number | null // ventes / (ventes + perdus) traités par ce membre ; null = non calculable (aucun dossier conclu)
 }
 
 export function teamStats(staff: StaffRow[], activities: ActivityStatRow[], leads: LeadStatRow[]): MemberStats[] {
@@ -208,7 +211,7 @@ export function teamStats(staff: StaffRow[], activities: ActivityStatRow[], lead
         proposals: to("devis"),
         booked,
         lost,
-        closingRate: booked + lost ? booked / (booked + lost) : 0,
+        closingRate: ratio(booked, booked + lost),
       }
     })
     .sort((a, b) => b.actions - a.actions)

@@ -309,6 +309,24 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   check("statistiques : « Vendus » = réservé + gagné, chiffre d'affaires sans double comptage", statsText.includes("Vendus") && statsText.includes(`CA : ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(revenue).replace(/\u202f|\u00a0/g, " ")} TND`), `CA attendu ${revenue}`)
 }
 
+// ---------------------------------------------------------------- L1 : « non calculable » et échec de chargement ≠ état vide
+{
+  // période sans aucun lead : dénominateur 0 → « Non calculable », jamais « 0 % »
+  await page.goto(`${BASE}/admin/stats?from=2000-01-01&to=2000-01-02`, { waitUntil: "networkidle" })
+  const emptyStats = await page.locator("main").innerText()
+  check("L1 : période sans lead → « Non calculable » (jamais 0 %)", emptyStats.includes("Non calculable") && !/Taux de réservation\s*0 %/.test(emptyStats))
+  // base indisponible : message d'erreur, pas « Aucun client »
+  fake.setFailCustomers(true)
+  const respClients = await page.goto(`${BASE}/admin/clients`, { waitUntil: "networkidle" }).catch(() => null)
+  const downClients = await page.locator("body").innerText().catch(() => "")
+  const downSegments = await (async () => { await page.goto(`${BASE}/admin/segments`, { waitUntil: "networkidle" }).catch(() => null); return page.locator("body").innerText().catch(() => "") })()
+  fake.setFailCustomers(false)
+  check("L1 : échec de chargement des clients → « Impossible de charger les clients. Réessayez. » (pas « Aucun client »)", downClients.includes("Impossible de charger les clients. Réessayez.") && !downClients.includes("Aucun client."), `${respClients?.status()} ${downClients.replace(/\s+/g, " ").slice(0, 400)}`)
+  check("L1 : échec de chargement des segments → message d'erreur (pas une liste vide)", downSegments.includes("Impossible de charger les segments. Réessayez."), downSegments.slice(0, 120))
+  await page.goto(`${BASE}/admin/clients`, { waitUntil: "networkidle" })
+  check("L1 : après rétablissement, la liste des clients revient", (await page.locator("tr[data-phone]").count()) > 0)
+}
+
 // ---------------------------------------------------------------- Customer 360 (Bloc 6)
 {
   // Ahmed (lead 1) et Walid (lead 7) partagent le même numéro : un seul client, deux demandes

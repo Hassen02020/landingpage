@@ -43,8 +43,8 @@ export function pageStats(i: StatInput): StatCard[] {
   add({ id: "prospects", label: "Prospects", value: zero(m?.leads), kind: "count", note: "Demandes reçues par le formulaire de cette page (CRM Easy2Book)." })
   add({ id: "qualifies", label: "Prospects qualifiés", value: zero(m?.qualified), kind: "count", note: "Prospects ayant atteint au moins l'étape « qualifié »." })
   add({ id: "devis", label: "Demandes de devis", value: zero(m?.quotes), kind: "count", note: "Prospects ayant atteint l'étape « devis / proposition »." })
-  add({ id: "reservations", label: "Réservations confirmées", value: i.ledgerAvailable ? zero(m?.confirmedBookings) : null, kind: "count",
-    note: !i.ledgerAvailable ? "Registre des commissions non installé." : zero(m?.bookings) > zero(m?.confirmedBookings) ? `${zero(m?.bookings)} réservation(s) enregistrée(s), dont ${zero(m?.confirmedBookings)} avec commission confirmée.` : "Réservations dont la commission nette est confirmée.",
+  add({ id: "reservations", label: "Réservations à commission confirmée", value: i.ledgerAvailable ? zero(m?.confirmedBookings) : null, kind: "count",
+    note: !i.ledgerAvailable ? "Registre des commissions non installé." : zero(m?.bookings) > zero(m?.confirmedBookings) ? `${zero(m?.bookings)} réservation(s) enregistrée(s), dont ${zero(m?.confirmedBookings)} avec commission confirmée.` : "Réservations enregistrées dont la commission nette est confirmée (pas une confirmation du fournisseur ni du paiement).",
     tone: zero(m?.bookingsWithoutCommission) > 0 ? "warn" : "plain" })
   add({ id: "commission", label: "Commission réellement conservée", value: i.ledgerAvailable ? zero(m?.commissionConfirmed) : null, kind: "money",
     note: !i.ledgerAvailable ? "Registre des commissions non installé." : `Commission nette CONFIRMÉE (annulations et remboursements déduits). ${zero(m?.commissionProvisional) !== 0 ? `Provisoire, non comptée : ${zero(m?.commissionProvisional)} TND. ` : ""}Le chiffre d'affaires des réservations n'est jamais utilisé ici.`,
