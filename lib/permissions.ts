@@ -29,22 +29,26 @@ export type Permission =
   | "duplicates.review" // confirmer ou rejeter un signalement de doublon (jamais le sien : double regard)
   | "duplicates.reopen" // rouvrir une décision de doublon (confirmée ou rejetée)
   | "ads.view" // lecture de la rentabilité publicitaire
+  | "bookings.confirm_assigned" // L7b : saisir la confirmation de réservation (fournisseur, paiement) sur SES dossiers
+  | "bookings.confirm" // idem sur TOUS les dossiers de l'organisation
+  | "payment_terms.manage" // définir les conditions de paiement d'une offre du catalogue
 
 const ALL_ADMIN: Permission[] = [
   "org.profile.edit", "social.connect", "employees.manage", "employees.view", "site.manage", "campaigns.manage",
   "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned",
   "sales.record", "sales.record_assigned", "catalog.manage", "promos.manage", "protection.manage", "templates.manage", "data.export",
   "ads.manage", "ads.view", "duplicates.flag", "duplicates.review", "duplicates.reopen",
+  "bookings.confirm_assigned", "bookings.confirm", "payment_terms.manage",
 ]
 
 export const ROLE_PERMISSIONS: Record<OrgRole, ReadonlySet<Permission>> = {
   admin: new Set(ALL_ADMIN),
   // manager : équipes autorisées, affectation, suivi commercial, rapports ; ni profil, ni réseaux, ni site, ni gestion des comptes
-  manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned", "ads.view", "duplicates.flag", "duplicates.review"]),
+  manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned", "ads.view", "duplicates.flag", "duplicates.review", "bookings.confirm_assigned", "bookings.confirm"]),
   // employé : ne voit et ne modifie que les dossiers qui lui sont ACTUELLEMENT affectés (décision Q8-A, 26/11/2026, qui remplace celle du 08/11/2026) ;
   // jamais d'affectation, de rapports, de gestion d'équipe ni de réglages. Aucun accès aux leads d'une AUTRE entreprise.
   // La restriction est appliquée côté serveur dans lib/server/db.ts (pas seulement à l'affichage).
-  employee: new Set<Permission>(["leads.view_assigned", "leads.update_assigned", "sales.record_assigned", "duplicates.flag"]),
+  employee: new Set<Permission>(["leads.view_assigned", "leads.update_assigned", "sales.record_assigned", "duplicates.flag", "bookings.confirm_assigned"]),
 }
 
 export const can = (role: OrgRole | null | undefined, permission: Permission): boolean =>
@@ -73,6 +77,12 @@ export function canModifyLead(role: OrgRole | null | undefined, userId: string, 
   if (can(role, "leads.update")) return true
   if (!can(role, "leads.update_assigned")) return false
   return lead.assigned_to === userId
+}
+
+/** L7b : saisir la confirmation de réservation d'un dossier. Employé : ses dossiers seulement ; manager et administrateur : tous. */
+export function canConfirmBooking(role: OrgRole | null | undefined, userId: string, lead: { assigned_to?: string | null }): boolean {
+  if (can(role, "bookings.confirm")) return true
+  return can(role, "bookings.confirm_assigned") && lead.assigned_to === userId
 }
 
 /** Affecter un lead : admin et manager à n'importe qui ; un employé seulement pour se DÉCHARGER de son propre dossier (il ne voit pas les dossiers libres). */

@@ -9,6 +9,7 @@ import { DbError, insertOne, select, update } from "@/lib/server/db"
 import { normalizePhone } from "@/lib/server/hash"
 import { parseCommissionCsv, type CommissionKind, type ParsedCommissionRow } from "@/lib/commission-import"
 import { isMissingTable } from "@/lib/server/ad-spend"
+import { shortNoteError } from "@/lib/booking-confirmation"
 
 export type MatchStatus = "rapproche" | "a_valider" | "ambigu" | "introuvable" | "deja_importee" | "conflit"
 export interface PreviewRow {
@@ -127,16 +128,21 @@ export async function commitCommissionImport(csv: string, validatedKeys: string[
   return out
 }
 
-export interface CommissionView { id: number; lead_ref: string | null; external_ref: string; kind: CommissionKind; amount_tnd: number | string; status: "provisoire" | "confirme"; event_date: string; import_batch: string | null }
+export interface CommissionView { id: number; lead_ref: string | null; external_ref: string; kind: CommissionKind; amount_tnd: number | string; status: "provisoire" | "confirme"; event_date: string; import_batch: string | null; confirmation_ref?: string | null }
 
 export async function listCommissions(limit = 100): Promise<{ rows: CommissionView[]; migrationApplied: boolean }> {
   try {
-    const rows = await select<{ id: number; lead_id: string; external_ref: string; kind: CommissionKind; amount_tnd: number | string; status: "provisoire" | "confirme"; event_date: string; import_batch: string | null }>(
-      "landing_commissions", `select=id,lead_id,external_ref,kind,amount_tnd,status,event_date,import_batch&order=created_at.desc,id.desc&limit=${Math.min(limit, 500)}`)
+    type Row = { id: number; lead_id: string; external_ref: string; kind: CommissionKind; amount_tnd: number | string; status: "provisoire" | "confirme"; event_date: string; import_batch: string | null; confirmation_ref?: string | null }
+    const q = (cols: string) => select<Row>("landing_commissions", `select=${cols}&order=created_at.desc,id.desc&limit=${Math.min(limit, 500)}`)
+    // la colonne confirmation_ref (migration 0032, L7b) peut être absente : on relit alors sans elle
+    const rows = await q("id,lead_id,external_ref,kind,amount_tnd,status,event_date,import_batch,confirmation_ref").catch((e) => {
+      if (e instanceof DbError && (e.code === "42703" || e.status === 400)) return q("id,lead_id,external_ref,kind,amount_tnd,status,event_date,import_batch")
+      throw e
+    })
     const ids = Array.from(new Set(rows.map((r) => r.lead_id)))
     const refs = new Map<string, string>()
     if (ids.length) (await select<{ id: string; ref: string }>("landing_leads", `select=id,ref&id=${inList(ids)}&limit=500`)).forEach((l) => refs.set(l.id, l.ref))
-    return { rows: rows.map((r) => ({ id: r.id, lead_ref: refs.get(r.lead_id) ?? null, external_ref: r.external_ref, kind: r.kind, amount_tnd: r.amount_tnd, status: r.status, event_date: r.event_date, import_batch: r.import_batch })), migrationApplied: true }
+    return { rows: rows.map((r) => ({ id: r.id, lead_ref: refs.get(r.lead_id) ?? null, external_ref: r.external_ref, kind: r.kind, amount_tnd: r.amount_tnd, status: r.status, event_date: r.event_date, import_batch: r.import_batch, confirmation_ref: r.confirmation_ref ?? null })), migrationApplied: true }
   } catch (e) {
     if (isMissingTable(e)) return { rows: [], migrationApplied: false }
     console.error("[commissions] lecture impossible", e instanceof Error ? e.message : "erreur")
@@ -145,11 +151,15 @@ export async function listCommissions(limit = 100): Promise<{ rows: CommissionVi
 }
 
 /** Confirme des commissions (provisoire → confirmé, une seule fois). Le déclencheur de la base refuse toute autre modification. */
-export async function confirmCommissions(ids: number[], actorId: string | null): Promise<{ confirmed: number; failed: number }> {
+export async function confirmCommissions(ids: number[], actorId: string | null, confirmationRef?: string | null): Promise<{ confirmed: number; failed: number; error?: string }> {
   let confirmed = 0, failed = 0
+  // L7b (option C) : référence justificative FACULTATIVE (140 car., ni téléphone, ni e-mail, ni lien), posée uniquement à la confirmation
+  const refErr = shortNoteError(confirmationRef)
+  if (refErr) return { confirmed: 0, failed: 0, error: refErr }
+  const ref = typeof confirmationRef === "string" && confirmationRef.trim() ? confirmationRef.trim() : null
   for (const id of Array.from(new Set(ids)).filter((n) => Number.isInteger(n) && n > 0).slice(0, 200)) {
     try {
-      const done = await update<{ id: number }>("landing_commissions", `id=eq.${id}&status=eq.provisoire`, { status: "confirme", confirmed_at: new Date().toISOString(), confirmed_by: actorId })
+      const done = await update<{ id: number }>("landing_commissions", `id=eq.${id}&status=eq.provisoire`, { status: "confirme", confirmed_at: new Date().toISOString(), confirmed_by: actorId, ...(ref ? { confirmation_ref: ref } : {}) })
       if (done.length) confirmed++
     } catch (e) {
       failed++

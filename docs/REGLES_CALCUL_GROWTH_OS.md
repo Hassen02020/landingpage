@@ -23,8 +23,8 @@ Le résultat du dossier (ouvert / gagné / perdu) est **distinct** de la confirm
 ## 3. Trois définitions séparées
 
 1. **Réservation enregistrée** : voir §2. **[Appliquée]**
-2. **Réservation confirmée** = confirmation du fournisseur **ET** conditions de paiement remplies. Aucune de ces deux preuves n'est enregistrée aujourd'hui. **[Proposée, non appliquée]** ; la nature des preuves (Q2) et les conditions de paiement par offre sont **[À définir]**.
-3. **Commission confirmée** = commission confirmée par la source compétente. Une commission confirmée **ne suffit pas seule** à rendre une réservation confirmée. Qui confirme (Q3) est **[À définir]**. Aujourd'hui : une ligne de commission passe de `provisoire` à `confirme` par action d'un administrateur (`supabase/migrations/0016_ad_economics.sql`, `lib/ad-economics.ts:188`) **[Appliquée]**.
+2. **Réservation confirmée** (décision Q2-A, 26/11/2026) = confirmation du fournisseur **saisie manuellement** (oui, date, mention courte de la preuve ≤ 140 car., aucun document) **ET** conditions de paiement de l'offre du dossier **définies** (par un administrateur, par offre) **ET** dossier marqué « conditions de paiement respectées » (oui, date). Règle unique, fonction pure `lib/booking-confirmation.ts`. États : Non renseigné · Fournisseur confirmé, paiement à suivre · Conditions de paiement non définies · Fournisseur non confirmé · **Confirmée**. Les réservations existantes restent « Non renseigné » ; aucun import automatique. **[Règle décidée ; saisie en cours de livraison (L7b, migration 0032 non appliquée en production tant que le GO d'application n'est pas donné)]**
+3. **Commission confirmée** (décision Q3, 26/11/2026) = commission confirmée **par un administrateur** (libellé « Confirmée par un administrateur »), avec une **référence justificative facultative** (≤ 140 car.) posée à la confirmation (option C, L7b). L'historique des confirmations passées n'est pas réécrit. Une commission confirmée **ne suffit pas seule** à rendre une réservation confirmée. Aujourd'hui : une ligne passe de `provisoire` à `confirme` par action d'un administrateur (`supabase/migrations/0016_ad_economics.sql`, `lib/ad-economics.ts:188`) **[Appliquée]**.
 
 ### Écart connu K1 (à ne pas masquer)
 Le code calcule `confirmedBooking = réservation enregistrée ET commission confirmée > 0` (`lib/ad-economics.ts:197`). C'est un **substitut** (proxy) : il ne correspond pas à la définition n°2. Il alimente `confirmedBookings`, le test « échantillon suffisant » (`ad-economics.ts:287, 292`), la désignation d'une « gagnante » (`ad-economics.ts:13, 295`) et un message de `lib/intelligence.ts:148`. Tant que les données de confirmation n'existent pas (lot L7b), ce nombre doit être étiqueté pour ce qu'il est (« réservations à commission confirmée »), sans changer la formule.
@@ -49,13 +49,9 @@ Seuil : 5 réservations (`MIN_BOOKINGS`, `lib/intelligence.ts:8` ; `minBookings`
 Le CA n'est ni une commission ni une marge. Un montant de **devis** n'est jamais du CA (décision du 25/11, lot L7, **[Proposée, non appliquée]**).
 Fiabilité à afficher sur chaque indicateur : exact / partiel / estimé / non disponible. Une répartition de dépense au prorata est **estimée**.
 
-## 6. Valeur de l'événement Purchase — **décision en attente (Q9), aucune recommandation arbitraire**
+## 6. Valeur de l'événement Purchase — décision Q9-A (26/11/2026) : **inchangée**
 
-Comportement actuel (inchangé) : `value` = montant de réservation saisi, en TND (`crm.ts:290, 298`). Options à arbitrer par le propriétaire :
-- **A. Chiffre d'affaires de la réservation** (actuel). Simple ; surestime la valeur si le CA diffère de ce que gagne l'agence.
-- **B. Commission nette.** Reflète le gain réel ; mais la commission n'est connue qu'après l'import ou la confirmation, souvent après les 7 jours de Meta.
-- **C. Marge nette estimée.** Plus proche de la rentabilité ; dépend de la répartition des coûts, donc estimée.
-La production ne compte aucune réservation, commission ni dépense (état au 25/11/2026) : rien ne permet de comparer. **Aucun changement de comportement Meta n'est fait ni autorisé par ce document.**
+`value` = montant de réservation saisi, en TND (`crm.ts:290, 298`) : le Purchase conserve le montant de vente actuel. Aucun événement Purchase existant n'est modifié, ni la logique d'envoi. Trois indicateurs sont **documentés séparément et jamais mélangés** : chiffre d'affaires (montant de vente), commission confirmée, marge nette (§5). Alternatives écartées pour l'instant : commission nette (connue trop tard, souvent après les 7 jours de Meta) et marge nette estimée (dépend d'une répartition des coûts).
 
 ## 7. Seuils existants (tous « par défaut, non validés »)
 
@@ -68,11 +64,11 @@ Sans seuil connu : ne jamais en inventer ; afficher « données insuffisantes po
 
 ## 8. Points à définir (informations métier manquantes)
 
-- **Q2** : quelles preuves de confirmation du fournisseur, et quelles conditions de paiement par offre (ex. acompte avant une date pour l'Omra).
-- **Q3** : qui est la source compétente pour confirmer une commission.
-- **Q9** : valeur du Purchase (§6).
-- Les réservations existantes n'ont pas ces données : elles resteront « non renseigné », jamais « confirmée » par défaut.
+- ~~Q2, Q3, Q9~~ : décidés le 26/11/2026 (voir §3 et §6).
+- **Q5, Q6, Q7, Q10** : restent à confirmer par le propriétaire.
+- Dossier sans offre du catalogue : jamais « Confirmée » (« Conditions de paiement non définies ») ; décision de confirmation de cette règle stricte attendue au moment des écrans.
+- Les réservations existantes n'ont pas ces données : elles restent « Non renseigné », jamais « Confirmée » par défaut.
 
 ## 9. Règles non appliquées — récapitulatif
 
-Réservation confirmée au sens du propriétaire (§3-2) · étiquette du substitut K1 · montant de devis hors CA · correction de la valeur Purchase après annulation · valeur Purchase alternative (§6).
+Recalcul des indicateurs « Réservations confirmées » sur la nouvelle définition (étape 5 de L7b, après saisie) · seuil de 5 à ne pas réappliquer sans Q5 · montant de devis hors CA · correction de la valeur Purchase après annulation.

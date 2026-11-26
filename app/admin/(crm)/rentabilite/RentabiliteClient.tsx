@@ -9,7 +9,7 @@ import { COST_CATEGORIES, COST_LABELS } from "@/lib/variable-cost-categories"
 
 interface SpendRow { id: number; date: string; network: string; campaign: string; amount: number; voids: number | null; reference: string | null }
 interface CostRowUi { id: number; date: string; category: string; amount: number; voids: number | null; target: string; reference: string | null }
-interface ComRow { id: number; leadRef: string | null; reservation: string; kind: string; amount: number; status: "provisoire" | "confirme"; date: string }
+interface ComRow { id: number; leadRef: string | null; reservation: string; kind: string; amount: number; status: "provisoire" | "confirme"; date: string; confirmationRef?: string | null }
 
 const CSV_TEMPLATE = "reservation_ref;nature;montant_tnd;date;lead_ref;telephone;ligne\nRES-0001;commission;350,000;2026-11-12;E2B-ABC234;;1\nRES-0001;remboursement;50,000;2026-11-20;E2B-ABC234;;1\n"
 const tnd = (n: number) => `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 3 })} TND`
@@ -27,6 +27,7 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
   const costVoided = new Set(costs.filter((c) => c.voids != null).map((c) => c.voids))
   const [pending, start] = useTransition()
   const [msg, setMsg] = useState<string | null>(null)
+  const [refText, setRefText] = useState("")
   const [csv, setCsv] = useState("")
   const [preview, setPreview] = useState<PreviewResult | null>(null)
   const [validated, setValidated] = useState<string[]>([])
@@ -174,14 +175,19 @@ export function RentabiliteClient({ canManage, spend, commissions, costs, costsE
             )}
           </div>
         )}
+        {canManage && commissions.some((c) => c.status === "provisoire") && (
+          <label className="block text-sm"><span className="text-gray-600">Référence justificative (facultative, 140 max, ni numéro, ni e-mail, ni lien), jointe à la prochaine confirmation</span>
+            <input value={refText} onChange={(e) => setRefText(e.target.value)} maxLength={140} data-testid="commission-ref-input" className="mt-1 w-full px-3 py-2 rounded-lg border" />
+            <span className="text-xs text-gray-500" aria-live="polite">{refText.length}/140</span></label>
+        )}
         {msg && <p role="status" className="text-sm text-gray-800 bg-gray-50 border rounded-xl p-3">{msg}</p>}
         <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-500"><th className="py-1 pr-3">Date</th><th className="pr-3">Réservation</th><th className="pr-3">Dossier</th><th className="pr-3">Nature</th><th className="pr-3 text-right">Montant</th><th className="pr-3">Statut</th><th /></tr></thead>
           <tbody>
             {commissions.length === 0 && <tr><td colSpan={7} className="py-3 text-gray-500">Aucune commission importée.</td></tr>}
             {commissions.map((c) => (
               <tr key={c.id} className="border-t"><td className="py-1.5 pr-3">{c.date}</td><td className="pr-3">{c.reservation}</td><td className="pr-3">{c.leadRef}</td><td className="pr-3">{c.kind}</td><td className="pr-3 text-right">{tnd(c.amount)}</td>
-                <td className="pr-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${c.status === "confirme" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{c.status === "confirme" ? "Confirmée" : "Provisoire"}</span></td>
-                <td>{canManage && c.status === "provisoire" && <button type="button" disabled={pending} className="text-xs font-bold text-violet-700 hover:underline" onClick={() => start(async () => { const r = await confirmCommissionsAction([c.id]); setMsg(r.message ?? (r.confirmed ? "Commission confirmée." : "Rien à confirmer.")) })}>Confirmer</button>}</td></tr>
+                <td className="pr-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${c.status === "confirme" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{c.status === "confirme" ? "Confirmée par un administrateur" : "Provisoire"}</span>{c.confirmationRef && <span className="block text-xs text-gray-500" data-testid="commission-ref">Référence : {c.confirmationRef}</span>}</td>
+                <td>{canManage && c.status === "provisoire" && <button type="button" disabled={pending} className="text-xs font-bold text-violet-700 hover:underline" onClick={() => start(async () => { const r = await confirmCommissionsAction([c.id], refText); setRefText(""); setMsg(r.message ?? (r.confirmed ? "Commission confirmée." : "Rien à confirmer.")) })}>Confirmer</button>}</td></tr>
             ))}
           </tbody></table></div>
       </section>
