@@ -36,14 +36,14 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
           <p className="text-gray-600 text-sm max-w-2xl">Créez, personnalisez, publiez et promouvez vos pages. Aucun code à écrire.</p>
         </div>
         <div className="flex flex-wrap gap-2"><Link href="/admin/createur/medias" className="border px-4 py-3 rounded-xl font-bold min-h-[44px] bg-white" data-testid="media-link">Médiathèque</Link>
-        <Link href="/admin/createur/modeles" className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="new-page">+ Nouvelle page</Link></div>
+        <Link href="/admin/createur/modeles" className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-3 rounded-xl min-h-[44px]" data-testid="new-page">+ Nouvelle page</Link></div>
       </div>
 
       {searchParams.ok && <p role="status" className="bg-green-50 border border-green-200 text-green-900 rounded-xl p-3 text-sm" data-testid="flash-ok">{searchParams.ok}</p>}
       {searchParams.erreur && <p role="alert" className="bg-red-50 border border-red-200 text-red-900 rounded-xl p-3 text-sm" data-testid="flash-error">{searchParams.erreur}</p>}
 
       {sch.available && scheduledCount > 0 && (
-        <form action={runSchedulesAction} className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex flex-wrap items-center gap-3 text-sm" data-testid="schedules-banner">
+        <form action={runSchedulesAction} className="bg-brand-50 border border-brand-200 rounded-xl p-3 flex flex-wrap items-center gap-3 text-sm" data-testid="schedules-banner">
           <span>{scheduledCount} page{scheduledCount > 1 ? "s" : ""} avec une programmation. La publication automatique n&apos;est pas activée : les programmations échues s&apos;appliquent avec ce bouton.</span>
           <button className="px-3 py-2 rounded-lg border text-sm font-bold min-h-[44px] bg-white" data-testid="run-schedules">Appliquer les programmations échues</button>
         </form>
@@ -65,7 +65,7 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
 
           <nav aria-label="Filtrer les pages" className="flex flex-wrap gap-2">
             {TABS.map(([v, label]) => (
-              <Link key={v} href={href({ vue: v === "toutes" ? "" : v })} aria-current={query.vue === v ? "page" : undefined} className={`${btn} ${query.vue === v ? "bg-violet-700 text-white border-violet-700" : "bg-white"}`}>
+              <Link key={v} href={href({ vue: v === "toutes" ? "" : v })} aria-current={query.vue === v ? "page" : undefined} className={`${btn} ${query.vue === v ? "bg-brand-700 text-white border-brand-700" : "bg-white"}`}>
                 {label}{v === "archivee" ? ` (${sum.archivees})` : v === "brouillon" ? ` (${sum.brouillons})` : v === "publiee" ? ` (${sum.publiees})` : ""}
               </Link>
             ))}
@@ -100,16 +100,16 @@ export default async function CreatorHome({ searchParams }: { searchParams: { vu
                       <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700">{PRODUCTS[c.product] ?? c.product}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      {sch.byId[c.id]?.publishAt && life === "brouillon" && <span className="px-2 py-0.5 rounded-full font-bold bg-violet-100 text-violet-800" data-testid="badge-scheduled">Programmée le {toTunisLocal(sch.byId[c.id].publishAt).replace("T", " à ")}</span>}
-                      {sch.byId[c.id]?.unpublishAt && life === "publiee" && <span className="px-2 py-0.5 rounded-full font-bold bg-violet-100 text-violet-800" data-testid="badge-unpublish">Masquage le {toTunisLocal(sch.byId[c.id].unpublishAt).replace("T", " à ")}</span>}
+                      {sch.byId[c.id]?.publishAt && life === "brouillon" && <span className="px-2 py-0.5 rounded-full font-bold bg-brand-100 text-brand-800" data-testid="badge-scheduled">Programmée le {toTunisLocal(sch.byId[c.id].publishAt).replace("T", " à ")}</span>}
+                      {sch.byId[c.id]?.unpublishAt && life === "publiee" && <span className="px-2 py-0.5 rounded-full font-bold bg-brand-100 text-brand-800" data-testid="badge-unpublish">Masquage le {toTunisLocal(sch.byId[c.id].unpublishAt).replace("T", " à ")}</span>}
                       {life === "archivee" ? <span className="px-2 py-0.5 rounded-full font-bold bg-gray-200 text-gray-700">Archivée</span>
                         : life === "brouillon" ? <span className="px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-800">Brouillon</span>
                         : <span title={status.detail} className={`px-2 py-0.5 rounded-full font-bold ${TONE[status.tone]}`}>Publiée · {status.label}</span>}
                       <span className="text-gray-500">{offers} offre{offers > 1 ? "s" : ""}</span>
-                      <span className="text-gray-400">· modifiée le {c.updated_at.slice(0, 10)}</span>
+                      <span className="text-gray-600">· modifiée le {c.updated_at.slice(0, 10)}</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {life !== "archivee" && <Link href={`/admin/createur/${c.id}?etape=infos`} className={`${btn} bg-violet-700 text-white border-violet-700`}>Modifier</Link>}
+                      {life !== "archivee" && <Link href={`/admin/createur/${c.id}?etape=infos`} className={`${btn} bg-brand-700 text-white border-brand-700`}>Modifier</Link>}
                       {life === "publiee" && <Link href={creatorPath(c.slug)} target="_blank" rel="noopener" className={btn}>Voir la page</Link>}
                       {life === "publiee" && <Link href={`/admin/createur/${c.id}?etape=publication`} className={btn}>Lien publicitaire</Link>}
                       {life !== "archivee" && <Link href={`/admin/createur/${c.id}?etape=stats`} className={btn}>Statistiques</Link>}

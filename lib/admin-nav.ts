@@ -2,7 +2,7 @@
 import type { OrgRole, Permission } from "@/lib/permissions"
 import { can } from "@/lib/permissions"
 
-export type IconName = "leads" | "pipeline" | "clock" | "plus" | "chart" | "calc" | "box" | "ticket" | "shield" | "plug" | "link" | "team" | "chat" | "download" | "user"
+export type IconName = "leads" | "pipeline" | "clock" | "plus" | "chart" | "calc" | "box" | "ticket" | "shield" | "plug" | "link" | "team" | "chat" | "download" | "user" | "inbox" | "repeat" | "copy" | "target" | "trend" | "star" | "form"
 
 export interface NavItem {
   href: string
@@ -23,11 +23,11 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin", label: "Leads", icon: "leads", match: (p, q) => (p === "/admin" && q.get("followUp") !== "due") || (p.startsWith("/admin/leads/") && p !== "/admin/leads/new") },
       { href: "/admin/pipeline", label: "Pipeline", icon: "pipeline" },
-      { href: "/admin/a-traiter", label: "À traiter", icon: "clock", permission: "leads.view_assigned" },
-      { href: "/admin/doublons", label: "Doublons", icon: "team", permission: "duplicates.review" },
+      { href: "/admin/a-traiter", label: "À traiter", icon: "inbox", permission: "leads.view_assigned" },
+      { href: "/admin/doublons", label: "Doublons", icon: "copy", permission: "duplicates.review" },
       { href: "/admin/conversations", label: "Conversations", icon: "chat", permission: "leads.view_all" },
-      { href: "/admin/clients", label: "Clients", icon: "team" },
-      { href: "/admin?followUp=due", label: "Relances", icon: "clock", match: (p, q) => p === "/admin" && q.get("followUp") === "due" },
+      { href: "/admin/clients", label: "Clients", icon: "user" },
+      { href: "/admin?followUp=due", label: "Relances", icon: "repeat", match: (p, q) => p === "/admin" && q.get("followUp") === "due" },
       { href: "/admin/leads/new", label: "Nouveau lead", icon: "plus" },
     ],
   },
@@ -37,8 +37,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/intelligence", label: "Vue d'ensemble", icon: "chart", permission: "reports.view", match: (p) => p === "/admin/intelligence" },
       { href: "/admin/intelligence/dirigeant", label: "Tableau dirigeant", icon: "chart", permission: "reports.view" },
       { href: "/admin/stats", label: "Statistiques", icon: "chart" },
-      { href: "/admin/segments", label: "Segments", icon: "team", permission: "reports.view" },
-      { href: "/admin/rentabilite", label: "Rentabilité", icon: "chart", permission: "ads.view" },
+      { href: "/admin/segments", label: "Segments", icon: "target", permission: "reports.view" },
+      { href: "/admin/rentabilite", label: "Rentabilité", icon: "trend", permission: "ads.view" },
       { href: "/admin/liens", label: "Liens de campagne", icon: "link" },
       { href: "/admin/intelligence/qualite", label: "Qualité des données", icon: "shield", permission: "reports.view" },
       { href: "/admin/calculateur", label: "Calculateur", icon: "calc" },
@@ -50,7 +50,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/createur", label: "Créateur de Landing Pages", icon: "plus", permission: "catalog.manage" },
       { href: "/admin/catalogue", label: "Offres et catégories", icon: "box", permission: "catalog.manage" },
       { href: "/admin/promos", label: "Codes promo", icon: "ticket", permission: "promos.manage" },
-      { href: "/admin/avis", label: "Avis des visiteurs", icon: "chat", permission: "catalog.manage" },
+      { href: "/admin/avis", label: "Avis des visiteurs", icon: "star", permission: "catalog.manage" },
     ],
   },
   {
@@ -58,7 +58,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/canaux", label: "Canaux", icon: "plug", permission: "reports.view" },
       { href: "/admin/integrations", label: "Intégrations", icon: "plug", permission: "social.connect" },
-      { href: "/admin/formulaire", label: "Formulaire", icon: "chat", permission: "site.manage" },
+      { href: "/admin/formulaire", label: "Formulaire", icon: "form", permission: "site.manage" },
       { href: "/admin/protection", label: "Protection", icon: "shield", permission: "protection.manage" },
       { href: "/admin/equipe", label: "Équipe", icon: "team", permission: "employees.view" },
       { href: "/admin/modeles", label: "Modèles WhatsApp", icon: "chat", permission: "templates.manage" },

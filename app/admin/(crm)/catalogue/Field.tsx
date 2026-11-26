@@ -9,4 +9,4 @@ export function Field({ label, error, help, children, className = "" }: { label:
   )
 }
 
-export const inputCls = "w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+export const inputCls = "w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"

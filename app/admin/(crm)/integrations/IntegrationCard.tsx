@@ -40,7 +40,7 @@ function Btn({ children, kind = "primary" }: { children: React.ReactNode; kind?:
       disabled={pending}
       className={
         kind === "primary"
-          ? "bg-violet-700 hover:bg-violet-800 text-white font-bold px-4 py-2 rounded-xl disabled:opacity-50"
+          ? "bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 rounded-xl disabled:opacity-50"
           : "border border-gray-300 hover:bg-gray-50 font-bold px-4 py-2 rounded-xl disabled:opacity-50"
       }
     >
@@ -65,7 +65,7 @@ export function IntegrationCard({ view }: { view: IntegrationView }) {
   const info = META_INFO[view.provider]
   const [saveState, save] = useFormState(saveIntegrationAction, undefined)
   const [testState, test] = useFormState(testIntegrationAction, undefined)
-  const input = "w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500"
+  const input = "w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
   const err = (k: string) => saveState?.errors?.[k]
 
   return (

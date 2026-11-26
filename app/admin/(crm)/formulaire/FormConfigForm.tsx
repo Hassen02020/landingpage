@@ -6,7 +6,7 @@ import { saveFormConfigAction } from "../../formulaire-actions"
 
 function Save() {
   const { pending } = useFormStatus()
-  return <button disabled={pending} className="rounded-xl bg-violet-700 px-5 py-2.5 font-bold text-white hover:bg-violet-800 disabled:opacity-50">{pending ? "Enregistrement…" : "Enregistrer le formulaire"}</button>
+  return <button disabled={pending} className="rounded-xl bg-brand-700 px-5 py-2.5 font-bold text-white hover:bg-brand-800 disabled:opacity-50">{pending ? "Enregistrement…" : "Enregistrer le formulaire"}</button>
 }
 
 export function FormConfigForm({ config }: { config: FormConfig }) {
@@ -42,9 +42,9 @@ export function FormConfigForm({ config }: { config: FormConfig }) {
       </section>
       <section className="space-y-3 rounded-2xl border bg-white p-5">
         <h2 className="font-black">Textes</h2>
-        <input name="title" defaultValue={config.title} placeholder="Titre de la page (par défaut : le nom de l'entreprise)" className={input} />
-        <textarea name="intro" defaultValue={config.intro} rows={2} placeholder="Texte d'introduction (facultatif)" className={input} />
-        <textarea name="thanks" defaultValue={config.thanks} rows={2} placeholder="Message affiché après l'envoi (facultatif)" className={input} />
+        <input name="title" defaultValue={config.title} aria-label="Titre de la page (par défaut : le nom de l'entreprise)" placeholder="Titre de la page (par défaut : le nom de l'entreprise)" className={input} />
+        <textarea name="intro" defaultValue={config.intro} rows={2} aria-label="Texte d'introduction (facultatif)" placeholder="Texte d'introduction (facultatif)" className={input} />
+        <textarea name="thanks" defaultValue={config.thanks} rows={2} aria-label="Message affiché après l'envoi (facultatif)" placeholder="Message affiché après l'envoi (facultatif)" className={input} />
       </section>
       <Save />
     </form>

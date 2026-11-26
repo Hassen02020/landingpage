@@ -50,3 +50,57 @@ La page Omra Ramadan complet (`/p/omra-ramadan-complet`) utilise ces composants 
 
 ## Ce qui n'a pas changé
 CRM, formulaire, consentements, attribution, `noindex`, pages `/c` et `/omra`, `SiteHeader` / `SiteFooter` partagés avec le reste du site.
+
+## Espace équipe (CRM) — LOT 1 de la modernisation frontend (26/11/2026)
+
+Décision du 25/11/2026 : bleu CRM `#003878`. Le CRM était en violet (`violet-*`, 47 fichiers) ; il reprend désormais l'identité.
+
+### Échelle `brand-*` (source unique : `app/globals.css`, exposée dans `tailwind.config.ts`)
+Nuances **dérivées** de `--e2b-blue` ; trois d'entre elles sont les couleurs officielles existantes.
+
+| Classe | Variable | Valeur | Usage |
+|---|---|---|---|
+| `brand-50` | `--e2b-blue-50` | `#f3f7fc` | fond des badges « en cours », survols |
+| `brand-100` | `--e2b-blue-soft` | `#e4edf9` | surfaces secondaires |
+| `brand-200`…`400` | `--e2b-blue-200…400` | `#c9daf0`, `#9dbbe3`, `#5f8fcc` | bordures, filets, titres de groupes du menu (sur fond foncé) |
+| `brand-500` | `--e2b-blue-500` | `#2d66ad` | anneau de focus clavier |
+| `brand-600` | `--e2b-blue-600` | `#124d93` | avatars, filets d'indicateurs |
+| `brand-700` | `--e2b-blue` | `#003878` | boutons principaux, liens |
+| `brand-800` | `--e2b-blue-dark` | `#00285a` | menu latéral, survol des boutons, pages connexion / 404 / erreur |
+| `brand-900`, `950` | `--e2b-blue-900`, `-950` | `#001d42`, `#00122b` | texte très foncé, réserve |
+
+Contrastes vérifiés par `tests/design-system-crm.test.ts` (blanc sur 500/600/700/800 ≥ 4,5:1 ; titres du menu ≥ 4,5:1 ; focus jaune sur le menu ≥ 3:1). Le jaune reste un accent : filet sous le logo du menu, focus sur fond foncé.
+
+### Statuts par phase (`app/admin/format.ts`, composant `StatusBadge`)
+Présentation seule : libellés et règles restent ceux de `lib/status.ts`.
+
+| Phase | Statuts | Couleur |
+|---|---|---|
+| À traiter | Nouveau, À contacter | ambre |
+| En cours | Contacté → En négociation | bleu de marque, de plus en plus soutenu |
+| Vendu | Réservé (clair), Gagné (plein) | vert |
+| Perdu | Perdu | gris |
+
+Chaque badge porte un point et le libellé, et annonce la phase aux lecteurs d'écran ; la couleur n'est jamais la seule information. Les colonnes du pipeline utilisent la même palette.
+
+### Composants partagés (`app/admin/(crm)/_components/ui.tsx`)
+`StatusBadge`, `PageHeader`, `KpiCard` (valeur fournie par la page, filet + libellé), `FilterChip` (`aria-current`), `Notice` (`role="status"` / `role="alert"` pour une erreur), `EmptyState` (vide réel, jamais un zéro trompeur), `Skeleton`, classes `fieldCls` / `primaryBtnCls` / `secondaryBtnCls`. Erreur de chargement : `LoadError` (existant). Montants affichés : `formatTnd` (`app/admin/format.ts`, affichage seul, aucun calcul).
+
+Règles : affichage seul (aucune lecture de données, aucun droit) ; une donnée interdite à un rôle **n'est pas transmise** au composant (contrôle serveur), jamais masquée en CSS.
+
+**Pas de `loading.tsx` au niveau des routes de l'espace équipe** : il ferait passer en HTTP 200 les 404 neutres (dossier d'un collègue, client inconnu). `Skeleton` est réservé à des zones `Suspense` internes. Garde-fou dans `tests/design-system-crm.test.ts`.
+
+### Focus et mouvement
+`.admin-root :focus-visible` : anneau de 3 px `brand-500` (jaune sur le menu foncé) ; `prefers-reduced-motion` respecté dans le CRM.
+
+### Exception
+`createur/modeles` garde le dégradé violet de la famille « autre » : c'est l'aperçu d'un thème de landing page (`lib/page-builder/style.ts`), pas la couleur du CRM. `/o/[slug]` (page d'une autre entreprise) n'est pas passé au bleu Easy2Book.
+
+### Lots 2 à 6 (26/11/2026) — navigation, CRM, pilotage, public, qualité
+- **Tableau de bord `/admin`** : `KpiCard` (valeur, libellé, sous-texte séparés ; le montant des réservations n'est plus collé au libellé), `PageHeader`, `FilterChip`, puces de filtres actifs retirables, compteur « n leads affichés », `EmptyState` / `Notice`, tableau avec `caption` et `scope="col"`, zone défilante focusable.
+- **Menu** : une icône par concept pour les entrées qui se confondaient (À traiter, Relances, Doublons, Segments, Rentabilité, Clients, Avis, Formulaire) ; titre de la page courante dans la barre mobile. Aucune entrée supprimée (27), routes et droits inchangés.
+- **Pipeline** : colonnes empilées sur mobile (colonnes vides masquées), boutons ≥ 44 px, « 100 sur N » quand une colonne dépasse le plafond d'affichage.
+- **Fiche dossier** : les actions (statut, relance, responsable) viennent avant les blocs d'information ; champs étiquetés ; formulaires d'échanges qui passent à la ligne sur mobile.
+- **Statistiques** : onglets en `nav` avec `aria-current`, retour à la ligne ; barres de l'entonnoir avec alternative textuelle ; erreurs de lecture annoncées (`role="alert"`).
+- **Public** : accueil `/` aux variables de marque (bleu, jaune en accent, vert WhatsApp accessible) ; boutons WhatsApp de `/omra`, `/summer-vibes`, `/voyages-organises` au vert validé. `/c/*` (rendu historique figé), `LeadCaptureForm` partagé et `/o/*` non modifiés.
+- **Règle** : texte informatif ≥ 4,5:1 (plus de `gray-400` / `amber-600` sur du texte utile) ; tout défilement horizontal est une région focusable et nommée ; `sr-only` dans une zone défilante exige un parent `relative`.

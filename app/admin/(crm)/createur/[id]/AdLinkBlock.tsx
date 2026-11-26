@@ -33,7 +33,7 @@ export function AdLinkBlock({ path, defaultCampaign, status, base }: { path: str
   const result = useMemo(() => buildLink({ path, source, medium: effMedium, campaign, content, dynamic: dynamic && canDynamic }, [{ path, label: path }], base), [path, source, effMedium, campaign, content, dynamic, canDynamic, base])
   const ready = status.ok && check?.state === "ok"
   const conv = campaign === "" || isConventionalCampaign(campaign)
-  const input = "w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+  const input = "w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
 
   return (
     <section className="bg-white rounded-2xl border p-5 space-y-4" aria-label="Lien publicitaire" data-testid="ad-link-block" data-ready={ready}>

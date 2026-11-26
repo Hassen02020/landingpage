@@ -14,10 +14,10 @@ export function NotFoundActions() {
   const wa = buildWhatsAppUrl("Bonjour Easy2Book, je cherchais une offre mais la page est introuvable. Pouvez-vous m'aider ?")
   return (
     <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-      <Link href={`/${qs}`} className="inline-flex items-center justify-center rounded-xl bg-violet-700 hover:bg-violet-800 text-white font-bold px-6 py-3">
+      <Link href={`/${qs}`} className="inline-flex items-center justify-center rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-6 py-3">
         Retour à l&apos;accueil
       </Link>
-      <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3">
+      <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-xl bg-e2b-wa hover:bg-e2b-wa-dark text-white font-bold px-6 py-3">
         Écrire sur WhatsApp
       </a>
     </div>

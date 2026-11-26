@@ -74,7 +74,7 @@ export default function HomePage() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-header" })}
-            className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm sm:text-base font-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 shadow transition-colors"
+            className="inline-flex items-center gap-2 bg-e2b-wa hover:bg-e2b-wa-dark text-white text-sm sm:text-base font-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 shadow transition-colors"
           >
             <WhatsAppIcon /> WhatsApp
           </a>
@@ -83,18 +83,18 @@ export default function HomePage() {
       <main id="contenu" tabIndex={-1} className="outline-none">
 
       {/* HERO */}
-      <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-emerald-900 text-white">
+      <section className="bg-e2b-blue text-white border-b-4 border-e2b-yellow">
         <div className="max-w-5xl mx-auto px-4 py-14 sm:py-20 text-center">
           <h1 className="text-3xl sm:text-5xl font-black leading-tight mb-4">
-            Voyages organisés, Omra & <span className="text-amber-400">promos hôtels</span>
+            Voyages organisés, Omra & <span className="text-e2b-yellow">promos hôtels</span>
           </h1>
-          <p className="text-lg text-blue-100 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-e2b-blue-soft max-w-2xl mx-auto mb-8">
             Choisissez votre offre, recevez votre devis gratuit sur WhatsApp. Réservation simple, avec un conseiller Easy2Book.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
               href="#devis"
-              className="bg-amber-400 hover:bg-amber-300 text-black font-black text-lg px-8 py-4 rounded-2xl shadow-xl"
+              className="bg-e2b-yellow hover:brightness-95 text-e2b-ink font-black text-lg px-8 py-4 rounded-2xl shadow-xl"
             >
               📝 Demander un devis
             </a>
@@ -103,7 +103,7 @@ export default function HomePage() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-hero" })}
-              className="bg-green-700 hover:bg-green-800 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl"
+              className="bg-e2b-wa hover:bg-e2b-wa-dark text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl"
             >
               💬 Écrire sur WhatsApp
             </a>
@@ -112,7 +112,7 @@ export default function HomePage() {
       </section>
 
       {/* OFFRES */}
-      <section className="py-14 bg-gray-50">
+      <section className="py-14 bg-e2b-blue-soft">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-center text-2xl sm:text-3xl font-black mb-10">Nos offres en ce moment</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -152,13 +152,13 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="p-5 flex flex-col flex-1">
-                  <div className="text-emerald-700 font-black mb-3">{o.price}</div>
+                  <div className="text-e2b-blue font-black mb-3">{o.price}</div>
                   <ul className="space-y-1 text-sm text-gray-700 mb-5 flex-1">
                     {o.points.map((p) => (
                       <li key={p}>✓ {p}</li>
                     ))}
                   </ul>
-                  <span className="block text-center bg-gray-900 group-hover:bg-blue-800 text-white font-bold py-3 rounded-xl transition-colors">
+                  <span className="block text-center bg-e2b-blue group-hover:bg-e2b-blue-dark text-white font-bold py-3 rounded-xl transition-colors">
                     Voir l&apos;offre →
                   </span>
                 </div>
@@ -194,7 +194,7 @@ export default function HomePage() {
         rel="noopener noreferrer"
         onClick={(e) => handleWhatsAppClick(e, { product: "autre", location: "home-floating" })}
         aria-label="WhatsApp"
-        className="fixed bottom-6 right-6 z-50 bg-green-700 hover:bg-green-800 text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-50 bg-e2b-wa hover:bg-e2b-wa-dark text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center"
       >
         💬
       </a>

@@ -55,7 +55,7 @@ export default async function LinksPage() {
         <h2 className="font-black">Règles de nommage</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-gray-500"><tr><th className="py-2 pr-4">Réseau</th><th className="pr-4">Support</th><th>Ce qui est enregistré</th></tr></thead>
+            <thead className="text-left text-gray-500"><tr><th scope="col" className="py-2 pr-4">Réseau</th><th scope="col" className="pr-4">Support</th><th>Ce qui est enregistré</th></tr></thead>
             <tbody>
               {LINK_SOURCES.flatMap((s) => s.mediums.map((m) => (
                 <tr key={`${s.id}-${m.id}`} className="border-t">

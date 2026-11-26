@@ -5,10 +5,11 @@ import { loadOverview } from "@/lib/server/intelligence"
 import { parsePeriod } from "@/lib/server/stats"
 import { MIN_BOOKINGS } from "@/lib/intelligence"
 import { DataGuard } from "../_components/DataGuard"
+import { formatTnd } from "@/app/admin/format"
 
 export const dynamic = "force-dynamic"
 
-const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} TND`
+const tnd = (n: number) => formatTnd(n)
 const TONE = { critical: "bg-red-50 border-red-200 text-red-900", warn: "bg-amber-50 border-amber-200 text-amber-900", info: "bg-blue-50 border-blue-200 text-blue-900" } as const
 
 function Card({ label, value, note }: { label: string; value: string; note?: string }) {

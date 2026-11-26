@@ -27,11 +27,11 @@ export function MediaPicker({ media, onPick, label }: { media: MediaEntry[]; onP
   if (media.length === 0) return null
   return (
     <details className="text-sm" data-testid="media-picker">
-      <summary className="cursor-pointer font-bold text-violet-800">{label}</summary>
+      <summary className="cursor-pointer font-bold text-brand-800">{label}</summary>
       <ul className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-auto">
         {media.map((m) => (
           <li key={m.url}>
-            <button type="button" onClick={() => onPick(m.url)} title={m.uses.join(" · ")} className="block w-full border rounded-lg overflow-hidden hover:ring-2 hover:ring-violet-500 min-h-[44px]" data-testid="media-choice">
+            <button type="button" onClick={() => onPick(m.url)} title={m.uses.join(" · ")} className="block w-full border rounded-lg overflow-hidden hover:ring-2 hover:ring-brand-500 min-h-[44px]" data-testid="media-choice">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={m.url} alt={m.uses[0] ?? ""} className="w-full h-16 object-cover" loading="lazy" />
             </button>
@@ -46,8 +46,8 @@ function SaveButtons({ canContinue }: { canContinue: boolean }) {
   const { pending } = useFormStatus()
   return (
     <div className="flex flex-wrap gap-3">
-      <button type="submit" disabled={pending} className="border border-violet-700 text-violet-800 font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">{pending ? "Enregistrement…" : "Enregistrer le brouillon"}</button>
-      {canContinue && <button type="submit" name="next" value="design" disabled={pending} className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">Enregistrer et continuer →</button>}
+      <button type="submit" disabled={pending} className="border border-brand-700 text-brand-800 font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">{pending ? "Enregistrement…" : "Enregistrer le brouillon"}</button>
+      {canContinue && <button type="submit" name="next" value="design" disabled={pending} className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">Enregistrer et continuer →</button>}
     </div>
   )
 }
@@ -72,7 +72,7 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [], 
   const nextKey = rows.reduce((m, r) => Math.max(m, r.key), -1) + 1
   const visibleRows = rows.filter((r) => !(r.removed && !r.id))
   const tabBtn = (id: "infos" | "perso", text: string) => (
-    <button type="button" onClick={() => setTab(id)} aria-pressed={tab === id} className={`px-4 py-2 rounded-xl text-sm font-bold ${tab === id ? "bg-violet-700 text-white" : "bg-white border hover:bg-gray-50"}`}>{text}</button>
+    <button type="button" onClick={() => setTab(id)} aria-pressed={tab === id} className={`px-4 py-2 rounded-xl text-sm font-bold ${tab === id ? "bg-brand-700 text-white" : "bg-white border hover:bg-gray-50"}`}>{text}</button>
   )
 
   return (
@@ -142,7 +142,7 @@ export function PageEditor({ theme, category, offers, slugLock, catalogue = [], 
               <p className="w-full text-xs text-gray-500">Les prix, dates et prestations sont copiés tels quels depuis le catalogue (rien n&apos;est inventé). Vous pouvez les ajuster ; l&apos;offre d&apos;origine n&apos;est pas modifiée.</p>
             </div>
           )}
-          {rows.length < 10 && <button type="button" onClick={() => setRows((rs) => [...rs, emptyRow(nextKey, theme)])} className="bg-white border-2 border-dashed rounded-2xl px-5 py-3 font-bold text-violet-800 hover:bg-violet-50 w-full">+ Ajouter une offre (un autre départ, une autre formule)</button>}
+          {rows.length < 10 && <button type="button" onClick={() => setRows((rs) => [...rs, emptyRow(nextKey, theme)])} className="bg-white border-2 border-dashed rounded-2xl px-5 py-3 font-bold text-brand-800 hover:bg-brand-50 w-full">+ Ajouter une offre (un autre départ, une autre formule)</button>}
         </section>
       </div>
 

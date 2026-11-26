@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 
 const fmt = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { timeZone: "Africa/Tunis", dateStyle: "short" })
 const input = "border rounded-lg px-3 py-2 text-sm bg-white w-full min-w-0"
-const btn = "px-4 py-2 rounded-lg text-sm font-bold bg-violet-600 text-white"
+const btn = "px-4 py-2 rounded-lg text-sm font-bold bg-brand-600 text-white"
 
 export default async function ConversationsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   const staff = await currentStaff()
@@ -41,7 +41,7 @@ export default async function ConversationsPage({ searchParams }: { searchParams
           <div key={label} className="bg-white rounded-2xl border p-4">
             <div className="text-xs text-gray-500">{label}</div>
             <div className="text-2xl font-black" data-testid="conv-stat">{value}</div>
-            <div className="text-xs text-gray-400">{hint}</div>
+            <div className="text-xs text-gray-600">{hint}</div>
           </div>
         ))}
       </section>
@@ -73,7 +73,7 @@ export default async function ConversationsPage({ searchParams }: { searchParams
 
       <nav className="flex gap-2" aria-label="Période">
         {[7, 30, 90].map((d) => (
-          <a key={d} href={`/admin/conversations?jours=${d}`} aria-current={d === days ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${d === days ? "bg-violet-600 text-white" : "bg-white border text-gray-700"}`}>{d} jours</a>
+          <a key={d} href={`/admin/conversations?jours=${d}`} aria-current={d === days ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${d === days ? "bg-brand-600 text-white" : "bg-white border text-gray-700"}`}>{d} jours</a>
         ))}
       </nav>
 
@@ -86,7 +86,7 @@ export default async function ConversationsPage({ searchParams }: { searchParams
               <div className="min-w-0">
                 <strong>{r.kind === "lot" ? `Lot de ${r.conversation_count}` : "Conversation"}</strong> · {CHANNEL_LABELS[r.channel as keyof typeof CHANNEL_LABELS] ?? r.channel} · {ORIGIN_LABELS[r.origin as keyof typeof ORIGIN_LABELS] ?? r.origin}
                 {r.campaign ? <span className="text-gray-500"> · {r.campaign}</span> : null}
-                <span className="text-gray-400"> · {fmt(r.started_at)}</span>
+                <span className="text-gray-600"> · {fmt(r.started_at)}</span>
                 <span className="ml-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs">{STAGE_LABELS[r.stage as Stage]}</span>
                 {r.status !== "ouverte" && <span className="ml-1 text-xs text-gray-500">({CONV_STATUS_LABELS[r.status as ConvStatus] ?? r.status})</span>}
               </div>

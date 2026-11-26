@@ -8,7 +8,7 @@ import type { Category, Offer } from "@/lib/server/catalog"
 function Save() {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" disabled={pending} className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">
+    <button type="submit" disabled={pending} className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">
       {pending ? "Enregistrement…" : "Enregistrer"}
     </button>
   )

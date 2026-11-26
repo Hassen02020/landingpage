@@ -490,7 +490,7 @@ export default function OmraView({ packages = DEFAULT_PACKAGES }: { packages?: O
         >
           احجز مكانك
         </button>
-        <WhatsAppLink fallbackValue={OMRA_PRICE_FROM} location="sticky" className="bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl px-4 py-3" pkg={selected}>
+        <WhatsAppLink fallbackValue={OMRA_PRICE_FROM} location="sticky" className="bg-e2b-wa hover:bg-e2b-wa-dark text-white font-bold rounded-xl px-4 py-3" pkg={selected}>
           واتساب
         </WhatsAppLink>
         <a href={`tel:+216${PHONE_NUMBER}`} aria-label="اتصل بنا" className="border border-gray-300 rounded-xl px-4 py-3 font-bold min-h-[44px] inline-flex items-center">

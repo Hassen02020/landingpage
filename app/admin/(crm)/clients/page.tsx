@@ -2,16 +2,16 @@ import Link from "next/link"
 import { dbConfigured } from "@/lib/server/db"
 import { listCustomers } from "@/lib/server/customer"
 import { LoadError } from "../_components/LoadError"
-import { STATUS_LABELS } from "@/lib/status"
 import { TIER_COLORS, TIER_LABELS } from "@/lib/loyalty"
-import { STATUS_COLORS, formatDate } from "../../format"
+import { formatDate, formatTnd } from "../../format"
+import { Notice, PageHeader, StatusBadge, fieldCls, primaryBtnCls } from "../_components/ui"
 
 export const dynamic = "force-dynamic"
 
-const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} TND`
+const tnd = (n: number) => formatTnd(n)
 
 export default async function ClientsPage({ searchParams }: { searchParams: { q?: string; page?: string } }) {
-  if (!dbConfigured()) return <p className="text-red-700">Base non configurée.</p>
+  if (!dbConfigured()) return <Notice tone="error">Base non configurée.</Notice>
   const page = Math.max(0, parseInt(searchParams.page || "0", 10) || 0)
   // un échec de chargement n'est PAS un état vide : on l'affiche comme une erreur
   let customers: Awaited<ReturnType<typeof listCustomers>> = []
@@ -23,26 +23,24 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
   }
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-black">Clients</h1>
-        <p className="text-sm text-gray-500">Un client = toutes les demandes d&apos;un même numéro de téléphone. Les dossiers anonymisés n&apos;apparaissent pas.</p>
-      </div>
+      <PageHeader title="Clients" description="Un client = toutes les demandes d'un même numéro de téléphone. Les dossiers anonymisés n'apparaissent pas." />
       <form className="flex gap-2" role="search">
-        <input name="q" defaultValue={searchParams.q} placeholder="Nom ou téléphone" aria-label="Rechercher un client" className="border rounded-xl px-3 py-2 flex-1 min-w-0 max-w-sm" />
-        <button className="bg-gray-900 text-white font-bold px-4 rounded-xl">Chercher</button>
+        <input name="q" defaultValue={searchParams.q} placeholder="Nom ou téléphone" aria-label="Rechercher un client" className={`${fieldCls} min-w-0 max-w-sm flex-1`} />
+        <button className={primaryBtnCls}>Chercher</button>
       </form>
       {failed ? <LoadError what="les clients" /> : (
-      <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <div tabIndex={0} role="region" aria-label="Liste des clients (défilement horizontal)" className="relative bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-gray-500 border-b">
-            <tr><th className="p-3">Client</th><th className="p-3">Demandes</th><th className="p-3">Dernier statut</th><th className="p-3">Ventes</th><th className="p-3">CA</th><th className="p-3">Niveau</th><th className="p-3">Marketing</th><th className="p-3">Dernière activité</th></tr>
+          <caption className="sr-only">Liste des clients</caption>
+          <thead className="text-left text-gray-600 border-b">
+            <tr><th scope="col" className="p-3">Client</th><th scope="col" className="p-3">Demandes</th><th scope="col" className="p-3">Dernier statut</th><th scope="col" className="p-3">Ventes</th><th scope="col" className="p-3">CA</th><th scope="col" className="p-3">Niveau</th><th scope="col" className="p-3">Marketing</th><th scope="col" className="p-3">Dernière activité</th></tr>
           </thead>
           <tbody>
             {customers.map((c) => (
               <tr key={c.phone} data-phone={c.phone} className="border-b last:border-0 hover:bg-gray-50">
-                <td className="p-3 max-w-[16rem]"><Link href={`/admin/clients/${c.phone}`} className="font-bold underline [overflow-wrap:anywhere]">{c.name}</Link><div className="text-xs text-gray-500">+{c.phone}</div></td>
-                <td className="p-3">{c.leads}{c.openLeads ? <span className="text-xs text-gray-500"> ({c.openLeads} en cours)</span> : null}</td>
-                <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[c.lastStatus]}`}>{STATUS_LABELS[c.lastStatus]}</span></td>
+                <td className="p-3 max-w-[16rem]"><Link href={`/admin/clients/${c.phone}`} className="font-bold underline [overflow-wrap:anywhere]">{c.name}</Link><div className="text-xs text-gray-600">+{c.phone}</div></td>
+                <td className="p-3">{c.leads}{c.openLeads ? <span className="text-xs text-gray-600"> ({c.openLeads} en cours)</span> : null}</td>
+                <td className="p-3"><StatusBadge status={c.lastStatus} /></td>
                 <td className="p-3">{c.booked}</td>
                 <td className="p-3">{c.revenue ? tnd(c.revenue) : "—"}</td>
                 <td className="p-3" data-tier={c.tier ?? ""}>{c.tier ? <span className={`px-2 py-1 rounded-full text-xs font-bold ${TIER_COLORS[c.tier]}`}>{TIER_LABELS[c.tier]}</span> : "—"}</td>
@@ -50,7 +48,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { q?
                 <td className="p-3">{formatDate(c.lastActivityAt)}</td>
               </tr>
             ))}
-            {!customers.length && <tr><td colSpan={8} className="p-6 text-center text-gray-500">Aucun client.</td></tr>}
+            {!customers.length && <tr><td colSpan={8} className="p-6 text-center text-gray-600">Aucun client.</td></tr>}
           </tbody>
         </table>
       </div>

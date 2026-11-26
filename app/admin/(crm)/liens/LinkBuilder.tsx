@@ -43,7 +43,7 @@ export function LinkBuilder({ destinations, base }: { destinations: Destination[
     () => buildLink({ path, source, medium: effectiveMedium, campaign, content, dynamic: dynamic && canDynamic }, destinations, base),
     [path, source, effectiveMedium, campaign, content, dynamic, canDynamic, destinations, base]
   )
-  const input = "w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+  const input = "w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
   // AVERTISSEMENT seulement (jamais de correction automatique) : un ancien lien avec tiret bas reste valide et inchangé
   const usedCampaign = result.ok ? result.params.utm_campaign : undefined
   const offConvention = Boolean(usedCampaign) && !isConventionalCampaign(usedCampaign as string)

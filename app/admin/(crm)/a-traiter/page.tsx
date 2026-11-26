@@ -19,7 +19,7 @@ export default async function ToTreatPage() {
         <strong>{a.ref}</strong> · {a.message}
         <span className="text-gray-500"> → {a.suggestion}</span>
       </div>
-      <Link href={`/admin/leads/${a.leadId}`} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-violet-600 text-white">Ouvrir</Link>
+      <Link href={`/admin/leads/${a.leadId}`} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-600 text-white">Ouvrir</Link>
     </li>
   )
   return (
@@ -29,7 +29,7 @@ export default async function ToTreatPage() {
         <p className="text-sm text-gray-600">
           Les dossiers qui demandent une action : jamais traités, relances échues, devis sans réponse, sans responsable. Cette liste <strong>n&apos;envoie aucun message</strong> : le conseiller agit, dans le respect du consentement et des règles des plateformes. Un dossier réservé, gagné ou perdu n&apos;y apparaît plus.
         </p>
-        <p className="text-xs text-gray-400">Seuils par défaut (à valider) : urgent après {DEFAULT_RULES.firstResponseMinutes} min sans traitement, responsable alerté après {DEFAULT_RULES.escalateAfterMinutes / 60} h, devis relancé après {DEFAULT_RULES.quoteSilenceDays} jours sans échange.</p>
+        <p className="text-sm text-gray-600">Seuils par défaut (à valider) : urgent après {DEFAULT_RULES.firstResponseMinutes} min sans traitement, responsable alerté après {DEFAULT_RULES.escalateAfterMinutes / 60} h, devis relancé après {DEFAULT_RULES.quoteSilenceDays} jours sans échange.</p>
       </div>
       <section aria-label="Résumé" className="grid grid-cols-3 gap-3">
         {[["Dossiers ouverts", openLeads], ["Alertes", alerts.length], ["Urgentes", urgent.length]].map(([l, v]) => (
