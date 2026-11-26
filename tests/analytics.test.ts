@@ -29,7 +29,8 @@ describe("entonnoir", () => {
 
   it("l'entonnoir est monotone décroissant et sans division par zéro", () => {
     const f = funnel([], [])
-    expect(f.every((s) => s.count === 0 && s.fromStart === 0 && s.fromPrevious === (s.key === "recus" ? 1 : 0))).toBe(true)
+    // 0 lead : aucun pourcentage calculable (jamais 0 % ni 100 % inventé)
+    expect(f.every((s) => s.count === 0 && s.fromStart === null && s.fromPrevious === null)).toBe(true)
     const g = funnel([lead("a", "qualifie"), lead("b", "contacte"), lead("c", "nouveau")], [])
     for (let i = 1; i < g.length; i++) expect(g[i].count).toBeLessThanOrEqual(g[i - 1].count)
   })

@@ -32,6 +32,8 @@ export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 export interface Actor {
   id: string | null // landing_staff.user_id, null pour le système ou l'API
   label: string
+  /** compte employé : ne voit que ses dossiers (décision Q8-A) ; les messages ne doivent révéler aucun dossier d'un collègue */
+  ownOnly?: boolean
 }
 
 export interface LeadRow {
@@ -226,8 +228,12 @@ export async function changeStatus(lead: LeadRow, status: Status, actor: Actor, 
       const conflicts = await reservationConflicts(lead)
       if (conflicts.length) {
         if (!opts.distinctReservation?.trim()) {
-          const refs = conflicts.map((c) => c.ref ?? c.id.slice(0, 8)).join(", ")
-          return { ok: false, code: "duplicate_reservation", conflicts, error: `Réservation possible en double : un autre dossier de ce client (${refs}) est déjà réservé pour la même offre. Signalez un doublon, ou confirmez « réservation distincte » avec un motif.` }
+          // employé : un dossier qui ne lui est pas affecté n'est jamais nommé (ni référence, ni montant) ; seul le constat neutre est donné
+          const visible = actor.ownOnly ? conflicts.filter((c) => c.assigned_to && c.assigned_to === actor.id) : conflicts
+          const hidden = conflicts.length - visible.length
+          const refs = visible.map((c) => c.ref ?? c.id.slice(0, 8)).join(", ")
+          const which = visible.length && !hidden ? `un autre dossier de ce client (${refs})` : hidden && !visible.length ? "un autre dossier de ce client" : `d'autres dossiers de ce client (${refs} et au moins un autre)`
+          return { ok: false, code: "duplicate_reservation", conflicts: visible.map(({ assigned_to: _a, ...c }) => c), error: `Réservation possible en double : ${which} est déjà réservé pour la même offre. Signalez un doublon, ou confirmez « réservation distincte » avec un motif.` }
         }
         distinctOf = conflicts
       }

@@ -120,11 +120,12 @@ describe("saisie côté serveur", () => {
     const other = await createIndividual(actor("admin"), input)
     expect(other).toMatchObject({ ok: false, errors: { leadId: expect.any(String) } })
   })
-  it("un employé peut relier une conversation à SA fiche ou à une fiche non affectée ; fiche anonymisée refusée", async () => {
+  it("un employé peut relier une conversation à SA fiche seulement (Q8-A : pas de fiche non affectée) ; fiche anonymisée refusée", async () => {
     leads[0].assigned_to = ME
     expect((await createIndividual(actor("employee"), { channel: "instagram", origin: "organique", leadId: LEAD_ID })).ok).toBe(true)
     leads[0].assigned_to = null
-    expect((await createIndividual(actor("employee"), { channel: "instagram", origin: "organique", leadId: LEAD_ID })).ok).toBe(true)
+    expect((await createIndividual(actor("employee"), { channel: "instagram", origin: "organique", leadId: LEAD_ID })).ok).toBe(false)
+    expect((await createIndividual(actor("manager"), { channel: "instagram", origin: "organique", leadId: LEAD_ID })).ok).toBe(true)
     leads[0].anonymized_at = "2026-11-01T00:00:00Z"
     expect((await createIndividual(actor("admin"), { channel: "instagram", origin: "organique", leadId: LEAD_ID })).ok).toBe(false)
   })

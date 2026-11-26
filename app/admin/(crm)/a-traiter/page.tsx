@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 
 export default async function ToTreatPage() {
   const staff = await currentStaff()
-  if (!staff || !can(staff.orgRole, "leads.view_all")) return <p className="bg-white rounded-2xl p-6">Accès réservé à l&apos;équipe.</p>
+  if (!staff || !can(staff.orgRole, "leads.view_assigned")) return <p className="bg-white rounded-2xl p-6">Accès réservé à l&apos;équipe.</p>
   const { alerts, openLeads } = await loadWorklist()
   const urgent = alerts.filter((a) => a.severity === "urgent")
   const escalations = can(staff.orgRole, "leads.assign") ? alerts.filter((a) => a.escalate) : []

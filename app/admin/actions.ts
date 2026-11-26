@@ -39,7 +39,7 @@ import {
   type Actor,
 } from "@/lib/server/crm"
 
-const actorOf = (s: Staff): Actor => ({ id: s.userId, label: s.email })
+const actorOf = (s: Staff): Actor => ({ id: s.userId, label: s.email, ownOnly: !can(s.orgRole, "leads.view_all") })
 const field = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim()
 
 async function requireStaff(): Promise<Staff> {

@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { can } from "@/lib/permissions"
+import { currentStaff } from "@/lib/server/auth"
 import { dbConfigured } from "@/lib/server/db"
 import { loadAllCustomers } from "@/lib/server/customer"
 import { SEGMENTS, evaluate, getSegment, idleDays } from "@/lib/segments"
@@ -11,6 +13,9 @@ export const dynamic = "force-dynamic"
 
 export default async function SegmentsPage({ searchParams }: { searchParams: { s?: string } }) {
   if (!dbConfigured()) return <p className="text-red-700">Base non configurée.</p>
+  // Les segments (dont Niveau / VIP) se calculent sur toute l'organisation : manager et administrateur seulement (décision Q8-A).
+  const staff = await currentStaff()
+  if (!staff || !can(staff.orgRole, "reports.view")) return <p className="bg-white rounded-2xl p-6">Accès réservé aux managers et administrateurs.</p>
   let customers: Awaited<ReturnType<typeof loadAllCustomers>> = []
   let failed = false
   try {

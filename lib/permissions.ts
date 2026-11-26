@@ -41,9 +41,10 @@ export const ROLE_PERMISSIONS: Record<OrgRole, ReadonlySet<Permission>> = {
   admin: new Set(ALL_ADMIN),
   // manager : équipes autorisées, affectation, suivi commercial, rapports ; ni profil, ni réseaux, ni site, ni gestion des comptes
   manager: new Set<Permission>(["employees.view", "reports.view", "leads.view_all", "leads.view_assigned", "leads.assign", "leads.update", "leads.update_assigned", "sales.record", "sales.record_assigned", "ads.view", "duplicates.flag", "duplicates.review"]),
-  // employé : VOIT tous les leads de son entreprise (décision du propriétaire, 08/11/2026) ; ne modifie que les siens ;
+  // employé : ne voit et ne modifie que les dossiers qui lui sont ACTUELLEMENT affectés (décision Q8-A, 26/11/2026, qui remplace celle du 08/11/2026) ;
   // jamais d'affectation, de rapports, de gestion d'équipe ni de réglages. Aucun accès aux leads d'une AUTRE entreprise.
-  employee: new Set<Permission>(["leads.view_all", "leads.view_assigned", "leads.update_assigned", "sales.record_assigned", "duplicates.flag"]),
+  // La restriction est appliquée côté serveur dans lib/server/db.ts (pas seulement à l'affichage).
+  employee: new Set<Permission>(["leads.view_assigned", "leads.update_assigned", "sales.record_assigned", "duplicates.flag"]),
 }
 
 export const can = (role: OrgRole | null | undefined, permission: Permission): boolean =>
@@ -63,26 +64,25 @@ export const roleFromLegacyStaff = (role: string): OrgRole => (role === "admin" 
 export const ROLE_LABELS: Record<OrgRole, string> = { admin: "Administrateur", manager: "Manager", employee: "Employé" }
 
 /**
- * Qui peut MODIFIER un lead (statut, notes, relance, vente) ? Décision du propriétaire (08/11/2026) :
+ * Qui peut MODIFIER un lead (statut, notes, relance, vente) ? Décision Q8-A (26/11/2026) :
  *  - administrateur et manager : tous les leads de leur entreprise ;
- *  - employé : SES leads et les leads NON affectés ; jamais ceux affectés à un collègue.
- * Voir tous les leads de son entreprise reste permis à tous les rôles ; une autre entreprise n'est jamais accessible.
+ *  - employé : UNIQUEMENT les dossiers qui lui sont actuellement affectés (un dossier non affecté ou affecté à un collègue lui est invisible).
+ * Une autre entreprise n'est jamais accessible.
  */
 export function canModifyLead(role: OrgRole | null | undefined, userId: string, lead: { assigned_to?: string | null }): boolean {
   if (can(role, "leads.update")) return true
   if (!can(role, "leads.update_assigned")) return false
-  return !lead.assigned_to || lead.assigned_to === userId
+  return lead.assigned_to === userId
 }
 
-/** Affecter un lead : admin et manager à n'importe qui ; un employé seulement pour PRENDRE un lead libre (ou se l'enlever). */
+/** Affecter un lead : admin et manager à n'importe qui ; un employé seulement pour se DÉCHARGER de son propre dossier (il ne voit pas les dossiers libres). */
 export function canAssignLead(role: OrgRole | null | undefined, userId: string, lead: { assigned_to?: string | null }, target: string | null): boolean {
   if (can(role, "leads.assign")) return true
   if (!can(role, "leads.update_assigned")) return false
-  if (target === userId) return !lead.assigned_to || lead.assigned_to === userId // prendre un lead libre
-  return target === null && lead.assigned_to === userId // rendre SON lead
+  return lead.assigned_to === userId && (target === null || target === userId) // rendre SON dossier (ou le garder)
 }
 
-/** Signaler un doublon : le droit de signaler ET celui de modifier le dossier (un employé : ses dossiers et les dossiers non affectés). */
+/** Signaler un doublon : le droit de signaler ET celui de modifier le dossier (un employé : ses dossiers uniquement). */
 export function canFlagDuplicate(role: OrgRole | null | undefined, userId: string, lead: { assigned_to?: string | null }): boolean {
   return can(role, "duplicates.flag") && canModifyLead(role, userId, lead)
 }

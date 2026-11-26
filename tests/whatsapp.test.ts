@@ -130,12 +130,16 @@ describe("entonnoir WhatsApp : chaque étape garde sa nature", () => {
     const f = whatsappFunnel(clicks, leads, acts)
     expect(f).toMatchObject({ clicks: 4, visitorsClicked: 2, formLeads: 3, whatsappLeads: 2, attachedLeads: 2, messagesIn: 2, messagesOut: 1, conversations: 2 })
     expect(f.whatsappAttachedRate).toBe(0.5)
+    // aucun lead WhatsApp saisi : taux non calculable, pas 0 %
+    expect(whatsappFunnel(clicks, leads.filter((l) => l.source !== "whatsapp"), acts).whatsappAttachedRate).toBeNull()
     expect(f.reserved).toBe(2) // 1 (source WhatsApp) + 3 (clic rattaché) ; le 4 est un formulaire sans WhatsApp
     expect(f.revenue).toBe(16500)
   })
 
   it("aucune donnée : zéros, jamais NaN", () => {
-    expect(Object.values(whatsappFunnel([], [], [])).every((v) => Number.isFinite(v))).toBe(true)
+    const f = whatsappFunnel([], [], [])
+    expect(f.whatsappAttachedRate).toBeNull() // non calculable, pas 0 %
+    expect(Object.entries(f).filter(([k]) => k !== "whatsappAttachedRate").every(([, v]) => Number.isFinite(v))).toBe(true)
   })
 })
 

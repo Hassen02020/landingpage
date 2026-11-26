@@ -23,7 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin", label: "Leads", icon: "leads", match: (p, q) => (p === "/admin" && q.get("followUp") !== "due") || (p.startsWith("/admin/leads/") && p !== "/admin/leads/new") },
       { href: "/admin/pipeline", label: "Pipeline", icon: "pipeline" },
-      { href: "/admin/a-traiter", label: "À traiter", icon: "clock", permission: "leads.view_all" },
+      { href: "/admin/a-traiter", label: "À traiter", icon: "clock", permission: "leads.view_assigned" },
       { href: "/admin/doublons", label: "Doublons", icon: "team", permission: "duplicates.review" },
       { href: "/admin/conversations", label: "Conversations", icon: "chat", permission: "leads.view_all" },
       { href: "/admin/clients", label: "Clients", icon: "team" },
@@ -37,7 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/intelligence", label: "Vue d'ensemble", icon: "chart", permission: "reports.view", match: (p) => p === "/admin/intelligence" },
       { href: "/admin/intelligence/dirigeant", label: "Tableau dirigeant", icon: "chart", permission: "reports.view" },
       { href: "/admin/stats", label: "Statistiques", icon: "chart" },
-      { href: "/admin/segments", label: "Segments", icon: "team" },
+      { href: "/admin/segments", label: "Segments", icon: "team", permission: "reports.view" },
       { href: "/admin/rentabilite", label: "Rentabilité", icon: "chart", permission: "ads.view" },
       { href: "/admin/liens", label: "Liens de campagne", icon: "link" },
       { href: "/admin/intelligence/qualite", label: "Qualité des données", icon: "shield", permission: "reports.view" },

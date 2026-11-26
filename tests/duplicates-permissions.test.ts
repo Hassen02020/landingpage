@@ -14,7 +14,7 @@ describe("matrice des permissions de doublon", () => {
   })
   it("signaler suit le droit de modifier le dossier : un employé ne signale pas sur le dossier d'un collègue", () => {
     expect(canFlagDuplicate("employee", ME, { assigned_to: ME })).toBe(true)
-    expect(canFlagDuplicate("employee", ME, { assigned_to: null })).toBe(true)
+    expect(canFlagDuplicate("employee", ME, { assigned_to: null })).toBe(false) // Q8-A : dossier non affecté invisible
     expect(canFlagDuplicate("employee", ME, { assigned_to: OTHER })).toBe(false)
     expect(canFlagDuplicate("manager", ME, { assigned_to: OTHER })).toBe(true)
     expect(canFlagDuplicate("admin", ME, { assigned_to: OTHER })).toBe(true)

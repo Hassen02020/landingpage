@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { can } from "@/lib/permissions"
+import { currentStaff } from "@/lib/server/auth"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { select } from "@/lib/server/db"
 import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
@@ -286,7 +288,7 @@ async function Funnel({ p }: { p: Period }) {
           {a.funnel.map((s) => (
             <div key={s.key} data-step={s.key}>
               <div className="flex justify-between text-sm"><span className="font-semibold">{s.label}</span><span><b data-count>{s.count}</b> <span className="text-gray-500">· {pct(s.fromStart)} du total · {pct(s.fromPrevious)} de l&apos;étape précédente</span></span></div>
-              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-violet-600 rounded" style={{ width: `${Math.round(s.fromStart * 100)}%` }} /></div>
+              <div className="h-2.5 bg-gray-100 rounded"><div className="h-2.5 bg-violet-600 rounded" style={{ width: `${Math.round((s.fromStart ?? 0) * 100)}%` }} /></div>
             </div>
           ))}
         </div>
@@ -327,7 +329,13 @@ async function Niches() {
 }
 
 export default async function StatsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
-  const view = ["marketing", "equipe", "entonnoir", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
+  const staff = await currentStaff()
+  if (!staff) return <p className="bg-white rounded-2xl p-6">Accès réservé à l&apos;équipe.</p>
+  // Employé : uniquement « Mes chiffres » (ses dossiers actuellement affectés, restriction appliquée côté serveur dans lib/server/db.ts).
+  // Les autres vues (équipe, entonnoir, WhatsApp, offres, niches) portent sur l'organisation entière : manager et administrateur seulement.
+  const orgWide = can(staff.orgRole, "reports.view")
+  const requested = ["marketing", "equipe", "entonnoir", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
+  const view = orgWide ? requested : "marketing"
   const p = parsePeriod(searchParams.from, searchParams.to)
   const level: Level = (["campaign", "adset", "ad"] as const).find((l) => l === searchParams.level) ?? "campaign"
   const member = /^[0-9a-f-]{36}$/i.test(searchParams.member || "") ? searchParams.member! : ""
@@ -338,8 +346,8 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-black">Statistiques</h1>
-        <Tabs view={view} p={p} />
+        <h1 className="text-2xl font-black">{orgWide ? "Statistiques" : "Mes chiffres"}</h1>
+        {orgWide && <Tabs view={view} p={p} />}
       </div>
 
       {view !== "niches" && (
@@ -367,7 +375,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
         />
       )}
       {view !== "niches" && (
-        <p className="text-xs text-gray-500">Leads reçus entre le {p.from.split("-").reverse().join("/")} et le {p.to.split("-").reverse().join("/")}.</p>
+        <p className="text-xs text-gray-500">{orgWide ? "" : "Vos dossiers actuellement affectés. "}Leads reçus entre le {p.from.split("-").reverse().join("/")} et le {p.to.split("-").reverse().join("/")}.</p>
       )}
 
       {view === "marketing" && <Marketing p={p} level={level} />}

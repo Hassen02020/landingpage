@@ -18,8 +18,10 @@ describe("matrice des rôles (chantier 06)", () => {
       expect(can("employee", p), p).toBe(false)
     }
   })
-  it("tous les rôles voient tous les leads de leur entreprise ; un rôle absent ou inconnu n'a aucun droit", () => {
-    for (const r of ["admin", "manager", "employee"] as OrgRole[]) expect(can(r, "leads.view_all")).toBe(true)
+  it("admin et manager voient tous les leads de l'organisation ; l'employé seulement les siens (Q8-A) ; un rôle absent ou inconnu n'a aucun droit", () => {
+    for (const r of ["admin", "manager"] as OrgRole[]) expect(can(r, "leads.view_all")).toBe(true)
+    expect(can("employee", "leads.view_all")).toBe(false)
+    expect(can("employee", "leads.view_assigned")).toBe(true)
     expect(can(null, "leads.view_all")).toBe(false)
     expect(can("root" as OrgRole, "leads.view_all")).toBe(false)
   })
@@ -35,7 +37,7 @@ describe("qui modifie un lead", () => {
   })
   it("employé : ses leads et les leads non affectés, JAMAIS ceux d'un collègue", () => {
     expect(canModifyLead("employee", ME, own)).toBe(true)
-    expect(canModifyLead("employee", ME, free)).toBe(true)
+    expect(canModifyLead("employee", ME, free)).toBe(false) // Q8-A : un dossier non affecté lui est invisible, donc non modifiable
     expect(canModifyLead("employee", ME, theirs)).toBe(false)
   })
   it("rôle absent ou inconnu : rien", () => {
@@ -52,7 +54,7 @@ describe("qui affecte un lead", () => {
     }
   })
   it("employé : prend un lead libre, rend le sien ; ne vole pas le lead d'un collègue, n'affecte personne d'autre", () => {
-    expect(canAssignLead("employee", ME, free, ME)).toBe(true)
+    expect(canAssignLead("employee", ME, free, ME)).toBe(false) // il ne voit pas les dossiers libres : pas de prise en charge
     expect(canAssignLead("employee", ME, own, null)).toBe(true)
     expect(canAssignLead("employee", ME, theirs, ME)).toBe(false) // vol
     expect(canAssignLead("employee", ME, theirs, null)).toBe(false) // dé-affecter un collègue
