@@ -30,7 +30,7 @@ export default async function ClientPage({ params }: { params: { phone: string }
         {s.tier && <span data-testid="tier" className={`px-3 py-1 rounded-full text-sm font-bold ${TIER_COLORS[s.tier]}`}>{TIER_LABELS[s.tier]}</span>}
         {c.email && <span className="text-gray-500">{c.email}</span>}
         {c.region && <span className="text-gray-500">· {c.region}</span>}
-        <a href={`https://wa.me/${c.phone}`} target="_blank" rel="noopener noreferrer" className="ml-auto bg-green-500 text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>
+        <a href={`https://wa.me/${c.phone}`} target="_blank" rel="noopener noreferrer" className="ml-auto bg-e2b-wa hover:bg-e2b-wa-dark text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3" data-testid="client-stats">
         {stat("Demandes", s.leads)}

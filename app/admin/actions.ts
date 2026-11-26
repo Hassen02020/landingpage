@@ -31,6 +31,7 @@ import {
   getLead,
   getLeadByRef,
   isStatus,
+  logCall,
   logWhatsApp,
   qualifyLead,
   setFollowUp,
@@ -191,10 +192,19 @@ export async function whatsappLogAction(fd: FormData): Promise<void> {
   const staff = await requireStaff()
   const lead = await leadForEdit(fd, staff)
   const direction = field(fd, "direction") === "out" ? "out" : "in"
-  const result = await logWhatsApp(lead, direction, field(fd, "text"), actorOf(staff)).catch(() => ({ ok: false as const, error: "Enregistrement impossible (migration 0006 appliquée ?)" }))
+  const result = await logWhatsApp(lead, direction, { theme: field(fd, "theme"), note: field(fd, "note") }, actorOf(staff)).catch(() => ({ ok: false as const, error: "Enregistrement impossible (migration 0006 appliquée ?)" }))
   revalidatePath(`/admin/leads/${lead.id}`)
   if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
   redirect(`/admin/leads/${lead.id}?ok=${encodeURIComponent(direction === "in" ? "Message reçu enregistré" : "Message envoyé enregistré")}`)
+}
+
+export async function callLogAction(fd: FormData): Promise<void> {
+  const staff = await requireStaff()
+  const lead = await leadForEdit(fd, staff)
+  const result = await logCall(lead, { theme: field(fd, "theme"), note: field(fd, "note") }, actorOf(staff)).catch(() => ({ ok: false as const, error: "Enregistrement impossible" }))
+  revalidatePath(`/admin/leads/${lead.id}`)
+  if (!result.ok) redirect(`/admin/leads/${lead.id}?erreur=${encodeURIComponent(result.error)}`)
+  redirect(`/admin/leads/${lead.id}?ok=Appel+enregistr%C3%A9`)
 }
 
 export async function withdrawMarketingAction(fd: FormData): Promise<void> {
@@ -216,7 +226,6 @@ export async function createLeadAction(fd: FormData): Promise<void> {
       source: field(fd, "source"),
       offer: field(fd, "offer"),
       destination: field(fd, "destination"),
-      message: field(fd, "message"),
       waRef: field(fd, "wa_ref"),
     },
     actorOf(staff)

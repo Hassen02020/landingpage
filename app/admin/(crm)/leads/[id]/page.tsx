@@ -5,7 +5,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PRODUCTS, WHATSAPP_NUMBER } from "@/lib/config"
 import { SOURCE_LABELS, STATUSES, STATUS_LABELS, findDuplicates, getActivities, getLead, listStaff, type Source } from "@/lib/server/crm"
-import { addNoteAction, assignAction, changeStatusAction, decideDuplicateAction, flagDuplicateAction, followUpAction, markTestAction, reopenDuplicateAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
+import ConversationFields from "./ConversationFields"
+import { addNoteAction, callLogAction, assignAction, changeStatusAction, decideDuplicateAction, flagDuplicateAction, followUpAction, markTestAction, reopenDuplicateAction, qualifyAction, whatsappLogAction, withdrawMarketingAction } from "../../../actions"
 import { CONTACT_CHANNEL_LABELS, CONTACT_CHANNELS, REGIONS } from "@/lib/regions"
 import { listTemplates, renderTemplate } from "@/lib/server/templates"
 import { STATUS_COLORS, formatDate } from "../../../format"
@@ -63,7 +64,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
         {lead.phone && !locked && <Link href={`/admin/clients/${lead.phone}`} className="text-sm underline">Voir le client (360°)</Link>}
         <span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>
         {lead.is_test && <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-800 text-white" data-testid="test-badge">TEST : exclu des analyses</span>}
-        {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="ml-auto bg-green-500 text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>}
+        {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="ml-auto bg-e2b-wa hover:bg-e2b-wa-dark text-white font-bold px-4 py-2 rounded-xl">💬 WhatsApp</a>}
       </div>
       {searchParams.ok && <div className="p-3 rounded-xl bg-green-50 text-green-800 text-sm">{searchParams.ok}</div>}
       {searchParams.erreur && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
@@ -100,17 +101,23 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
       {lead.phone && !locked && (
         <section className="bg-white rounded-2xl shadow-sm p-4 text-sm">
           <h2 className="font-bold">Échanges WhatsApp</h2>
-          <p className="text-gray-500 mb-2">Aucune API WhatsApp n&apos;est connectée : enregistrez ici les messages reçus ou envoyés pour suivre la conversation (comptée dans les statistiques WhatsApp).</p>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <p className="text-gray-500 mb-2">Aucune API WhatsApp n&apos;est connectée : enregistrez ici le <strong>thème</strong> des messages reçus ou envoyés pour suivre la conversation (comptée dans les statistiques WhatsApp). Le texte du message n&apos;est pas conservé.</p>
+          <div className="grid gap-3">
             {([["in", "💬 Message reçu"], ["out", "💬 Message envoyé"]] as const).map(([dir, label]) => (
-              <form key={dir} action={whatsappLogAction} className="flex gap-2">
+              <form key={dir} action={whatsappLogAction} className="flex gap-2 items-start">
                 <input type="hidden" name="id" value={lead.id} />
                 <input type="hidden" name="direction" value={dir} />
-                <input name="text" maxLength={500} placeholder="Résumé (facultatif)" className="flex-1 min-w-0 px-3 py-2 rounded-lg border" />
-                <button className="shrink-0 border border-green-300 text-green-800 bg-green-50 hover:bg-green-100 rounded-lg px-3 py-2 font-semibold">{label}</button>
+                <ConversationFields idPrefix={`wa-${dir}`} />
+                <button className="shrink-0 bg-e2b-wa hover:bg-e2b-wa-dark text-white rounded-lg px-3 py-2 font-semibold">{label}</button>
               </form>
             ))}
           </div>
+          <h2 className="font-bold mt-4">Appel téléphonique</h2>
+          <form action={callLogAction} className="flex gap-2 items-start mt-2">
+            <input type="hidden" name="id" value={lead.id} />
+            <ConversationFields idPrefix="call" />
+            <button className="shrink-0 bg-gray-900 text-white rounded-lg px-3 py-2 font-semibold">📞 Appel enregistré</button>
+          </form>
         </section>
       )}
 
@@ -317,7 +324,7 @@ export default async function LeadPage({ params, searchParams }: { params: { id:
         {!locked && (
           <form action={addNoteAction} className="flex gap-2">
             <input type="hidden" name="id" value={lead.id} />
-            <input name="body" required maxLength={2000} placeholder="Ajouter une note (appel, échange WhatsApp…)" className="flex-1 px-3 py-2 rounded-lg border" />
+            <input name="body" required maxLength={140} aria-label="Note courte" placeholder="Ajouter une note courte (140 max, ni numéro, ni e-mail, ni lien)" className="flex-1 px-3 py-2 rounded-lg border" />
             <button className="px-4 py-2 rounded-lg bg-gray-900 text-white font-bold">Ajouter</button>
           </form>
         )}

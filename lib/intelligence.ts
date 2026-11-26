@@ -4,7 +4,7 @@
 import { isConventionalCampaign } from "@/lib/campaign-name"
 import { isBooking, isUntreated, type Status } from "@/lib/status"
 
-/** Nombre minimal de réservations (confirmées) pour comparer sérieusement deux lignes (identique à lib/ad-economics). */
+/** Nombre minimal de réservations (à commission confirmée) pour comparer sérieusement deux lignes (identique à lib/ad-economics). */
 export const MIN_BOOKINGS = 5
 
 export interface SampleState {
@@ -18,7 +18,7 @@ export interface SampleState {
 export function sampleState(n: number, min: number, noun: string): SampleState {
   const count = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
   const enough = count >= min
-  return { enough, n: count, min, message: enough ? "" : `Données insuffisantes : ${count} ${noun}, ${min} minimum pour comparer.` }
+  return { enough, n: count, min, message: enough ? "" : `Données insuffisantes pour conclure : ${count} ${noun}, ${min} minimum pour comparer (seuil par défaut, non validé).` }
 }
 
 // ------------------------------------------------------------------ qualité des données
@@ -145,7 +145,7 @@ export function overviewAlerts(i: OverviewInput): OverviewAlert[] {
   const out: OverviewAlert[] = []
   if (i.leads === 0) out.push({ key: "no_leads", severity: "info", text: "Aucun lead sur la période." })
   if (i.leads > 0 && i.bookings === 0)
-    out.push({ key: "no_bookings", severity: "info", text: `0 réservation sur ${i.leads} lead(s) : aucune conclusion de rentabilité n'est possible (${MIN_BOOKINGS} réservations confirmées minimum pour comparer).` })
+    out.push({ key: "no_bookings", severity: "info", text: `0 réservation sur ${i.leads} lead(s) : aucune conclusion de rentabilité n'est possible (${MIN_BOOKINGS} réservations à commission confirmée minimum pour comparer ; seuil par défaut, non validé).` })
   if (i.spend !== null && i.spend > 0 && i.leads === 0)
     out.push({ key: "spend_without_leads", severity: "warn", text: "Des dépenses sont enregistrées mais aucun lead n'est arrivé : vérifiez les liens de campagne et le suivi." })
   if (i.unattachedSpendCount > 0)

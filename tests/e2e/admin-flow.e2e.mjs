@@ -185,13 +185,36 @@ check("WhatsApp : texte sans référence valide refusé avec un message clair", 
 // échanges saisis sur la fiche
 await page.goto(`${BASE}/admin/leads/${waLead.id}`, { waitUntil: "networkidle" })
 const inForm = page.locator("form").filter({ has: page.getByRole("button", { name: "💬 Message reçu" }) })
-await inForm.locator('input[name="text"]').fill("Veut le prix pour 4 personnes")
+const actsBefore = db.landing_lead_activities.length
+// L2 : sans thème, le navigateur bloque l'envoi (champ obligatoire) et rien n'est écrit
+await inForm.locator('input[name="note"]').fill("note sans thème")
+await inForm.getByRole("button", { name: "💬 Message reçu" }).click()
+await page.waitForTimeout(500)
+check("L2 : message reçu sans thème refusé (rien n'est écrit)", db.landing_lead_activities.length === actsBefore)
+await inForm.locator('select[name="theme"]').selectOption("prix")
+await inForm.locator('input[name="note"]').fill("4 personnes")
 await Promise.all([page.waitForURL(/ok=/), inForm.getByRole("button", { name: "💬 Message reçu" }).click()])
-check("WhatsApp : « message reçu » saisi sur la fiche et tracé", db.landing_lead_activities.some((a) => a.lead_id === waLead.id && a.type === "wa_in" && a.body === "Veut le prix pour 4 personnes"))
+check("WhatsApp : « message reçu » saisi sur la fiche : thème + note courte tracés", db.landing_lead_activities.some((a) => a.lead_id === waLead.id && a.type === "wa_in" && a.body === "[Prix demandé] 4 personnes"))
 await page.goto(`${BASE}/admin/leads/${waLead.id}`, { waitUntil: "networkidle" })
 const outForm = page.locator("form").filter({ has: page.getByRole("button", { name: "💬 Message envoyé" }) })
+await outForm.locator('select[name="theme"]').selectOption("devis")
 await Promise.all([page.waitForURL(/ok=/), outForm.getByRole("button", { name: "💬 Message envoyé" }).click()])
-check("WhatsApp : « message envoyé » saisi sur la fiche et tracé", db.landing_lead_activities.some((a) => a.lead_id === waLead.id && a.type === "wa_out"))
+check("WhatsApp : « message envoyé » saisi sur la fiche et tracé avec son thème", db.landing_lead_activities.some((a) => a.lead_id === waLead.id && a.type === "wa_out" && a.body === "[Devis demandé]"))
+// L2 : note refusée côté serveur (téléphone), même si le navigateur l'autorise
+await page.goto(`${BASE}/admin/leads/${waLead.id}`, { waitUntil: "networkidle" })
+const inForm2 = page.locator("form").filter({ has: page.getByRole("button", { name: "💬 Message reçu" }) })
+await inForm2.locator('select[name="theme"]').selectOption("dates")
+await inForm2.locator('input[name="note"]').fill("rappeler le 98 140 514")
+await Promise.all([page.waitForURL(/erreur=/), inForm2.getByRole("button", { name: "💬 Message reçu" }).click()])
+check("L2 : note contenant un numéro refusée avec un message clair, rien d'écrit", (await page.getByText(/aucun numéro de téléphone/).first().isVisible()) && !db.landing_lead_activities.some((a) => (a.body ?? "").includes("98 140 514")))
+// L2 : appel téléphonique
+await page.goto(`${BASE}/admin/leads/${waLead.id}`, { waitUntil: "networkidle" })
+const callForm = page.locator("form").filter({ has: page.getByRole("button", { name: "📞 Appel enregistré" }) })
+await callForm.locator('select[name="theme"]').selectOption("rappel")
+await Promise.all([page.waitForURL(/ok=/), callForm.getByRole("button", { name: "📞 Appel enregistré" }).click()])
+check("L2 : appel enregistré avec son thème", db.landing_lead_activities.some((a) => a.lead_id === waLead.id && a.type === "note" && a.body === "[Appel · Rappel demandé]"))
+check("L2 : aucun message collé n'a été conservé (création manuelle)", !JSON.stringify(db.landing_lead_activities).includes("Bonjour, je veux des infos") && db.landing_leads.every((l) => !(l.first_name === "Test" && l.message)))
+check("L2 : bouton WhatsApp de la fiche en vert accessible (plus de vert clair)", (await page.locator('a:has-text("💬 WhatsApp")').first().getAttribute("class"))?.includes("bg-e2b-wa") === true)
 
 // onglet statistiques WhatsApp : chaque étape garde sa nature
 await page.goto(`${BASE}/admin/stats?view=whatsapp`, { waitUntil: "networkidle" })
@@ -284,6 +307,24 @@ check("stats WhatsApp : clics observés, messages saisis, rattachement calculé,
   const revenue = sellers.reduce((a, l) => a + (Number(l.booking_value) || 0), 0)
   const statsText = (await page.locator("main").innerText()).replace(/\u202f|\u00a0/g, " ")
   check("statistiques : « Vendus » = réservé + gagné, chiffre d'affaires sans double comptage", statsText.includes("Vendus") && statsText.includes(`CA : ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(revenue).replace(/\u202f|\u00a0/g, " ")} TND`), `CA attendu ${revenue}`)
+}
+
+// ---------------------------------------------------------------- L1 : « non calculable » et échec de chargement ≠ état vide
+{
+  // période sans aucun lead : dénominateur 0 → « Non calculable », jamais « 0 % »
+  await page.goto(`${BASE}/admin/stats?from=2000-01-01&to=2000-01-02`, { waitUntil: "networkidle" })
+  const emptyStats = await page.locator("main").innerText()
+  check("L1 : période sans lead → « Non calculable » (jamais 0 %)", emptyStats.includes("Non calculable") && !/Taux de réservation\s*0 %/.test(emptyStats))
+  // base indisponible : message d'erreur, pas « Aucun client »
+  fake.setFailCustomers(true)
+  const respClients = await page.goto(`${BASE}/admin/clients`, { waitUntil: "networkidle" }).catch(() => null)
+  const downClients = await page.locator("body").innerText().catch(() => "")
+  const downSegments = await (async () => { await page.goto(`${BASE}/admin/segments`, { waitUntil: "networkidle" }).catch(() => null); return page.locator("body").innerText().catch(() => "") })()
+  fake.setFailCustomers(false)
+  check("L1 : échec de chargement des clients → « Impossible de charger les clients. Réessayez. » (pas « Aucun client »)", downClients.includes("Impossible de charger les clients. Réessayez.") && !downClients.includes("Aucun client."), `${respClients?.status()} ${downClients.replace(/\s+/g, " ").slice(0, 400)}`)
+  check("L1 : échec de chargement des segments → message d'erreur (pas une liste vide)", downSegments.includes("Impossible de charger les segments. Réessayez."), downSegments.slice(0, 120))
+  await page.goto(`${BASE}/admin/clients`, { waitUntil: "networkidle" })
+  check("L1 : après rétablissement, la liste des clients revient", (await page.locator("tr[data-phone]").count()) > 0)
 }
 
 // ---------------------------------------------------------------- Customer 360 (Bloc 6)

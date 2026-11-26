@@ -3,14 +3,16 @@ import { PRODUCTS, type Product } from "@/lib/config"
 import { select } from "@/lib/server/db"
 import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
 import { loadAnalytics } from "@/lib/server/analytics"
-import { groupBy, groupByOffer, loadLeadStats, loadTeam, parsePeriod, rates, teamStats, totals, type Counts, type Level, type Period } from "@/lib/server/stats"
+import { groupBy, groupByOffer, loadLeadStats, loadTeam, parsePeriod, ratio, rates, teamStats, totals, type Counts, type Level, type Period } from "@/lib/server/stats"
 
 export const dynamic = "force-dynamic"
 
 type Niche = { product: Product | null; niche: string; clics_whatsapp: number; visiteurs_contact: number; leads: number; reservations: number; chiffre_affaires_tnd: number }
 
 const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} TND`
-const pct = (r: number) => `${Math.round(r * 100)} %`
+const NC = "Non calculable"
+const pct = (r: number | null) => (r === null ? NC : `${Math.round(r * 100)} %`)
+const tndOrNC = (n: number | null) => (n === null ? NC : tnd(n))
 
 function Kpi({ label, value, sub, tone }: { label: string; value: string | number; sub?: string; tone: string }) {
   return (
@@ -88,7 +90,7 @@ async function Marketing({ p, level }: { p: Period; level: Level }) {
       <KpiGrid c={c} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
         <div className="bg-white rounded-2xl border p-4">Taux de réservation <strong className="block text-xl">{pct(r.bookingRate)}</strong><span className="text-xs text-gray-500">réservations / leads reçus</span></div>
-        <div className="bg-white rounded-2xl border p-4">Panier moyen <strong className="block text-xl">{tnd(r.avgBasket)}</strong><span className="text-xs text-gray-500">par réservation</span></div>
+        <div className="bg-white rounded-2xl border p-4">Panier moyen <strong className="block text-xl">{tndOrNC(r.avgBasket)}</strong><span className="text-xs text-gray-500">{r.avgBasket === null ? "aucune réservation sur la période" : "par réservation"}</span></div>
         <div className="bg-white rounded-2xl border p-4">Chiffre d&apos;affaires <strong className="block text-xl">{tnd(c.revenue)}</strong><span className="text-xs text-gray-500">montants saisis à la réservation</span></div>
       </div>
       <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
@@ -147,7 +149,7 @@ async function Team({ p, member }: { p: Period; member: string }) {
     (a, m) => ({ actions: a.actions + m.actions, contacted: a.contacted + m.contacted, qualified: a.qualified + m.qualified, proposals: a.proposals + m.proposals, booked: a.booked + m.booked, lost: a.lost + m.lost, notes: a.notes + m.notes, assigned: a.assigned + m.assigned }),
     { actions: 0, contacted: 0, qualified: 0, proposals: 0, booked: 0, lost: 0, notes: 0, assigned: 0 }
   )
-  const closing = sum.booked + sum.lost ? sum.booked / (sum.booked + sum.lost) : 0
+  const closing = ratio(sum.booked, sum.booked + sum.lost)
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
