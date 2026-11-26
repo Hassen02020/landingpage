@@ -56,7 +56,7 @@ export default function BookingConfirmation({ leadId, view, canEdit, isBooking, 
             <label className="block"><span className="text-gray-600">Date du paiement (exigée si « oui »)</span>
               <input type="date" name="payment_respected_on" defaultValue={c?.payment_respected_on ?? ""} className="mt-1 w-full px-3 py-2 rounded-lg border" />
             </label>
-            <button disabled={disabled} className="w-full bg-violet-700 text-white font-bold py-2 rounded-lg disabled:opacity-50">Enregistrer la confirmation</button>
+            <button disabled={disabled} className="w-full bg-brand-700 text-white font-bold py-2 rounded-lg disabled:opacity-50">Enregistrer la confirmation</button>
           </fieldset>
         </form>
       )}

@@ -6,7 +6,7 @@ import { blockAction, countriesAction, type FormState } from "../../settings-act
 function Submit({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" disabled={pending} className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-4 py-2 rounded-xl disabled:opacity-50 whitespace-nowrap">
+    <button type="submit" disabled={pending} className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 rounded-xl disabled:opacity-50 whitespace-nowrap">
       {pending ? "…" : children}
     </button>
   )

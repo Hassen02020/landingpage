@@ -32,7 +32,7 @@ export default async function PaymentTerms({ canManage }: { canManage: boolean }
                   <label className="block"><span className="text-gray-600">Mention (140 max, ni numéro, ni e-mail, ni lien)</span>
                     <input name="payment_terms_note" maxLength={140} defaultValue={o.payment_terms_note ?? ""} className="mt-1 w-full px-3 py-2 rounded-lg border" /></label>
                   <div className="md:col-span-4 flex flex-wrap gap-2">
-                    <button name="defined" value="1" className="px-3 py-2 rounded-lg bg-violet-700 text-white font-bold disabled:opacity-50">Marquer les conditions comme définies</button>
+                    <button name="defined" value="1" className="px-3 py-2 rounded-lg bg-brand-700 text-white font-bold disabled:opacity-50">Marquer les conditions comme définies</button>
                     <button name="defined" value="0" className="px-3 py-2 rounded-lg border font-semibold disabled:opacity-50">Enregistrer sans les définir</button>
                   </div>
                 </fieldset>

@@ -46,10 +46,10 @@ export function InboundJournal({ events, health, tableMissing }: { events: Inbou
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-500 border-b">
-                    <th className="py-2 pe-3">Date (Tunis)</th>
-                    <th className="pe-3">Canal</th>
-                    <th className="pe-3">Source</th>
-                    <th className="pe-3">Issue</th>
+                    <th scope="col" className="py-2 pe-3">Date (Tunis)</th>
+                    <th scope="col" className="pe-3">Canal</th>
+                    <th scope="col" className="pe-3">Source</th>
+                    <th scope="col" className="pe-3">Issue</th>
                     <th>Raison</th>
                   </tr>
                 </thead>

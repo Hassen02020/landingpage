@@ -31,7 +31,7 @@ export default async function AvisPage({ searchParams }: { searchParams: Record<
       {tableMissing && <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">La migration <code>0025_reviews.sql</code> n&apos;est pas encore appliquée dans Supabase.</div>}
       <nav className="flex gap-2" aria-label="Statut des avis">
         {TABS.map((t) => (
-          <Link key={t.status} href={`/admin/avis?status=${t.status}`} className={`${btn} ${t.status === status ? "bg-violet-600 text-white" : "bg-white border text-gray-700"}`} aria-current={t.status === status ? "page" : undefined}>
+          <Link key={t.status} href={`/admin/avis?status=${t.status}`} className={`${btn} ${t.status === status ? "bg-brand-600 text-white" : "bg-white border text-gray-700"}`} aria-current={t.status === status ? "page" : undefined}>
             {t.label}
           </Link>
         ))}

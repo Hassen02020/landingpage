@@ -4,11 +4,12 @@ import { loadCustomer } from "@/lib/server/customer"
 import { STATUS_LABELS } from "@/lib/status"
 import { TIER_COLORS, TIER_LABELS, vipThreshold } from "@/lib/loyalty"
 import { SOURCE_LABELS, type Source } from "@/lib/server/crm"
-import { STATUS_COLORS, formatDate } from "../../../format"
+import { formatDate, formatTnd } from "../../../format"
+import { StatusBadge } from "../../_components/ui"
 
 export const dynamic = "force-dynamic"
 
-const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} TND`
+const tnd = (n: number) => formatTnd(n)
 const LABELS: Record<string, string> = {
   created: "Création", status_change: "Statut", note: "Note", assignment: "Assignation", follow_up: "Relance",
   marketing_withdrawn: "Consentement", anonymized: "Anonymisation", wa_in: "💬 WhatsApp reçu", wa_out: "💬 WhatsApp envoyé",
@@ -50,13 +51,13 @@ export default async function ClientPage({ params }: { params: { phone: string }
       <section className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <h2 className="font-bold p-4 pb-0">Demandes</h2>
         <table className="w-full text-sm">
-          <thead className="text-left text-gray-500 border-b"><tr><th className="p-3">Réf.</th><th className="p-3">Produit / offre</th><th className="p-3">Statut</th><th className="p-3">Montant</th><th className="p-3">Canal</th><th className="p-3">Origine</th><th className="p-3">Date</th></tr></thead>
+          <thead className="text-left text-gray-500 border-b"><tr><th scope="col" className="p-3">Réf.</th><th scope="col" className="p-3">Produit / offre</th><th scope="col" className="p-3">Statut</th><th scope="col" className="p-3">Montant</th><th scope="col" className="p-3">Canal</th><th scope="col" className="p-3">Origine</th><th scope="col" className="p-3">Date</th></tr></thead>
           <tbody>
             {c.leads.map((l) => (
               <tr key={l.id} className="border-b last:border-0">
                 <td className="p-3"><Link className="font-mono underline" href={`/admin/leads/${l.id}`}>{l.ref}</Link></td>
                 <td className="p-3">{l.product}{l.offer ? ` — ${l.offer}` : ""}</td>
-                <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[l.status]}`}>{STATUS_LABELS[l.status]}</span></td>
+                <td className="p-3"><StatusBadge status={l.status} /></td>
                 <td className="p-3">{l.booking_value ? tnd(Number(l.booking_value)) : "—"}</td>
                 <td className="p-3">{l.channel || "direct"}{l.utm_campaign ? ` · ${l.utm_campaign}` : ""}</td>
                 <td className="p-3">{SOURCE_LABELS[(l.source ?? "form") as Source]}</td>

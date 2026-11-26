@@ -107,7 +107,7 @@ function VoyageCard({ voyage, today }: { voyage: Voyage; today: string | null })
             label="💬 Demander le programme"
             location={`card-${voyage.id}`}
             tripName={voyage.title}
-            className="block w-full bg-green-700 hover:bg-green-800 text-white font-black text-sm py-3 rounded-2xl text-center transition-all shadow hover:shadow-lg"
+            className="block w-full bg-e2b-wa hover:bg-e2b-wa-dark text-white font-black text-sm py-3 rounded-2xl text-center transition-all shadow hover:shadow-lg"
           />
         </div>
       </div>
@@ -147,7 +147,7 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
       <SiteHeader
         fixed
         current="/voyages-organises"
-        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm sm:text-base font-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 transition-colors shadow" />}
+        cta={<CTAButton label="WhatsApp" location="header" className="inline-flex items-center gap-2 bg-e2b-wa hover:bg-e2b-wa-dark text-white text-sm sm:text-base font-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shrink-0 transition-colors shadow" />}
       />
       <main id="contenu" tabIndex={-1} className="outline-none">
 
@@ -307,7 +307,7 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
             <CTAButton
               label="💬 Réserver sur WhatsApp"
               location="bottom-cta"
-              className="bg-green-700 hover:bg-green-800 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition-all hover:scale-105"
+              className="bg-e2b-wa hover:bg-e2b-wa-dark text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition-all hover:scale-105"
             />
             <a
               href={`tel:+216${PHONE_NUMBER}`}
@@ -333,7 +333,7 @@ export default function VoyagesClient({ initialToday }: { initialToday: string }
         <CTAButton
           label="💬"
           location="floating"
-          className="bg-green-700 hover:bg-green-800 text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 block text-center leading-[4rem]"
+          className="bg-e2b-wa hover:bg-e2b-wa-dark text-white text-3xl w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 block text-center leading-[4rem]"
         />
       </aside>
     </div>

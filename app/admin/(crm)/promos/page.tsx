@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 
 const STATUS: Record<PromoStatus, { label: string; cls: string }> = {
   active: { label: "Actif", cls: "bg-green-100 text-green-800" },
-  scheduled: { label: "Programmé", cls: "bg-blue-100 text-violet-700" },
+  scheduled: { label: "Programmé", cls: "bg-blue-100 text-brand-700" },
   expired: { label: "Expiré", cls: "bg-gray-200 text-gray-600" },
   exhausted: { label: "Épuisé", cls: "bg-amber-100 text-amber-800" },
   disabled: { label: "Désactivé", cls: "bg-red-100 text-red-700" },

@@ -6,10 +6,11 @@ import { PRODUCTS, type Product } from "@/lib/config"
 import { listCategories, listOffers, seatsLeft, type Category, type Offer } from "@/lib/server/catalog"
 import PaymentTerms from "./PaymentTerms"
 import { archiveOfferAction, duplicateOfferAction } from "../../catalog-actions"
+import { formatTnd } from "@/app/admin/format"
 
 export const dynamic = "force-dynamic"
 
-const tnd = (n: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} TND`
+const tnd = (n: number) => formatTnd(n)
 const day = (d: string | null) => (d ? d.split("-").reverse().join("/") : "—")
 
 export default async function CataloguePage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
@@ -60,7 +61,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Re
         </div>
         <div className="flex gap-2">
           <Link href="/admin/catalogue/categories/new" className="border bg-white font-bold px-4 py-2 rounded-xl">+ Catégorie</Link>
-          <Link href="/admin/catalogue/offres/new" className="bg-violet-700 hover:bg-violet-800 text-white font-bold px-4 py-2 rounded-xl">+ Ajouter une offre</Link>
+          <Link href="/admin/catalogue/offres/new" className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 rounded-xl">+ Ajouter une offre</Link>
         </div>
       </div>
 

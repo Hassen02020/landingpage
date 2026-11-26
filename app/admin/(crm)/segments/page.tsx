@@ -8,11 +8,12 @@ import { RELIABILITY_LABELS, profileSegment } from "@/lib/segment-profile"
 import { STATUS_LABELS } from "@/lib/status"
 import { LoadError } from "../_components/LoadError"
 import { formatDate } from "../../format"
+import { Notice } from "../_components/ui"
 
 export const dynamic = "force-dynamic"
 
 export default async function SegmentsPage({ searchParams }: { searchParams: { s?: string } }) {
-  if (!dbConfigured()) return <p className="text-red-700">Base non configurée.</p>
+  if (!dbConfigured()) return <Notice tone="error">Base non configurée.</Notice>
   // Les segments (dont Niveau / VIP) se calculent sur toute l'organisation : manager et administrateur seulement (décision Q8-A).
   const staff = await currentStaff()
   if (!staff || !can(staff.orgRole, "reports.view")) return <p className="bg-white rounded-2xl p-6">Accès réservé aux managers et administrateurs.</p>
@@ -67,7 +68,7 @@ export default async function SegmentsPage({ searchParams }: { searchParams: { s
             )
           })()}
           <table className="w-full text-sm">
-            <thead className="text-left text-gray-500 border-b"><tr><th className="p-3">Client</th><th className="p-3">Statut</th><th className="p-3">Région</th><th className="p-3">Inactif depuis</th><th className="p-3">Dernière activité</th></tr></thead>
+            <thead className="text-left text-gray-500 border-b"><tr><th scope="col" className="p-3">Client</th><th scope="col" className="p-3">Statut</th><th scope="col" className="p-3">Région</th><th scope="col" className="p-3">Inactif depuis</th><th scope="col" className="p-3">Dernière activité</th></tr></thead>
             <tbody data-testid="segment-members">
               {shown.eligible.map((c) => (
                 <tr key={c.phone} data-phone={c.phone} className="border-b last:border-0">

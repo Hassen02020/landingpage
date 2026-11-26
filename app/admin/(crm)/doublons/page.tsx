@@ -26,7 +26,7 @@ export default async function DuplicatesPage({ searchParams }: { searchParams: {
       {searchParams.erreur && <div role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{searchParams.erreur}</div>}
       <nav className="flex gap-2" aria-label="Statut">
         {DUP_STATUSES.map((s) => (
-          <Link key={s} href={`/admin/doublons?statut=${s}`} aria-current={s === status ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${s === status ? "bg-violet-600 text-white" : "bg-white border text-gray-700"}`}>{DUP_STATUS_LABELS[s]}</Link>
+          <Link key={s} href={`/admin/doublons?statut=${s}`} aria-current={s === status ? "page" : undefined} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${s === status ? "bg-brand-600 text-white" : "bg-white border text-gray-700"}`}>{DUP_STATUS_LABELS[s]}</Link>
         ))}
       </nav>
       {reviews.length === 0 ? <p className="bg-white rounded-2xl p-6 text-sm text-gray-500">Aucun signalement dans cette liste.</p> : (
@@ -39,7 +39,7 @@ export default async function DuplicatesPage({ searchParams }: { searchParams: {
               {r.status === "signale" && canDecideDuplicate(staff.orgRole, staff.userId, r) && (
                 <form action={decideDuplicateAction} className="ml-auto flex flex-wrap items-center gap-1">
                   <input type="hidden" name="review_id" value={r.id} />
-                  <input name="note" maxLength={300} placeholder="Note de décision (facultatif)" className="px-2 py-1 rounded border text-xs" />
+                  <input name="note" maxLength={300} aria-label="Note de décision (facultatif)" placeholder="Note de décision (facultatif)" className="px-2 py-1 rounded border text-xs" />
                   <button name="decision" value="confirme" className="text-xs rounded bg-gray-800 text-white px-2 py-1">Confirmer</button>
                   <button name="decision" value="rejete" className="text-xs rounded border px-2 py-1">Rejeter</button>
                 </form>

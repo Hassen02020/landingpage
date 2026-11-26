@@ -16,6 +16,35 @@
   /* ambiances par produit (système de composants) : seules les SURFACES varient, jamais le bleu, le jaune, le logo ni la police */
   --e2b-surface-omra: #fbf8f2;   /* crème chaud, déjà validé sur la page Omra Ramadan */
   --e2b-line-omra: #efe7d6;
+  /* échelle du bleu de marque (LOT 1, design system CRM) : nuances DÉRIVÉES de --e2b-blue pour les interfaces
+     (espace équipe, pages d'erreur). 100 = --e2b-blue-soft, 700 = --e2b-blue, 800 = --e2b-blue-dark. Exposée dans Tailwind sous brand-*. */
+  --e2b-blue-50: #f3f7fc;
+  --e2b-blue-200: #c9daf0;
+  --e2b-blue-300: #9dbbe3;
+  --e2b-blue-400: #5f8fcc;
+  --e2b-blue-500: #2d66ad;
+  --e2b-blue-600: #124d93;
+  --e2b-blue-900: #001d42;
+  --e2b-blue-950: #00122b;
+}
+
+/* ---- Espace équipe (CRM) : focus clavier visible et mouvement réduit (WCAG 2.2 AA : 2.4.7, 2.4.11, 2.3.3) ---- */
+.admin-root :focus-visible {
+  outline: 3px solid var(--e2b-blue-500);
+  outline-offset: 2px;
+}
+.admin-root .bg-brand-950 :focus-visible,
+.admin-root .bg-brand-900 :focus-visible,
+.admin-root .bg-brand-800 :focus-visible {
+  outline-color: var(--e2b-yellow);
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-root *, .admin-root *::before, .admin-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ---- Site public : confort tactile et lisibilité (n'affecte pas l'espace équipe, repéré par .admin-root) ---- */
