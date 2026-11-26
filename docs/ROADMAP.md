@@ -258,3 +258,8 @@ Audit mesuré (axe-core, captures mobile 390 px et ordinateur 1366 px, poids, d�
 | ADS-ROI | Rentabilité publicitaire : dépenses + commissions nettes importées d'EasyV4, formules, gagnante (PR 1 : migration 0016 non appliquée + calcul testé) | `docs/ROI_PUBLICITAIRE.md` |
 - 24/11/2026 — Certification CRM (lecture seule) : doublons (PR #88, migration 0030) FUSIONNÉS et DÉPLOYÉS ; **D5 = exclusion sans colonne** actée par le propriétaire ; cohérence des anciennes données et statistiques vérifiée en production ; audit connecté D1/D2, doublons en réel et droits Manager/employé en réel **non faits** (aucun compte de test). Voir `docs/CERTIFICATION_CRM_2026-11-24.md` et `docs/AUDIT_CONNECTE_D1_D2.md`.
 - 25/11/2026 — Audit connecté de l'Administrateur (D1/D2, doublons, cohérence) : conforme. Dossier de test `9c9f5f5b` marqué test (autorisé). Comptes Manager/employé de test et test réel d'un doublon (P2/P4) **écartés par le propriétaire** : droits non-Admin et parcours d'écriture des doublons restent prouvés par tests, non vérifiés en réel ; anomalies à signaler pour correction. Voir `docs/CERTIFICATION_CRM_2026-11-24.md` §7.
+
+## Growth OS v3 — L0 (26/11/2026)
+| Lot | État | Notes |
+|---|---|---|
+| L0 — Règles de calcul et définitions | **PR PRÉPARÉE** (documentation seule) | `docs/REGLES_CALCUL_GROWTH_OS.md` ; aucun code, aucune migration ; Q2, Q3, Q9 documentées « à définir / en attente » ; contrôle : références de code relues, aucun test exécuté (documentation) |
