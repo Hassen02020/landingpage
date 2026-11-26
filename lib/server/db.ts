@@ -72,6 +72,28 @@ export class TenantContextError extends Error {}
 
 const orgStore = new AsyncLocalStorage<{ orgId: string }>()
 
+// Restriction « employé » (décision Q8-A) : un compte employé ne lit et ne modifie que les leads qui lui sont actuellement affectés.
+// Appliquée ICI, au niveau des requêtes, pour que ni une page, ni un calcul, ni une URL directe ne puisse la contourner.
+// Ne s'applique qu'aux requêtes faites au nom d'une SESSION (pas aux points d'entrée publics ni aux webhooks, qui posent un contexte explicite).
+const unscopedStore = new AsyncLocalStorage<true>()
+
+/**
+ * Contrôle INTERNE qui doit voir tous les dossiers de l'organisation (ex. détection d'une réservation en double). Le résultat ne doit
+ * jamais exposer à un employé le montant, le nom ni le détail d'un dossier qui ne lui est pas affecté.
+ */
+export function runUnscopedLeads<T>(fn: () => Promise<T> | T): Promise<T> | T {
+  return unscopedStore.run(true, fn)
+}
+
+async function employeeLeadScope(): Promise<string | null> {
+  if (orgStore.getStore() || unscopedStore.getStore()) return null
+  try {
+    return await (await import("./session-org")).resolveEmployeeScope()
+  } catch {
+    return null
+  }
+}
+
 /** Exécute `fn` (et tout ce qu'elle attend) dans le contexte de l'organisation `orgId`. */
 export function runWithOrg<T>(orgId: string, fn: () => Promise<T> | T): Promise<T> | T {
   if (!isOrgId(orgId)) throw new TenantContextError("identifiant d'organisation invalide")
@@ -130,8 +152,23 @@ async function orgFor(mode: TenantMode, target: string): Promise<string> {
   return resolved
 }
 
-/** Applique le cloisonnement à une requête. Retourne le chemin et le corps à envoyer. */
+/**
+ * Applique le cloisonnement par organisation PUIS la restriction « employé » (quel que soit le mode multi-entreprises, y compris « off »).
+ * La restriction est ajoutée en plus des filtres de l'appelant (ET) : un filtre « assigned_to » fourni ne peut que RÉDUIRE le résultat.
+ */
 async function scopeRequest(cfg: { url: string; key: string }, path: string, init: RequestInit): Promise<{ path: string; body: RequestInit["body"] }> {
+  const out = await scopeTenant(cfg, path, init)
+  const q = out.path.indexOf("?")
+  const target = q === -1 ? out.path : out.path.slice(0, q)
+  const method = (init.method || "GET").toUpperCase()
+  if (target !== "landing_leads" || (method !== "GET" && method !== "PATCH")) return out
+  const me = await employeeLeadScope()
+  if (!me) return out
+  return { path: `${out.path}${q === -1 ? "?" : "&"}assigned_to=eq.${me}`, body: out.body }
+}
+
+/** Cloisonnement par organisation d'une requête. Retourne le chemin et le corps à envoyer. */
+async function scopeTenant(cfg: { url: string; key: string }, path: string, init: RequestInit): Promise<{ path: string; body: RequestInit["body"] }> {
   const q = path.indexOf("?")
   const target = q === -1 ? path : path.slice(0, q)
   const query = q === -1 ? "" : path.slice(q + 1)

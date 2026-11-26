@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { PRODUCTS } from "@/lib/config"
+import { can } from "@/lib/permissions"
 import { dbConfigured } from "@/lib/server/db"
 import { currentStaff } from "@/lib/server/auth"
 import { PAGE_SIZE, STATUSES, STATUS_LABELS, listLeads, listStaff, type LeadRow } from "@/lib/server/crm"
@@ -49,6 +50,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
     return `/admin?${u}`
   }
   const here = `/admin${params.length ? `?${new URLSearchParams(params)}` : ""}`
+  const seesAll = can(me?.orgRole, "leads.view_all") // employé : uniquement ses dossiers (décision Q8-A)
   const title =
     searchParams.followUp === "due" ? "Relances à faire" : searchParams.assigned === "me" ? "Mes leads" : searchParams.assigned === "none" ? "Leads non assignés" : "Leads"
   const chip = (href: string, label: string, active: boolean) => (
@@ -63,8 +65,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
           <Card href="/admin" value={dash.today} label="Reçus aujourd'hui" tone="text-violet-700" />
           <Card href="/admin?followUp=due" value={dash.overdue} label="Relances échues" tone={dash.overdue ? "text-red-600" : "text-gray-900"} />
           <Card href="/admin?assigned=me&open=1" value={dash.mine} label="Mes dossiers ouverts" tone="text-gray-900" />
-          <Card href="/admin?assigned=none&open=1" value={dash.unassigned} label="Non assignés" tone={dash.unassigned ? "text-amber-600" : "text-gray-900"} />
-          <Card href="/admin?status=reserve,gagne" value={dash.bookedMonth} label={`Réservés ce mois · ${tnd(dash.revenueMonth)}`} tone="text-green-700" />
+          {seesAll && <Card href="/admin?assigned=none&open=1" value={dash.unassigned} label="Non assignés" tone={dash.unassigned ? "text-amber-600" : "text-gray-900"} />}
+          <Card href="/admin?status=reserve,gagne" value={dash.bookedMonth} label={`${seesAll ? "Réservés ce mois" : "Mes réservations ce mois"} · ${tnd(dash.revenueMonth)}`} tone="text-green-700" />
         </div>
       )}
 
@@ -73,7 +75,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
         <div className="flex flex-wrap gap-2">
           {chip("/admin", "Tous", !params.length)}
           {chip("/admin?assigned=me&open=1", "Mes leads", searchParams.assigned === "me")}
-          {chip("/admin?assigned=none&open=1", "Non assignés", searchParams.assigned === "none")}
+          {seesAll && chip("/admin?assigned=none&open=1", "Non assignés", searchParams.assigned === "none")}
           {chip("/admin?followUp=due", "Relances", searchParams.followUp === "due")}
           {chip("/admin/pipeline", "Vue pipeline →", false)}
         </div>
@@ -95,12 +97,14 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
           <option value="">Tous canaux</option>
           {["meta", "tiktok", "whatsapp", "google", "organic", "referral", "direct"].map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select name="assigned" defaultValue={searchParams.assigned || ""} className="px-3 py-2 rounded-lg border">
+        {seesAll && (
+          <select name="assigned" defaultValue={searchParams.assigned || ""} className="px-3 py-2 rounded-lg border">
           <option value="">Tous responsables</option>
           <option value="me">Moi</option>
           <option value="none">Non assignés</option>
           {staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.full_name || s.email}</option>)}
         </select>
+        )}
         {searchParams.followUp && <input type="hidden" name="followUp" value={searchParams.followUp} />}
         {searchParams.open && <input type="hidden" name="open" value={searchParams.open} />}
         <button className="px-4 py-2 rounded-lg bg-violet-700 text-white font-bold">Filtrer</button>

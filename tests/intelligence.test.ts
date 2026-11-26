@@ -136,13 +136,13 @@ describe("menu Intelligence : droits par rôle inchangés, aucune entrée dupliq
     const intel = NAV_GROUPS.find((g) => g.title === "Intelligence")!.items.map((i) => i.href)
     for (const h of ["/admin/stats", "/admin/segments", "/admin/rentabilite", "/admin/liens", "/admin/calculateur"]) expect(intel).toContain(h)
   })
-  it("employé : ne voit ni la vue d'ensemble, ni la qualité des données, ni la rentabilité ; garde Statistiques et Segments (comme avant)", () => {
+  it("employé : ne voit ni la vue d'ensemble, ni la qualité des données, ni la rentabilité ; garde Statistiques (« Mes chiffres ») ; Segments réservé aux responsables (Q8-A)", () => {
     const l = labels("employee")
     expect(l).not.toContain("Intelligence/Vue d'ensemble")
     expect(l).not.toContain("Intelligence/Qualité des données")
     expect(l).not.toContain("Intelligence/Rentabilité")
     expect(l).toContain("Intelligence/Statistiques")
-    expect(l).toContain("Intelligence/Segments")
+    expect(l).not.toContain("Intelligence/Segments")
   })
   it("manager et administrateur : voient la vue d'ensemble, la qualité des données et la rentabilité", () => {
     for (const role of ["manager", "admin"] as const) {

@@ -721,6 +721,77 @@ await ctx.close()
   const before = db.landing_integrations.length
   await ap.goto(`${BASE}/admin`, { waitUntil: "networkidle" })
   check("agent : accède aux leads", (await ap.locator('input[name="ids"]').count()) > 0 && db.landing_integrations.length === before)
+  // ---- L3 (décision Q8-A) : l'employé ne voit et n'ouvre que les dossiers qui lui sont ACTUELLEMENT affectés
+  const AG = db.landing_staff.find((u) => u.email === AGENT.email).user_id
+  const mineL = db.landing_leads.filter((l) => l.assigned_to === AG)
+  const theirsL = db.landing_leads.filter((l) => l.assigned_to !== AG)
+  const body = async (path) => { const r = await ap.goto(`${BASE}${path}`, { waitUntil: "networkidle" }); return { status: r?.status(), text: await ap.locator("body").innerText() } }
+  const lastNames = (rows) => rows.map((l) => l.first_name).filter((n) => n && n.length > 3)
+  {
+    const home = await body("/admin")
+    check("L3 employé : la liste ne contient que ses dossiers", (await ap.locator('input[name="ids"]').count()) === mineL.length && mineL.length >= 2, `${await ap.locator('input[name="ids"]').count()} / ${mineL.length}`)
+    check("L3 employé : aucun nom de dossier d'un collègue ou non affecté dans la liste", lastNames(theirsL).every((n) => !home.text.includes(n)))
+    check("L3 employé : pas de carte « Non assignés », pas de filtre « Tous responsables », pas de liste de collègues", !home.text.includes("Non assignés") && (await ap.locator('select[name="assigned"]').count()) === 0)
+    const direct = await body(`/admin/leads/${theirsL.find((l) => l.status !== "reserve").id}`)
+    check("L3 employé : URL directe d'un dossier d'un collègue / non affecté → 404 neutre, sans nom, sans montant", direct.status === 404 && lastNames(theirsL).every((n) => !direct.text.includes(n)) && !direct.text.includes("collègue"), String(direct.status))
+    const bookedOther = theirsL.find((l) => l.booking_value)
+    const direct2 = await body(`/admin/leads/${bookedOther.id}`)
+    check("L3 employé : URL directe d'un dossier réservé d'un collègue → 404, montant non affiché", direct2.status === 404 && !direct2.text.includes(String(bookedOther.booking_value)))
+    const own = await body(`/admin/leads/${mineL[0].id}`)
+    check("L3 employé : son propre dossier s'ouvre", own.status === 200 && own.text.includes(mineL[0].first_name))
+    const st = await body("/admin/stats")
+    const ownRev = mineL.filter((l) => l.booking_value && ["reserve", "gagne"].includes(l.status)).reduce((a, l) => a + Number(l.booking_value), 0)
+    const fmt = (n) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n).replace(/[\u202f\u00a0]/g, " ")
+    const stNorm = st.text.replace(/[\u202f\u00a0]/g, " ")
+    check("L3 employé : « Mes chiffres » (ses dossiers), sans onglets de l'organisation", st.text.includes("Mes chiffres") && (await ap.getByRole("link", { name: /Équipe \| Suivi|Niches|WhatsApp/ }).count()) === 0)
+    check("L3 employé : son chiffre d'affaires = ses dossiers seulement (jamais celui de l'organisation)", stNorm.includes(fmt(ownRev)) && !stNorm.includes(fmt(ownRev + 7800)) && ownRev > 0, fmt(ownRev))
+    for (const v of ["equipe", "whatsapp", "niches", "entonnoir", "offres"]) {
+      await body(`/admin/stats?view=${v}`)
+      const main = await ap.locator("main").innerText()
+      if (!main.includes("Mes chiffres") || /Direction|Clics WhatsApp|Niche|Membre/.test(main)) check(`L3 employé : /admin/stats?view=${v} ne révèle rien de l'organisation`, false, main.slice(0, 160))
+    }
+    const pipe = await body("/admin/pipeline")
+    check("L3 employé : le pipeline ne montre que ses dossiers", lastNames(theirsL).every((n) => !pipe.text.includes(n)))
+    const cl = await body("/admin/clients")
+    check("L3 employé : la liste clients ne montre que ses clients", lastNames(theirsL).every((n) => !cl.text.includes(n)))
+    const seg = await body("/admin/segments")
+    check("L3 employé : segments (dont Niveau / VIP) refusés, absents du menu", seg.text.includes("Accès réservé") && (await aside.getByRole("link", { name: "Segments", exact: true }).count()) === 0)
+    const foreignClient = await body(`/admin/clients/${theirsL.find((l) => l.phone && !mineL.some((m) => m.phone === l.phone)).phone}`)
+    check("L3 employé : fiche client d'un autre client → aucune donnée (pas de nom, pas de montant)", lastNames(theirsL).every((n) => !foreignClient.text.includes(n)))
+    const todo = await body("/admin/a-traiter")
+    check("L3 employé : « À traiter » = ses dossiers seulement", !todo.text.includes("Accès réservé") && lastNames(theirsL).every((n) => !todo.text.includes(n)))
+    const conv = await body("/admin/conversations")
+    check("L3 employé : conversations de l'organisation refusées", conv.text.includes("Accès réservé"))
+    // P4 : doublon de réservation avec un dossier d'un collègue → message neutre (ni référence, ni montant, ni nom)
+    const mine3 = mineL.find((l) => l.status === "contacte" && l.phone)
+    const colleague = { ...mine3, id: "88888888-8888-4888-8888-000000000001", ref: "E2B-COLL01", first_name: "Collegue", assigned_to: db.landing_staff.find((u) => u.email === ADMIN.email).user_id, status: "reserve", booking_value: 31337, booked_at: new Date().toISOString(), notes: null }
+    db.landing_leads.push(colleague)
+    await ap.goto(`${BASE}/admin/leads/${mine3.id}`, { waitUntil: "networkidle" })
+    const sf = ap.locator("form").filter({ hasText: "Changer le statut" })
+    await sf.locator('select[name="status"]').selectOption("reserve")
+    await sf.locator('input[name="booking_value"]').fill("500")
+    await sf.getByRole("button", { name: "Enregistrer" }).click()
+    await ap.waitForURL(/erreur=/, { timeout: 15000 })
+    const dupTxt = await ap.locator("body").innerText()
+    check("L3 P4 : réservation en double détectée MÊME si le dossier est celui d'un collègue, l'écriture s'arrête", dupTxt.includes("Réservation possible en double") && db.landing_leads.find((l) => l.id === mine3.id).status === "contacte")
+    check("L3 P4 : le message ne révèle ni référence, ni montant, ni nom du dossier du collègue", !dupTxt.includes("E2B-COLL01") && !dupTxt.includes("31337") && !dupTxt.includes("31 337") && !dupTxt.includes("Collegue"))
+    db.landing_leads.splice(db.landing_leads.findIndex((l) => l.id === colleague.id), 1)
+    // P6 : réaffectation par un responsable → le dossier disparaît (liste, URL directe, chiffres) ; l'historique reste en base
+    const moved = mineL.find((l) => l.status === "reserve" && l.booking_value)
+    db.landing_leads.find((l) => l.id === moved.id).assigned_to = db.landing_staff.find((u) => u.email === ADMIN.email).user_id
+    const actsBefore = db.landing_lead_activities.filter((a) => a.lead_id === moved.id).length
+    const gone = await body(`/admin/leads/${moved.id}`)
+    check("L3 P6 : après réaffectation, l'ancien employé n'ouvre plus le dossier (404)", gone.status === 404)
+    const st2 = (await body("/admin/stats")).text.replace(/[\u202f\u00a0]/g, " ")
+    check("L3 P6 : après réaffectation, le montant sort de ses chiffres", !st2.includes(fmt(Number(moved.booking_value))))
+    check("L3 P6 : l'historique du dossier reste conservé dans le journal", db.landing_lead_activities.filter((a) => a.lead_id === moved.id).length === actsBefore)
+    db.landing_leads.find((l) => l.id === moved.id).assigned_to = AG
+    // actions : modification d'un dossier d'un collègue par POST direct → refus neutre, rien écrit
+    const victim = theirsL.find((l) => l.status === "nouveau")
+    const beforeNotes = db.landing_lead_activities.length
+    const res = await ap.request.post(`${BASE}/admin`, { form: { id: victim.id, body: "tentative", bulk: "assign:me", ids: victim.id }, failOnStatusCode: false, maxRedirects: 0 }).catch(() => null)
+    check("L3 employé : prise d'un dossier d'un collègue / libre par action groupée : aucun effet", db.landing_leads.find((l) => l.id === victim.id).assigned_to !== AG && db.landing_lead_activities.length === beforeNotes && (res === null || res.status() < 500))
+  }
   await actx.close()
 }
 

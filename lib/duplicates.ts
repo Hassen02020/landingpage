@@ -115,7 +115,7 @@ export function suggestPrimary(a: { id: string; created_at: string; purchaseSent
 }
 
 export interface ReservationOther extends DupLead { purchaseSentOrPending?: boolean }
-export interface ReservationConflict { id: string; ref?: string; status: string; confidence: DupConfidence }
+export interface ReservationConflict { id: string; ref?: string; status: string; confidence: DupConfidence; assigned_to?: string | null }
 
 /** Autres dossiers du même client, même produit, même offre/départ (non différents), déjà RÉSERVÉS / GAGNÉS ou portant un Purchase envoyé / en attente,
  *  qui ne sont pas des doublons confirmés. Pas de fenêtre de temps : deux réservations pour la même clé exigent TOUJOURS une décision humaine. */
@@ -128,7 +128,7 @@ export function findReservationConflicts(lead: DupLead, others: (ReservationOthe
     if (!isBooking(o.status) && !o.purchaseSentOrPending) continue
     const cmp = compareOffering(lead, o)
     if (cmp === "different") continue
-    out.push({ id: o.id, ref: o.ref, status: o.status, confidence: cmp === "same" ? "elevee" : "faible" })
+    out.push({ id: o.id, ref: o.ref, status: o.status, confidence: cmp === "same" ? "elevee" : "faible", ...("assigned_to" in o ? { assigned_to: (o as { assigned_to?: string | null }).assigned_to ?? null } : {}) })
   }
   return out
 }

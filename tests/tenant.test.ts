@@ -19,8 +19,9 @@ describe("matrice des rôles", () => {
       expect(can("employee", p), `employé ne doit pas avoir ${p}`).toBe(false)
     }
     expect(can("manager", "leads.assign") && can("manager", "leads.view_all") && can("manager", "reports.view")).toBe(true)
-    // décision du 08/11/2026 : l'employé VOIT tous les leads de son entreprise ; il n'affecte pas, ne rapporte pas, ne modifie que les siens
-    expect(can("employee", "leads.view_all") && can("employee", "leads.view_assigned") && can("employee", "leads.update_assigned")).toBe(true)
+    // décision Q8-A (26/11/2026) : l'employé ne voit et ne modifie que ses dossiers actuellement affectés ; il n'affecte pas, ne rapporte pas
+    expect(can("employee", "leads.view_all")).toBe(false)
+    expect(can("employee", "leads.view_assigned") && can("employee", "leads.update_assigned")).toBe(true)
     expect(can("employee", "leads.assign") || can("employee", "reports.view") || can("employee", "leads.update") || can("employee", "employees.view")).toBe(false)
   })
 

@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { can } from "@/lib/permissions"
+import { currentStaff } from "@/lib/server/auth"
 import { PRODUCTS, type Product } from "@/lib/config"
 import { select } from "@/lib/server/db"
 import { loadWhatsApp } from "@/lib/server/whatsapp-stats"
@@ -327,7 +329,13 @@ async function Niches() {
 }
 
 export default async function StatsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
-  const view = ["marketing", "equipe", "entonnoir", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
+  const staff = await currentStaff()
+  if (!staff) return <p className="bg-white rounded-2xl p-6">Accès réservé à l&apos;équipe.</p>
+  // Employé : uniquement « Mes chiffres » (ses dossiers actuellement affectés, restriction appliquée côté serveur dans lib/server/db.ts).
+  // Les autres vues (équipe, entonnoir, WhatsApp, offres, niches) portent sur l'organisation entière : manager et administrateur seulement.
+  const orgWide = can(staff.orgRole, "reports.view")
+  const requested = ["marketing", "equipe", "entonnoir", "whatsapp", "offres", "niches"].includes(searchParams.view || "") ? searchParams.view! : "marketing"
+  const view = orgWide ? requested : "marketing"
   const p = parsePeriod(searchParams.from, searchParams.to)
   const level: Level = (["campaign", "adset", "ad"] as const).find((l) => l === searchParams.level) ?? "campaign"
   const member = /^[0-9a-f-]{36}$/i.test(searchParams.member || "") ? searchParams.member! : ""
@@ -338,8 +346,8 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-black">Statistiques</h1>
-        <Tabs view={view} p={p} />
+        <h1 className="text-2xl font-black">{orgWide ? "Statistiques" : "Mes chiffres"}</h1>
+        {orgWide && <Tabs view={view} p={p} />}
       </div>
 
       {view !== "niches" && (
@@ -367,7 +375,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Record
         />
       )}
       {view !== "niches" && (
-        <p className="text-xs text-gray-500">Leads reçus entre le {p.from.split("-").reverse().join("/")} et le {p.to.split("-").reverse().join("/")}.</p>
+        <p className="text-xs text-gray-500">{orgWide ? "" : "Vos dossiers actuellement affectés. "}Leads reçus entre le {p.from.split("-").reverse().join("/")} et le {p.to.split("-").reverse().join("/")}.</p>
       )}
 
       {view === "marketing" && <Marketing p={p} level={level} />}

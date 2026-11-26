@@ -134,14 +134,18 @@ const B = await session(BOB.email, BOB.password)
   check("Bob SARL : l'historique de ce lead appartient à Bob SARL", acts.length > 0 && acts.every((a) => a.organization_id === BOB_ORG), JSON.stringify(acts.map((a) => a.organization_id)))
 }
 
-// ================================================================ C2. RÈGLE DU PROPRIÉTAIRE : un EMPLOYÉ voit TOUS les leads de SON entreprise, aucun lead d'une autre
+// ================================================================ C2. RÈGLE Q8-A (26/11/2026) : un EMPLOYÉ ne voit que SES dossiers affectés de SON entreprise, aucun lead d'une autre
 {
   const E = await session(AGENT.email, AGENT.password)
   const home = await open(E.page, "/admin")
   const seen = await E.page.locator('input[name="ids"]').count()
-  const mineAll = e2bLeads().length
-  const assignedToOthers = e2bLeads().filter((l) => l.assigned_to && l.assigned_to !== "22222222-2222-4222-8222-222222222222").length
-  check("employé d'Easy2Book : voit TOUS les leads d'Easy2Book (les siens, ceux d'un collègue, les non affectés)", seen === mineAll && assignedToOthers > 0, `${seen} / ${mineAll} (dont ${assignedToOthers} attribués à d'autres)`)
+  const AG_ID = "22222222-2222-4222-8222-222222222222"
+  const mineOnly = e2bLeads().filter((l) => l.assigned_to === AG_ID).length
+  const notMine = e2bLeads().filter((l) => l.assigned_to !== AG_ID).length
+  check("employé d'Easy2Book : ne voit QUE ses dossiers (ni ceux d'un collègue, ni les non affectés)", seen === mineOnly && mineOnly > 0 && notMine > 0, `${seen} / ${mineOnly} (sur ${mineOnly + notMine} leads de l'entreprise)`)
+  const other = e2bLeads().find((l) => l.assigned_to !== AG_ID)
+  const otherPage = await open(E.page, `/admin/leads/${other.id}`)
+  check("employé d'Easy2Book : ouvrir DIRECTEMENT le dossier d'un collègue → 404, aucun nom ni montant", otherPage.status === 404 && !otherPage.text.includes(other.first_name) && !(other.booking_value && otherPage.text.includes(String(other.booking_value))), `${otherPage.status}`)
   check("employé d'Easy2Book : ne voit AUCUN lead de Bob SARL", leaks(home.text, BOB_MARKERS).length === 0, leaks(home.text, BOB_MARKERS).join(","))
   const direct = await open(E.page, `/admin/leads/${bobLeads()[0].id}`)
   check("employé d'Easy2Book : ouvrir DIRECTEMENT un lead de Bob → 404, rien affiché", direct.status === 404 && leaks(direct.text, BOB_MARKERS).length === 0, `${direct.status}`)
@@ -173,23 +177,16 @@ const B = await session(BOB.email, BOB.password)
   const eh = await open(E.page, "/admin")
   check("employé : le menu n'affiche ni Équipe, ni Codes promo, ni Offres, ni Intégrations, ni Protection, ni Modèles, ni Export", !/(Équipe|Codes promo|Offres et catégories|Intégrations|Protection|Modèles WhatsApp|Export CSV)/.test(eh.text), eh.text.slice(0, 200))
   const before = theirs.status
-  await setStatus(E.page, theirs.id, before === "contacte" ? "perdu" : "contacte")
-  check("employé : modifier le statut d'un lead AFFECTÉ À UN COLLÈGUE est refusé (statut inchangé, message clair)", db.landing_leads.find((l) => l.id === theirs.id).status === before && (await body(E.page)).includes("affecté à un collègue"), `${db.landing_leads.find((l) => l.id === theirs.id).status}`)
+  const theirsPage = await open(E.page, `/admin/leads/${theirs.id}`)
+  check("employé : le dossier d'un COLLÈGUE n'est ni visible ni modifiable (404, statut inchangé, aucun message révélateur)", theirsPage.status === 404 && db.landing_leads.find((l) => l.id === theirs.id).status === before && !theirsPage.text.includes("collègue"))
   await setStatus(E.page, mine.id, "qualifie")
-  check("employé : modifier un de SES leads fonctionne", db.landing_leads.find((l) => l.id === mine.id).status === "qualifie")
-  await setStatus(E.page, free.id, "a_contacter")
-  check("employé : modifier un lead NON AFFECTÉ fonctionne", db.landing_leads.find((l) => l.id === free.id).status === "a_contacter")
-  // affectation : voler le lead d'un collègue refusé ; prendre un lead libre accepté
-  await open(E.page, `/admin/leads/${theirs.id}`)
-  await E.page.selectOption('select[name="assigned_to"]', AGENT_ID)
-  await E.page.locator('form:has(select[name="assigned_to"]) button').click()
-  await E.page.waitForTimeout(1500)
-  check("employé : prendre le lead d'un collègue est refusé (affectation inchangée)", db.landing_leads.find((l) => l.id === theirs.id).assigned_to === ADMIN_ID)
-  await open(E.page, `/admin/leads/${free2.id}`)
-  await E.page.selectOption('select[name="assigned_to"]', AGENT_ID)
-  await E.page.locator('form:has(select[name="assigned_to"]) button').click()
-  await E.page.waitForTimeout(1500)
-  check("employé : prendre un lead libre est accepté", db.landing_leads.find((l) => l.id === free2.id).assigned_to === AGENT_ID)
+  check("employé : modifier un de SES dossiers fonctionne", db.landing_leads.find((l) => l.id === mine.id).status === "qualifie")
+  const freeBefore = free.status
+  const freePage = await open(E.page, `/admin/leads/${free.id}`)
+  check("employé : un dossier NON AFFECTÉ lui est invisible (404) et reste inchangé (Q8-A)", freePage.status === 404 && db.landing_leads.find((l) => l.id === free.id).status === freeBefore)
+  // affectation : un employé ne peut ni voler le dossier d'un collègue, ni prendre un dossier libre (invisible pour lui)
+  const free2Page = await open(E.page, `/admin/leads/${free2.id}`)
+  check("employé : prendre un dossier libre ou celui d'un collègue est impossible (404, affectation inchangée)", free2Page.status === 404 && db.landing_leads.find((l) => l.id === theirs.id).assigned_to === ADMIN_ID && !db.landing_leads.find((l) => l.id === free2.id).assigned_to)
   for (const path of ["/admin/equipe", "/admin/promos", "/admin/catalogue", "/admin/protection", "/admin/integrations", "/admin/modeles"]) {
     const r = await open(E.page, path)
     check(`employé : ${path} est fermé`, /réservée|réservé/.test(r.text) && !/Ajouter un membre|Nouveau code/.test(r.text), r.text.slice(0, 80))
@@ -201,6 +198,8 @@ const B = await session(BOB.email, BOB.password)
   const mh = await open(M.page, "/admin")
   check("manager : le menu affiche l'Équipe mais ni Codes promo, ni Offres, ni Intégrations, ni Protection, ni Modèles, ni Export", /Équipe/.test(mh.text) && !/(Codes promo|Offres et catégories|Intégrations|Protection|Modèles WhatsApp|Export CSV)/.test(mh.text), mh.text.slice(0, 200))
   check("manager : voit tous les leads d'Easy2Book et aucun lead de Bob SARL", (await M.page.locator('input[name="ids"]').count()) === e2bLeads().length && leaks(mh.text, BOB_MARKERS).length === 0)
+  const mst = await open(M.page, "/admin/stats?view=equipe")
+  check("manager : Statistiques de l'organisation (onglet Équipe) et Segments accessibles ; aucune donnée de Bob SARL", /Équipe \| Suivi/.test(mst.text) && !mst.text.includes("Mes chiffres") && leaks(mst.text, BOB_MARKERS).length === 0 && !/Accès réservé/.test((await open(M.page, "/admin/segments")).text))
   const mteam = await open(M.page, "/admin/equipe")
   check("manager : voit l'équipe mais sans formulaire d'ajout ni changement de rôle", mteam.text.includes("Manager Leila") && !mteam.text.includes("Ajouter un membre") && (await M.page.locator('select[name="role"]:not([disabled])').count()) === 0, mteam.text.slice(0, 120))
   for (const path of ["/admin/promos", "/admin/catalogue", "/admin/protection", "/admin/integrations", "/admin/modeles"]) {
